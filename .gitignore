@@ -7,6 +7,7 @@ dist
 /htmlcov/
 *.iml
 target/
+<<<<<<< HEAD
 .coverage
 .coverage.*
 coverage.*
@@ -20,3 +21,8 @@ remorph_transpile/
 /linter/src/main/antlr4/library/gen/
 .databricks-login.json
 /core/src/main/antlr4/com/databricks/labs/remorph/parsers/*/gen/
+=======
+.coverage*
+coverage.*
+*.iws
+>>>>>>> d5d174bf (Adding Maven and Scala build infra (#193))

@@ -24,9 +24,12 @@ dev:
 lint:
 	hatch run verify
 
-fmt:
+fmt: fmt-python fmt-scala
+
+fmt-python:
 	hatch run fmt
 
+<<<<<<< HEAD
 setup_spark_remote:
 	.github/scripts/setup_spark_remote.sh
 
@@ -34,6 +37,20 @@ test:
 	hatch run test
 
 integration: setup_spark_remote
+=======
+fmt-scala:
+	mvn -f parent/pom.xml scalafmt:format
+
+test: test-python test-scala
+
+test-python:
+	hatch run test
+
+test-scala:
+	mvn test -f parent/pom.xml
+
+integration:
+>>>>>>> d5d174bf (Adding Maven and Scala build infra (#193))
 	hatch run integration
 
 coverage:
