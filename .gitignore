@@ -25,4 +25,8 @@ remorph_transpile/
 .coverage*
 coverage.*
 *.iws
+<<<<<<< HEAD
 >>>>>>> d5d174bf (Adding Maven and Scala build infra (#193))
+=======
+/core/gen/
+>>>>>>> 387796ff (Added grammars and intermediate representation (#230))

@@ -39,7 +39,7 @@ test:
 integration: setup_spark_remote
 =======
 fmt-scala:
-	mvn -f parent/pom.xml scalafmt:format
+	mvn -f pom.xml scalafmt:format
 
 test: test-python test-scala
 
