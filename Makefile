@@ -47,7 +47,7 @@ test-python:
 	hatch run test
 
 test-scala:
-	mvn test -f parent/pom.xml
+	mvn test -f pom.xml
 
 integration:
 >>>>>>> d5d174bf (Adding Maven and Scala build infra (#193))
