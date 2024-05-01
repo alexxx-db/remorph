@@ -13,6 +13,7 @@ target/
 coverage.*
 *.iws
 /core/gen/
+<<<<<<< HEAD
 /antlrlinter/gen/
 *.tokens
 spark-warehouse/
@@ -30,3 +31,6 @@ coverage.*
 =======
 /core/gen/
 >>>>>>> 387796ff (Added grammars and intermediate representation (#230))
+=======
+*.tokens
+>>>>>>> b410d42f (Implement basic arithmetic and bitwise operators (#295))
