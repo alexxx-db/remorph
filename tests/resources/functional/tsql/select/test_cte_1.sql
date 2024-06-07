@@ -5,6 +5,12 @@
 --
 -- tsql sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte
+<<<<<<< HEAD
 
 -- databricks sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte;
+=======
+GO
+-- databricks sql:
+WITH cte AS (SELECT * FROM t) SELECT * FROM cte
+>>>>>>> 596a140d (TSQL: Implement WITH CTE (#443))
