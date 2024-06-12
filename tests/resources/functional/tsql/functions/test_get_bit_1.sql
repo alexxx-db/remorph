@@ -11,9 +11,13 @@
 SELECT GET_BIT(42, 7);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 -- databricks sql:
 SELECT GETBIT(42, 7);
 =======
 -- GET_BIT sql:
+=======
+-- databricks sql:
+>>>>>>> bb50ebb6 (Better coverage reports (#456))
 SELECT BIT_COUNT(42);
 >>>>>>> 5126eaff (Improve test coverage for TSQL remorph (#439))
