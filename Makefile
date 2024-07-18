@@ -56,14 +56,25 @@ integration:
 coverage:
 	hatch run coverage && open htmlcov/index.html
 
+<<<<<<< HEAD
 clean_coverage_dir:
 	rm -fr ${OUTPUT_DIR}
 
 python_coverage_report:
+=======
+build_core_jar:
+	mvn --update-snapshots -B install -DskipTests -pl "!com.databricks.labs:remorph-coverage" --file pom.xml
+
+dialect_coverage_report: build_core_jar
+>>>>>>> 2705ee7d (Add snowflake coverage tests run to Makefile (#558))
 	hatch run python src/databricks/labs/remorph/coverage/remorph_snow_transpilation_coverage.py
 	hatch run pip install --upgrade sqlglot
 	hatch -e sqlglot-latest run python src/databricks/labs/remorph/coverage/sqlglot_snow_transpilation_coverage.py
+<<<<<<< HEAD
 	hatch -e sqlglot-latest run python src/databricks/labs/remorph/coverage/sqlglot_tsql_transpilation_coverage.py
 
 dialect_coverage_report: clean_coverage_dir python_coverage_report
 	hatch run python src/databricks/labs/remorph/coverage/local_report.py
+=======
+	mvn compile -DskipTests exec:java -pl coverage --file pom.xml -DsourceDir=${INPUT_DIR} -DoutputPath=${OUTPUT_DIR} -DsourceDialect=Snow -Dextractor=full
+>>>>>>> 2705ee7d (Add snowflake coverage tests run to Makefile (#558))
