@@ -17,6 +17,7 @@ coverage.*
 /antlrlinter/gen/
 *.tokens
 spark-warehouse/
+<<<<<<< HEAD
 remorph_transpile/
 /linter/gen/
 /linter/src/main/antlr4/library/gen/
@@ -34,3 +35,6 @@ coverage.*
 =======
 *.tokens
 >>>>>>> b410d42f (Implement basic arithmetic and bitwise operators (#295))
+=======
+remorph_transpile/
+>>>>>>> 7b18a32a ([internal] Port subset of Apache Spark's Catalyst into remorph-core IR (#704))
