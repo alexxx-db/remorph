@@ -78,6 +78,47 @@ def local_report(output_dir: Path):
         )
 
 
+def sqlglot_run_coverage(dialect, subfolder):
+    input_dir = get_env_var("INPUT_DIR_PARENT", required=True)
+    output_dir = get_env_var("OUTPUT_DIR", required=True)
+    sqlglot_version = sqlglot.__version__
+    SQLGLOT_COMMIT_HASH = ""  # C0103 pylint
+
+    if not input_dir:
+        raise ValueError("Environment variable `INPUT_DIR_PARENT` is required")
+    if not output_dir:
+        raise ValueError("Environment variable `OUTPUT_DIR` is required")
+
+    collect_transpilation_stats(
+        "SQLGlot",
+        SQLGLOT_COMMIT_HASH,
+        sqlglot_version,
+        dialect,
+        Databricks,
+        Path(input_dir) / subfolder,
+        Path(output_dir),
+    )
+
+
+def local_report(output_dir: Path):
+    all = collections.defaultdict(list)
+    for file in output_dir.rglob("*.json"):
+        with file.open("r", encoding="utf8") as f:
+            for line in f:
+                raw = json.loads(line)
+                entry = ReportEntry(**raw)
+                all[(entry.project, entry.source_dialect)].append(entry)
+    for (project, dialect), entries in sorted(all.items()):
+        total = len(entries)
+        parsed = sum(entry.parsed for entry in entries)
+        transpiled = sum(entry.transpiled for entry in entries)
+        parse_ratio = parsed / total
+        transpile_ratio = transpiled / total
+        print(
+            f"{project} -> {dialect}: {parse_ratio:.2%} parsed ({parsed}/{total}), {transpile_ratio:.2%} transpiled ({transpiled}/{total})"
+        )
+
+
 def get_supported_sql_files(input_dir: Path) -> Generator[Path, None, None]:
     yield from filter(lambda item: item.is_file() and item.suffix.lower() in [".sql", ".ddl"], input_dir.rglob("*"))
 

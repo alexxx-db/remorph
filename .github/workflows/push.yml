@@ -268,7 +268,12 @@ jobs:
   coverage-tests-with-make:
     runs-on: ubuntu-latest
     env:
+<<<<<<< HEAD
       INPUT_DIR: .
+=======
+      INPUT_DIR_PARENT: .
+      INPUT_DIR: ./snowflake             # backward compat
+>>>>>>> a013e9d8 (Fixes around coverage tests (#720))
       OUTPUT_DIR: ./test-reports
     steps:
       - name: Checkout
@@ -294,7 +299,15 @@ jobs:
           cache: 'maven'
 
       - name: Create dummy test file
+<<<<<<< HEAD
         run: echo "SELECT * FROM t;" >> dummy_test.sql
+=======
+        run: |
+          mkdir $INPUT_DIR_PARENT/snowflake
+          mkdir $INPUT_DIR_PARENT/tsql
+          echo "SELECT * FROM t;" >> $INPUT_DIR_PARENT/snowflake/dummy_test.sql
+          echo "SELECT * FROM t;" >> $INPUT_DIR_PARENT/tsql/dummy_test.sql
+>>>>>>> a013e9d8 (Fixes around coverage tests (#720))
         shell: bash
 
       - name: Dry run coverage tests with make
