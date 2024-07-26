@@ -94,5 +94,16 @@ antlr_coverage_report: build_core_jar
 	mvn exec:java -pl coverage --file pom.xml -DsourceDir=${INPUT_DIR_PARENT}/tsql -DoutputPath=${OUTPUT_DIR} -DsourceDialect=Tsql -Dextractor=full
 
 dialect_coverage_report: clean_coverage_dir antlr_coverage_report python_coverage_report
+<<<<<<< HEAD
 	hatch -e sqlglot-latest run python src/databricks/labs/remorph/coverage/local_report.py
 >>>>>>> a013e9d8 (Fixes around coverage tests (#720))
+=======
+	hatch run python src/databricks/labs/remorph/coverage/local_report.py
+
+antlr-coverage: build_core_jar
+	echo "Running coverage for snowflake"
+	mvn -DskipTests compile exec:java -pl coverage --file pom.xml -DsourceDir=${INPUT_DIR_PARENT}/snowflake -DoutputPath=.venv/antlr-coverage -DsourceDialect=Snow -Dextractor=full
+	echo "Running coverage for tsql"
+	mvn exec:java -pl coverage --file pom.xml -DsourceDir=${INPUT_DIR_PARENT}/tsql -DoutputPath=.venv/antlr-coverage -DsourceDialect=Tsql -Dextractor=full
+	OUTPUT_DIR=.venv/antlr-coverage hatch run python src/databricks/labs/remorph/coverage/local_report.py
+>>>>>>> 6328f493 (Feature: introduce core transpiler (#715))
