@@ -10,10 +10,13 @@ import com.databricks.labs.remorph.parsers.intermediate.Literal
 =======
 import com.databricks.labs.remorph.generators.{Generator, GeneratorContext}
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 6328f493 (Feature: introduce core transpiler (#715))
 =======
 import com.databricks.labs.remorph.parsers.intermediate.RLike
 >>>>>>> f85e0f10 (Snowflake: introduce a specific call mapper (#742))
+=======
+>>>>>>> 4ad7a52c (Generate IN (#754))
 import com.databricks.labs.remorph.parsers.{intermediate => ir}
 import com.databricks.labs.remorph.transpilers.TranspileException
 
@@ -25,6 +28,9 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
     extends Generator[ir.Expression, String] {
   private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
   private val timeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.of("UTC"))
+
+  // LogicalPlan and Expression are mutually recursive (due to expressions such as EXISTS, IN, etc.)
+  private val logicalPlanGenerator = new LogicalPlanGenerator(this)
 
   override def generate(ctx: GeneratorContext, tree: ir.Expression): String = expression(ctx, tree)
 
@@ -52,7 +58,7 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
       case a: ir.Assign => assign(ctx, a)
       case opts: ir.Options => options(ctx, opts)
       case i: ir.KnownInterval => interval(ctx, i)
-
+      case s: ir.ScalarSubquery => scalarSubquery(ctx, s)
       case c: ir.Case => caseWhen(ctx, c)
       case x => throw TranspileException(s"Unsupported expression: $x")
     }
@@ -162,7 +168,7 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
     s"${expression(ctx, like.left)} LIKE ${expression(ctx, like.right)}$escape"
   }
 
-  private def rlike(ctx: GeneratorContext, r: RLike): String = {
+  private def rlike(ctx: GeneratorContext, r: ir.RLike): String = {
     s"${expression(ctx, r.left)} RLIKE ${expression(ctx, r.right)}"
   }
 
@@ -182,7 +188,8 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
   private def callFunction(ctx: GeneratorContext, fn: ir.Fn): String = {
     val call = callMapper.convert(fn)
     call match {
-      case r: RLike => rlike(ctx, r)
+      case r: ir.RLike => rlike(ctx, r)
+      case i: ir.In => in(ctx, i)
       case fn: ir.Fn => s"${fn.prettyName}(${fn.children.map(expression(ctx, _)).mkString(", ")})"
 
       // Certain functions can be translated directly to Databricks expressions such as INTERVAL
@@ -293,6 +300,15 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
     val otherwise = c.otherwise.map { o => s"ELSE ${expression(ctx, o)}" }.toSeq
     val chunks = expr ++ branches ++ otherwise
     chunks.mkString("CASE ", " ", " END")
+  }
+
+  private def in(ctx: GeneratorContext, inExpr: ir.In): String = {
+    val values = inExpr.other.map(expression(ctx, _)).mkString(", ")
+    s"${expression(ctx, inExpr.left)} IN ($values)"
+  }
+
+  private def scalarSubquery(ctx: GeneratorContext, subquery: ir.ScalarSubquery): String = {
+    logicalPlanGenerator.generate(ctx, subquery.relation)
   }
 
   private def orNull(option: Option[String]): String = option.getOrElse("NULL")
