@@ -19,6 +19,7 @@ SELECT GET_BIT(42, 7);
 <<<<<<< HEAD
 -- databricks sql:
 <<<<<<< HEAD
+<<<<<<< HEAD
 SELECT GETBIT(42, 7);
 =======
 -- GET_BIT sql:
@@ -30,3 +31,6 @@ SELECT BIT_COUNT(42);
 =======
 SELECT getbit(42, 7);;
 >>>>>>> 98d95eb5 (TSQL: Improve function coverage (#455))
+=======
+SELECT GETBIT(42, 7);
+>>>>>>> 8c55bd59 (TSQL: Improve transpilation coverage (#766))

@@ -13,6 +13,7 @@ FOR XML RAW ('namespace:namespace'), ELEMENTS;
 
 -- databricks sql:
 <<<<<<< HEAD
+<<<<<<< HEAD
 WITH XMLNAMESPACES ('somereference' as namespace) SELECT col1 as 'namespace:col1', col2 as 'namespace:col2' FROM  Table1 WHERE col2 = 'xyz' FOR XML RAW ('namespace:namespace'), ELEMENTS;
 =======
 
@@ -23,3 +24,6 @@ FROM  Table1
 WHERE col2 = 'xyz'
 FOR XML RAW ('namespace:namespace'), ELEMENTS;
 >>>>>>> b6255e0b (TSQL: Update the SELECT statement to support XML workspaces (#451))
+=======
+WITH XMLNAMESPACES ('somereference' as namespace) SELECT col1 as 'namespace:col1', col2 as 'namespace:col2' FROM  Table1 WHERE col2 = 'xyz' FOR XML RAW ('namespace:namespace'), ELEMENTS;
+>>>>>>> 8c55bd59 (TSQL: Improve transpilation coverage (#766))

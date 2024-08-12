@@ -194,6 +194,7 @@ class ExpressionGenerator(val callMapper: ir.CallMapper = new ir.CallMapper())
 
       // Certain functions can be translated directly to Databricks expressions such as INTERVAL
       case e: ir.Expression => expression(ctx, e)
+
       case _ => throw TranspileException("not implemented")
     }
   }

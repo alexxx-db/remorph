@@ -16,6 +16,7 @@ SELECT LEFT_SHIFT(42, 7);
 -- databricks sql:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 SELECT LEFTSHIFT(42, 7);
 =======
 SELECT LEFT_SHIFT(42, 7);
@@ -23,3 +24,6 @@ SELECT LEFT_SHIFT(42, 7);
 =======
 SELECT leftshift(42, 7);
 >>>>>>> 98d95eb5 (TSQL: Improve function coverage (#455))
+=======
+SELECT LEFTSHIFT(42, 7);
+>>>>>>> 8c55bd59 (TSQL: Improve transpilation coverage (#766))

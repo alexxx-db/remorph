@@ -6,11 +6,15 @@
 -- tsql sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 -- databricks sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte;
 =======
 GO
+=======
+
+>>>>>>> 8c55bd59 (TSQL: Improve transpilation coverage (#766))
 -- databricks sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte
 >>>>>>> 596a140d (TSQL: Implement WITH CTE (#443))
