@@ -14,6 +14,7 @@ coverage.*
 *.iws
 /core/gen/
 <<<<<<< HEAD
+<<<<<<< HEAD
 /antlrlinter/gen/
 *.tokens
 spark-warehouse/
@@ -38,3 +39,9 @@ coverage.*
 =======
 remorph_transpile/
 >>>>>>> 7b18a32a ([internal] Port subset of Apache Spark's Catalyst into remorph-core IR (#704))
+=======
+/antlrlinter/gen/
+*.tokens
+spark-warehouse/
+remorph_transpile/
+>>>>>>> 4a818601 ( Implement ANTLR4 grammar customized linter (#797))
