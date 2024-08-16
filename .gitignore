@@ -44,4 +44,9 @@ remorph_transpile/
 *.tokens
 spark-warehouse/
 remorph_transpile/
+<<<<<<< HEAD
 >>>>>>> 4a818601 ( Implement ANTLR4 grammar customized linter (#797))
+=======
+/linter/gen/
+/linter/src/main/antlr4/library/gen/
+>>>>>>> 6f0987ee (TSQL: Resolve orphaned grammar rules / grammar cleanup (#802))
