@@ -12,4 +12,8 @@ SELECT
   CAST('12345' AS STRING) AS string_val,
   CAST('12345' AS STRING) AS text_val,
   CAST('A' AS STRING) AS char_val,
+<<<<<<< HEAD
   CAST('A' AS STRING) AS character_val;
+=======
+  CAST('A' AS STRING) AS character_val;
+>>>>>>> ae9cf349 ([snowflake] fix data type mapping and explain `UnparsedType` (#810))

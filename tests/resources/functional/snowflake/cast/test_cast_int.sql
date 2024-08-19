@@ -14,4 +14,8 @@ SELECT
   CAST(123 AS DECIMAL(38, 0)) AS int_val,
   CAST(123 AS DECIMAL(38, 0)) AS integer_val,
   CAST(123 AS DECIMAL(38, 0)) AS bigint_val,
+<<<<<<< HEAD
   CAST(123 AS TINYINT) AS tinyint_val;
+=======
+  CAST(123 AS TINYINT) AS tinyint_val;
+>>>>>>> ae9cf349 ([snowflake] fix data type mapping and explain `UnparsedType` (#810))

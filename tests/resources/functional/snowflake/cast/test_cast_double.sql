@@ -14,4 +14,8 @@ SELECT
   CAST(12345.678 AS DOUBLE) AS float_val,
   CAST(12345.678 AS DOUBLE) AS float4_val,
   CAST(12345.678 AS DOUBLE) AS float8_val,
+<<<<<<< HEAD
   CAST(12345.678 AS DOUBLE) AS real_val;
+=======
+  CAST(12345.678 AS DOUBLE) AS real_val;
+>>>>>>> ae9cf349 ([snowflake] fix data type mapping and explain `UnparsedType` (#810))

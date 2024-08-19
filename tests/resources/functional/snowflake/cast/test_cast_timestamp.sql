@@ -12,4 +12,8 @@ SELECT
   CAST('2024-01-01 12:34:56' AS TIMESTAMP) AS timestamp_val,
   CAST('2024-01-01 12:34:56 +00:00' AS TIMESTAMP) AS timestamp_ltz_val,
   CAST('2024-01-01 12:34:56' AS TIMESTAMP_NTZ) AS timestamp_ntz_val,
+<<<<<<< HEAD
   CAST('2024-01-01 12:34:56 +00:00' AS TIMESTAMP) AS timestamp_tz_val;
+=======
+  CAST('2024-01-01 12:34:56 +00:00' AS TIMESTAMP) AS timestamp_tz_val;
+>>>>>>> ae9cf349 ([snowflake] fix data type mapping and explain `UnparsedType` (#810))
