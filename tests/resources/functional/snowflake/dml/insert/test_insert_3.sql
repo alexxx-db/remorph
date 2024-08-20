@@ -14,4 +14,8 @@ SELECT
   z
 FROM bar
 WHERE
+<<<<<<< HEAD
   x > z AND y = 'qux';
+=======
+  x > z AND y = 'qux';
+>>>>>>> a989e005 ([snowflake] map more functions to Databricks SQL (#826))
