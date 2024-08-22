@@ -20,7 +20,10 @@ from databricks.labs.remorph.lineage import lineage_generator
 from databricks.labs.remorph.transpiler.execute import transpile as do_transpile
 from databricks.labs.remorph.reconcile.execute import RECONCILE_OPERATION_NAME, AGG_RECONCILE_OPERATION_NAME
 from databricks.labs.remorph.jvmproxy import proxy_command
+<<<<<<< HEAD
 from databricks.sdk.core import with_user_agent_extra
+=======
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
 
 from databricks.sdk import WorkspaceClient
 
@@ -36,6 +39,7 @@ def raise_validation_exception(msg: str) -> Exception:
 
 
 proxy_command(remorph, "debug-script")
+<<<<<<< HEAD
 proxy_command(remorph, "debug-me")
 proxy_command(remorph, "debug-coverage")
 proxy_command(remorph, "debug-estimate")
@@ -66,6 +70,8 @@ def _verify_workspace_client(ws: WorkspaceClient) -> WorkspaceClient:
         setattr(ws.config, '_product_info', ('remorph', __version__))
 
     return ws
+=======
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
 
 
 @remorph.command

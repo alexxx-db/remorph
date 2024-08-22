@@ -112,4 +112,10 @@ antlr-coverage: build_core_jar
 
 antlr-lint:
 	mvn compile -DskipTests exec:java -pl linter --file pom.xml -Dexec.args="-i core/src/main/antlr4 -o .venv/linter/grammar -c true"
+<<<<<<< HEAD
 >>>>>>> 4a818601 ( Implement ANTLR4 grammar customized linter (#797))
+=======
+
+dev-cli:
+	mvn -f core/pom.xml dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))

@@ -58,6 +58,7 @@ commands:
         description: Directory to store the generated lineage file
   - name: configure-secrets
     description: Utility to setup Scope and Secrets on Databricks Workspace
+<<<<<<< HEAD
   - name: debug-me
     description: "[INTERNAL] Debug SDK connectivity"
   - name: install-assessment
@@ -66,3 +67,10 @@ commands:
     description: "Install Transpile"
   - name: install-reconcile
     description: "Install Reconcile"
+=======
+  - name: debug-script
+    description: "[INTERNAL] Debug Script"
+    flags:
+      - name: name
+        description: Filename to debug
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))

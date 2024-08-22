@@ -93,7 +93,11 @@ unit test coverage suite and the clear difference between _unit tests_ and _inte
 
 ## JVM Proxy
 
+<<<<<<< HEAD
 In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
+=======
+In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`, 
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
 so that `.databricks-login.json` file gets created with the following contents:
 
 ```
@@ -103,7 +107,11 @@ so that `.databricks-login.json` file gets created with the following contents:
 }
 ```
 
+<<<<<<< HEAD
 then run `make dev-cli` to collect classpath information. And then invoke commands,
+=======
+then run `make dev-cli` to collect classpath information. And then invoke commands, 
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
 like `databricks labs remorph debug-script --name file`. Add `--debug` flag to recompile project each run.
 
 Example output is:

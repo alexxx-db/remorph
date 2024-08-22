@@ -49,4 +49,8 @@ remorph_transpile/
 =======
 /linter/gen/
 /linter/src/main/antlr4/library/gen/
+<<<<<<< HEAD
 >>>>>>> 6f0987ee (TSQL: Resolve orphaned grammar rules / grammar cleanup (#802))
+=======
+.databricks-login.json
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
