@@ -13,8 +13,12 @@ SELECT
   verticals.value AS value
 FROM
   sample_data,
+<<<<<<< HEAD
   LATERAL FLATTEN(input => array_column, OUTER => TRUE ) AS verticals;
 >>>>>>> b2dc8a94 ([chore] increase coverage by 8% (#827))
+=======
+  LATERAL FLATTEN(input => array_column, OUTER => true ) AS verticals;
+>>>>>>> c333275e (Improve coverage test success rate around snowflake's conversion functions (#841))
 
 -- databricks sql:
 SELECT
