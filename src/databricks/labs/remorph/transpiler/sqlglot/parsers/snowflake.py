@@ -53,10 +53,23 @@ DATE_DELTA_INTERVAL = {
 
 rank_functions = (
     local_expression.CumeDist,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
     exp.FirstValue,
     exp.LastValue,
     local_expression.NthValue,
     local_expression.Ntile,
+=======
+    local_expression.DenseRank,
+    exp.FirstValue,
+    exp.Lag,
+    exp.LastValue,
+    exp.Lead,
+    local_expression.NthValue,
+    local_expression.Ntile,
+    local_expression.PercentRank,
+    local_expression.Rank,
+    exp.RowNumber,
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
 )
 
 
@@ -238,6 +251,14 @@ def contains_expression(expr, target_type):
             if contains_expression(sub_expr, target_type):
                 return True
     return False
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
+=======
+
+
+class Snow(Snowflake):
+    # Instantiate Snowflake Dialect
+    snowflake = Snowflake()
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
 
 
 def _parse_sha2(args: list) -> exp.SHA2:
@@ -437,10 +458,13 @@ class Snowflake(SqlglotSnowflake):
             "RANK": local_expression.Rank.from_arg_list,
             "PERCENT_RANK": local_expression.PercentRank.from_arg_list,
             "NTILE": local_expression.Ntile.from_arg_list,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             "TO_ARRAY": local_expression.ToArray.from_arg_list,
             "SHA2": _parse_sha2,
             "LAST_DAY": _parse_last_day,
             "ARRAY_FLATTEN": exp.Flatten.from_arg_list,
+=======
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
         }
 
         FUNCTION_PARSERS = {
@@ -532,4 +556,45 @@ class Snowflake(SqlglotSnowflake):
                 # return self._parse_csv in case of COLUMNS are not enclosed in brackets ()
                 return self._parse_csv(self._parse_field_def)
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             return self._parse_wrapped_csv(self._parse_add_column, optional=True)
+=======
+            if isinstance(this, exp.Column) and this.table:
+                col_table_alias = this.table.upper()
+            elif isinstance(this, local_expression.Bracket) and isinstance(this.this, exp.Column) and this.this.table:
+                col_table_alias = this.this.table.upper()
+            else:
+                col_table_alias = this.name.upper()
+            is_table_alias = col_table_alias == table_alias.upper() if table_alias is not None else False
+
+            if not isinstance(this, exp.Bracket) and is_name_value:
+                # If the column is referring to `lateral alias`, remove `.value` reference (not needed in Databricks)
+                if table_alias and this.table != table_alias:
+                    return self.expression(local_expression.Bracket, this=this.table, expressions=[path])
+
+                    # if it is referring to `table_alias`, we need to keep `.value`. See below example:
+                    # - SELECT f.first, p.c.value.first, p.value FROM persons_struct AS p
+                    #    LATERAL VIEW EXPLODE($p.$c.contact) AS f
+
+                return self.expression(local_expression.Bracket, this=this, expressions=[path])
+            if isinstance(this, local_expression.Bracket) and (is_name_value or is_table_alias):
+                return self.expression(local_expression.Bracket, this=this, expressions=[path])
+            if (isinstance(path, exp.Column)) and (path or is_path_value):
+                return self.expression(local_expression.Bracket, this=this, expressions=[path])
+
+            return self.expression(exp.Bracket, this=this, expressions=[path])
+
+        def _parse_window(self, this: exp.Expression | None, alias: bool = False) -> exp.Expression | None:
+            window = super()._parse_window(this=this, alias=alias)
+            # Adding default window frame for the rank-related functions in snowflake
+            if window and contains_expression(window.this, rank_functions) and window.args.get('spec') is None:
+                window.args['spec'] = self.expression(
+                    exp.WindowSpec,
+                    kind="ROWS",
+                    start="UNBOUNDED",
+                    start_side="PRECEDING",
+                    end="UNBOUNDED",
+                    end_side="FOLLOWING",
+                )
+            return window
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py

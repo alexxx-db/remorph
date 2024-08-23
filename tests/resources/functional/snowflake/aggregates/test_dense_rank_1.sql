@@ -13,7 +13,12 @@ SELECT
   DENSE_RANK() OVER (
     PARTITION BY col1
     ORDER BY
+<<<<<<< HEAD
       col2 ASC NULLS LAST
+=======
+      col2 ASC NULLS LAST ROWS BETWEEN UNBOUNDED PRECEDING
+      AND UNBOUNDED FOLLOWING
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833))
   ) AS dense_rank_col1
 FROM
   tabl;

@@ -18,4 +18,8 @@ SELECT
       AND CURRENT ROW
   ) AS dense_rank_col1
 FROM
+<<<<<<< HEAD
   tabl;
+=======
+  tabl;
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833))

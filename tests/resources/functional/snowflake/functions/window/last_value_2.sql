@@ -2,11 +2,10 @@
 SELECT
   taba.col_a,
   taba.col_b,
-  nth_value(
+  last_value(
     CASE
       WHEN taba.col_c IN ('xyz', 'abc') THEN taba.col_d
-    END,
-    42
+    END
   ) ignore nulls OVER (
     partition BY taba.col_e
     ORDER BY
@@ -20,11 +19,10 @@ FROM
 SELECT
   taba.col_a,
   taba.col_b,
-  NTH_VALUE(
+  LAST_VALUE(
     CASE
       WHEN taba.col_c IN ('xyz', 'abc') THEN taba.col_d
-    END,
-    42
+    END
   ) IGNORE NULLS OVER (
     PARTITION BY taba.col_e
     ORDER BY
@@ -32,8 +30,4 @@ SELECT
       AND CURRENT ROW
   ) AS derived_col_a
 FROM
-<<<<<<< HEAD
   schema_a.table_a AS taba;
-=======
-  schema_a.table_a AS taba;
->>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833))

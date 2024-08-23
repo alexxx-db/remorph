@@ -24,4 +24,8 @@ SELECT
       AND CURRENT ROW
   ) AS row_number
 FROM
+<<<<<<< HEAD
   trades;
+=======
+  trades;
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833))

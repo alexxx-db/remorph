@@ -9,10 +9,15 @@ from sqlglot.dialects.dialect import rename_func
 from sqlglot.errors import UnsupportedError
 from sqlglot.helper import apply_index_offset, csv
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 from databricks.labs.remorph.transpiler.sqlglot import local_expression
 from databricks.labs.remorph.transpiler.sqlglot.lca_utils import unalias_lca_in_select
 
 # pylint: disable=too-many-public-methods
+=======
+from databricks.labs.remorph.snow import lca_utils, local_expression
+from databricks.labs.remorph.snow.snowflake import contains_expression, rank_functions
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
 
 logger = logging.getLogger(__name__)
 
@@ -758,14 +763,21 @@ class Databricks(SqlglotDatabricks):  #
             return self.func(self.sql(expression, "this"), *expression.expressions)
 
         def order_sql(self, expression: exp.Order, flat: bool = False) -> str:
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
             if isinstance(expression.parent, exp.Window):
+=======
+            if isinstance(expression.parent, exp.Window) and contains_expression(expression.parent, rank_functions):
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
                 for ordered_expression in expression.expressions:
                     if isinstance(ordered_expression, exp.Ordered) and ordered_expression.args.get('desc') is None:
                         ordered_expression.args['desc'] = False
             return super().order_sql(expression, flat)
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 
         def add_column_sql(self, expression: exp.Alter) -> str:
             # Final output contains ADD COLUMN before each column
             # This function will handle this issue and return the final output
             columns = self.expressions(expression, key="actions", flat=True)
             return f"ADD COLUMN {columns}"
+=======
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
