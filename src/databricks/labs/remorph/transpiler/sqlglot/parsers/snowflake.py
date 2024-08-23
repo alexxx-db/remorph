@@ -309,12 +309,20 @@ class Snowflake(SqlglotSnowflake):
         }
 
         SINGLE_TOKENS = {
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             **SqlglotSnowflake.Tokenizer.SINGLE_TOKENS,
+=======
+            **Snowflake.Tokenizer.SINGLE_TOKENS,
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/snowflake.py
             "&": TokenType.PARAMETER,  # https://docs.snowflake.com/en/user-guide/snowsql-use#substituting-variables-in-a-session
             "!": TokenType.COMMAND,
         }
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
         KEYWORDS = {**SqlglotSnowflake.Tokenizer.KEYWORDS}
+=======
+        KEYWORDS = {**Snowflake.Tokenizer.KEYWORDS}
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/snowflake.py
         # DEC is not a reserved keyword in Snowflake it can be used as table alias
         KEYWORDS.pop("DEC")
 

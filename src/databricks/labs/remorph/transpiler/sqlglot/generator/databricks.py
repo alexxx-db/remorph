@@ -293,6 +293,7 @@ def _array_slice(self: SqlglotDatabricks.Generator, expression: local_expression
     return func_expr
 
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 def _to_command(self, expr: exp.Command):
     this_sql = self.sql(expr, 'this')
     expression = self.sql(expr.expression, 'this')
@@ -304,6 +305,30 @@ def _to_command(self, expr: exp.Command):
 
 def _parse_json(self, expression: exp.ParseJSON) -> str:
     return self.func("PARSE_JSON", expression.this, expression.expression)
+=======
+def _to_command(self, expression: exp.Command):
+    this_sql = self.sql(expression, 'this')
+    prefix = '-- snowsql command:' if this_sql == '!' else '-- '
+    return f"{prefix}{this_sql}{self.sql(expression, 'expression')}"
+
+
+def _parse_json(self, expr: exp.ParseJSON):
+    """
+    Converts `PARSE_JSON` function to `FROM_JSON` function.
+    Schema is a mandatory argument for Databricks `FROM_JSON` function
+    [FROM_JSON](https://docs.databricks.com/en/sql/language-manual/functions/from_json.html)
+    Need to explicitly specify the Schema {<COL_NAME>_SCHEMA} in the current execution environment
+    """
+    expr_this = self.sql(expr, "this")
+    # use column name as prefix or use JSON_COLUMN_SCHEMA when the expression is nested
+    column = expr_this.replace("'", "").upper() if isinstance(expr.this, exp.Column) else "JSON_COLUMN"
+    conv_expr = self.func("FROM_JSON", expr_this, f"{{{column}_SCHEMA}}")
+    warning_msg = (
+        f"***Warning***: you need to explicitly specify `SCHEMA` for `{column}` column in expression: `{conv_expr}`"
+    )
+    logger.warning(warning_msg)
+    return conv_expr
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
 
 
 def _to_number(self, expression: local_expression.ToNumber):
@@ -466,10 +491,13 @@ class Databricks(SqlglotDatabricks):  #
             exp.NullSafeEQ: lambda self, e: self.binary(e, "<=>"),
             exp.If: if_sql(false_value="NULL"),
             exp.Command: _to_command,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
             exp.CurrentDate: _current_date,
             exp.Not: _not_sql,
             local_expression.ToArray: to_array,
             local_expression.ArrayExists: rename_func("EXISTS"),
+=======
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
         }
 
         def preprocess(self, expression: exp.Expression) -> exp.Expression:
