@@ -40,6 +40,7 @@ def raise_validation_exception(msg: str) -> Exception:
 
 proxy_command(remorph, "debug-script")
 <<<<<<< HEAD
+<<<<<<< HEAD
 proxy_command(remorph, "debug-me")
 proxy_command(remorph, "debug-coverage")
 proxy_command(remorph, "debug-estimate")
@@ -72,6 +73,9 @@ def _verify_workspace_client(ws: WorkspaceClient) -> WorkspaceClient:
     return ws
 =======
 >>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+proxy_command(remorph, "debug-me")
+>>>>>>> 8ccbfb8f ([internal] added query plan debugger and dependency injection baseline (#854))
 
 
 @remorph.command

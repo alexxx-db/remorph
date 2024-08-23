@@ -73,4 +73,11 @@ commands:
     flags:
       - name: name
         description: Filename to debug
+<<<<<<< HEAD
 >>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+      - name: dialect
+        description: sql dialect
+  - name: debug-me
+    description: "[INTERNAL] Debug SDK connectivity"
+>>>>>>> 8ccbfb8f ([internal] added query plan debugger and dependency injection baseline (#854))
