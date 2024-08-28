@@ -438,6 +438,15 @@ class Databricks(SqlglotDatabricks):  #
             "%-d": "dd",
         }
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+    class Generator(org_databricks.Databricks.Generator):
+        INVERSE_TIME_MAPPING: dict[str, str] = {
+            **{v: k for k, v in org_databricks.Databricks.TIME_MAPPING.items()},
+            "%-d": "dd",
+        }
+
+>>>>>>> 6de49dae (Improve coverage around snowflake functions (#860)):src/databricks/labs/remorph/snow/databricks.py
         COLLATE_IS_FUNC = True
         # [TODO]: Variant needs to be transformed better, for now parsing to string was deemed as the choice.
         TYPE_MAPPING = {
