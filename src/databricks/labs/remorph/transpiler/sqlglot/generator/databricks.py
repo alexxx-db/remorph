@@ -294,6 +294,9 @@ def _array_slice(self: SqlglotDatabricks.Generator, expression: local_expression
 
 
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+>>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858)):src/databricks/labs/remorph/snow/databricks.py
 def _to_command(self, expr: exp.Command):
     this_sql = self.sql(expr, 'this')
     expression = self.sql(expr.expression, 'this')
@@ -301,6 +304,7 @@ def _to_command(self, expr: exp.Command):
     if this_sql == "!":
         return f"{prefix}{expression}"
     return f"{prefix} {expression}"
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 
 
 def _parse_json(self, expression: exp.ParseJSON) -> str:
@@ -310,6 +314,8 @@ def _to_command(self, expression: exp.Command):
     this_sql = self.sql(expression, 'this')
     prefix = '-- snowsql command:' if this_sql == '!' else '-- '
     return f"{prefix}{this_sql}{self.sql(expression, 'expression')}"
+=======
+>>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858)):src/databricks/labs/remorph/snow/databricks.py
 
 
 def _parse_json(self, expr: exp.ParseJSON):
