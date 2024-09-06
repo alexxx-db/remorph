@@ -41,7 +41,11 @@ SELECT DISTINCT
     AND dd.is_test = false
     AND dst.origin IN ('Chat')
     AND dd_agent_id IS NOT NULL
+<<<<<<< HEAD
     AND dst.CREATED_DATE > CURRENT_DATE() - 7
+=======
+    AND dst.CREATED_DATE > CURRENT_DATE - 7
+>>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887))
   ORDER BY
     1 DESC NULLS FIRST,
     3 DESC NULLS FIRST;

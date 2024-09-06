@@ -418,9 +418,21 @@ def _create_named_struct_for_cmp(wg_params: local_expression.WithinGroupParams) 
     return named_struct_func
 
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 def _current_date(self, expression: exp.CurrentDate) -> str:
     zone = self.sql(expression, "this")
     return f"CURRENT_DATE({zone})" if zone else "CURRENT_DATE()"
+=======
+def _not_sql(self, expression: exp.Not) -> str:
+    if isinstance(expression.this, exp.Is):
+        return f"{expression.this.this} IS NOT {self.sql(expression.this, 'expression')}"
+    return f"NOT {self.sql(expression, 'this')}"
+
+
+class Databricks(org_databricks.Databricks):  #
+    # Instantiate Databricks Dialect
+    databricks = org_databricks.Databricks()
+>>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
 
 
 def _not_sql(self, expression: exp.Not) -> str:
@@ -507,12 +519,16 @@ class Databricks(SqlglotDatabricks):  #
             exp.If: if_sql(false_value="NULL"),
             exp.Command: _to_command,
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
             exp.CurrentDate: _current_date,
             exp.Not: _not_sql,
             local_expression.ToArray: to_array,
             local_expression.ArrayExists: rename_func("EXISTS"),
 =======
 >>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
+=======
+            exp.Not: _not_sql,
+>>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
         }
 
         def preprocess(self, expression: exp.Expression) -> exp.Expression:
