@@ -10,6 +10,7 @@ WITH cte AS (SELECT * FROM t) SELECT * FROM cte
 
 -- databricks sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte;
+<<<<<<< HEAD
 =======
 GO
 =======
@@ -18,3 +19,5 @@ GO
 -- databricks sql:
 WITH cte AS (SELECT * FROM t) SELECT * FROM cte
 >>>>>>> 596a140d (TSQL: Implement WITH CTE (#443))
+=======
+>>>>>>> 94c141e8 (Make coverage test fail CI in case of failure (#908))
