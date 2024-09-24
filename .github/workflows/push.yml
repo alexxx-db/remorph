@@ -232,7 +232,7 @@ jobs:
         uses: actions/cache@v2
 =======
       - name: Run Unit Tests with Maven
-        run: mvn --update-snapshots -B install scoverage:report -pl "!com.databricks.labs:remorph-coverage" --file pom.xml --fail-at-end
+        run: mvn --update-snapshots scoverage:report --file pom.xml --fail-at-end
 
       - name: Uplaod remorph-core jars as Artifacts
         uses: actions/upload-artifact@v4
@@ -241,6 +241,7 @@ jobs:
           name: remorph-core-jars
           path: ~/.m2/repository/com/databricks/labs/remorph*
 
+<<<<<<< HEAD
       - name: Publish test coverage
 <<<<<<< HEAD
         uses: codecov/codecov-action@v1
@@ -300,6 +301,8 @@ jobs:
         run: mvn --update-snapshots -B exec:java -pl coverage --file pom.xml --fail-at-end -DsourceDir=tests/resources/functional/snowflake -DoutputPath=coverage-result.json -DsourceDialect=Snow -Dextractor=comment
 >>>>>>> 94c141e8 (Make coverage test fail CI in case of failure (#908))
 
+=======
+>>>>>>> a86301bb (Move coverage tests into the core module (#912))
 
       - name: Publish JUnit report
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -312,11 +315,10 @@ jobs:
           fail_on: 'nothing'
         continue-on-error: true
 
-      - name: Upload coverage tests results as json as Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Publish test coverage
+        uses: codecov/codecov-action@v4
         with:
-          name: remorph-coverage-results
-          path: coverage/target/coverage-result.json
+          token: ${{ secrets.CODECOV_TOKEN }}
 
 <<<<<<< HEAD
 >>>>>>> 9862d0a5 (Introduce coverage tests (#382))
