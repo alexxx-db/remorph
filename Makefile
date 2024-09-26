@@ -118,4 +118,10 @@ antlr-lint:
 
 dev-cli:
 	mvn -f core/pom.xml dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+<<<<<<< HEAD
 >>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+
+estimate-coverage: build_core_jar
+	java -jar $(wildcard core/target/remorph-core-*-SNAPSHOT.jar) '{"command": "debug-estimate", "flags":{"dst":"$(abspath ${OUTPUT_DIR})", "source-dialect": "snowflake", "console-output": "true"}}'
+>>>>>>> b0e33fe4 (Create repeatable estimator for Snowflake query history (#924))

@@ -275,12 +275,21 @@ jobs:
           path: ~/.m2
           key: ${{ github.job }}-${{ hashFiles('**/pom.xml') }}
 
+<<<<<<< HEAD
       - name: Download remorph-core-jars
         uses: actions/download-artifact@v4
+=======
+      - name: Run Unit Tests with Maven
+        run: mvn --update-snapshots scoverage:report --file pom.xml --fail-at-end
+
+      - name: Upload remorph-core jars as Artifacts
+        uses: actions/upload-artifact@v4
+>>>>>>> b0e33fe4 (Create repeatable estimator for Snowflake query history (#924))
         with:
           name: remorph-core-jars
           path: ~/.m2/repository/com/databricks/labs/
 
+<<<<<<< HEAD
       - name: Run Coverage Tests with Maven
         run: mvn --update-snapshots -B test -pl coverage --file pom.xml --fail-at-end
 
@@ -304,6 +313,8 @@ jobs:
 =======
 >>>>>>> a86301bb (Move coverage tests into the core module (#912))
 
+=======
+>>>>>>> b0e33fe4 (Create repeatable estimator for Snowflake query history (#924))
       - name: Publish JUnit report
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
