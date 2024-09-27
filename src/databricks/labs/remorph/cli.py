@@ -43,6 +43,7 @@ proxy_command(remorph, "debug-script")
 <<<<<<< HEAD
 proxy_command(remorph, "debug-me")
 proxy_command(remorph, "debug-coverage")
+<<<<<<< HEAD
 proxy_command(remorph, "debug-estimate")
 proxy_command(remorph, "debug-bundle")
 
@@ -76,6 +77,8 @@ def _verify_workspace_client(ws: WorkspaceClient) -> WorkspaceClient:
 =======
 proxy_command(remorph, "debug-me")
 >>>>>>> 8ccbfb8f ([internal] added query plan debugger and dependency injection baseline (#854))
+=======
+>>>>>>> 83f2f724 (Make debug-coverage a proper command (#940))
 
 
 @remorph.command
