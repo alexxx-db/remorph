@@ -158,6 +158,7 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
             if node == "OUTER":
                 is_outer = True
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
         if not generator_expr:
             generator_expr = expression.this.this
 
@@ -172,6 +173,21 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
     lateral_statement = _generate_lateral_statement(
         self, select_contains_index, has_parse_json, generator_function_str, alias_str
     )
+=======
+        if select_contains_index:
+            generator_function_str = f"POSEXPLODE({generator_expr})"
+            alias_str = f"{' ' + alias.name if isinstance(alias, exp.TableAlias) else ''} AS index, value"
+        else:
+            generator_function_str = f"VARIANT_EXPLODE({generator_expr})"
+
+    if is_outer:
+        generator_function_str = generator_function_str.replace("VARIANT_EXPLODE", "VARIANT_EXPLODE_OUTER")
+
+    if select_contains_index:
+        lateral_statement = self.sql(f"LATERAL VIEW OUTER {generator_function_str}{alias_str}")
+    else:
+        lateral_statement = self.sql(f", LATERAL {generator_function_str}{alias_str}")
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/databricks.py
     return lateral_statement
 
 
@@ -318,6 +334,7 @@ def _to_command(self, expression: exp.Command):
 >>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858)):src/databricks/labs/remorph/snow/databricks.py
 
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 def _parse_json(self, expr: exp.ParseJSON):
     """
     Converts `PARSE_JSON` function to `FROM_JSON` function.
@@ -335,6 +352,10 @@ def _parse_json(self, expr: exp.ParseJSON):
     logger.warning(warning_msg)
     return conv_expr
 >>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
+=======
+def _parse_json(self, expression: exp.ParseJSON) -> str:
+    return self.func("PARSE_JSON", expression.this, expression.expression)
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/databricks.py
 
 
 def _to_number(self, expression: local_expression.ToNumber):

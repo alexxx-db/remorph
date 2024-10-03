@@ -3,6 +3,9 @@ SELECT
   f.value:name AS "Contact",
   f.value:first,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
   CAST(p.col:a:info:id AS DOUBLE) AS "id_parsed",
   p.col:b:first,
   p.col:a:info
@@ -11,6 +14,7 @@ FROM
     PARSE_JSON('{"a": {"info": {"id": 101, "first": "John" }, "contact": [{"name": "Alice", "first": "A"}, {"name": "Bob", "first": "B"}]}, "b": {"id": 101, "first": "John"}}')
   ) AS p(col)
 , LATERAL FLATTEN(input => p.col:a:contact) AS f;
+<<<<<<< HEAD
 
 -- databricks sql:
 SELECT
@@ -39,3 +43,18 @@ SELECT
   p.value
 FROM persons_struct AS p LATERAL VIEW EXPLODE($p.$c.contact) AS f;
 >>>>>>> b2dc8a94 ([chore] increase coverage by 8% (#827))
+=======
+
+-- databricks sql:
+SELECT
+  f.value:name AS `Contact`,
+  f.value:first,
+  CAST(p.col:a.info.id AS DOUBLE) AS `id_parsed`,
+  p.col:b.first,
+  p.col:a.info
+FROM (
+  SELECT
+   PARSE_JSON('{"a": {"info": {"id": 101, "first": "John" }, "contact": [{"name": "Alice", "first": "A"}, {"name": "Bob", "first": "B"}]}, "b": {"id": 101, "first": "John"}}')
+) AS p(col)
+, LATERAL VARIANT_EXPLODE(p.col:a.contact) AS f;
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))

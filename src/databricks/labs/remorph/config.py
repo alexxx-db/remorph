@@ -4,10 +4,43 @@ from pathlib import Path
 
 from databricks.labs.remorph.transpiler.transpile_status import TranspileError
 from databricks.labs.remorph.reconcile.recon_config import Table
+<<<<<<< HEAD
 
 
 logger = logging.getLogger(__name__)
 
+=======
+from databricks.labs.remorph.snow import databricks, oracle, snowflake, presto
+
+logger = logging.getLogger(__name__)
+
+SQLGLOT_DIALECTS: dict[str, DialectType] = {
+    "athena": Dialects.ATHENA,
+    "bigquery": Dialects.BIGQUERY,
+    "databricks": databricks.Databricks,
+    "mysql": Dialects.MYSQL,
+    "netezza": Dialects.POSTGRES,
+    "oracle": oracle.Oracle,
+    "postgresql": Dialects.POSTGRES,
+    "presto": presto.Presto,
+    "redshift": Dialects.REDSHIFT,
+    "snowflake": snowflake.Snow,
+    "sqlite": Dialects.SQLITE,
+    "teradata": Dialects.TERADATA,
+    "trino": Dialects.TRINO,
+    "tsql": Dialects.TSQL,
+    "vertica": Dialects.POSTGRES,
+}
+
+
+def get_dialect(engine: str) -> Dialect:
+    return Dialect.get_or_raise(SQLGLOT_DIALECTS.get(engine))
+
+
+def get_key_from_dialect(input_dialect: Dialect) -> str:
+    return [source_key for source_key, dialect in SQLGLOT_DIALECTS.items() if dialect == input_dialect][0]
+
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
 
 @dataclass
 class TranspileConfig:

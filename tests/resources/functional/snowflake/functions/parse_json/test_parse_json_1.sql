@@ -2,4 +2,8 @@
 SELECT tt.id, PARSE_JSON(tt.details) FROM prod.public.table tt;
 
 -- databricks sql:
+<<<<<<< HEAD
 SELECT tt.id, PARSE_JSON(tt.details) FROM prod.public.table AS tt;
+=======
+SELECT tt.id, PARSE_JSON(tt.details) FROM prod.public.table AS tt;
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))

@@ -3,6 +3,7 @@ SELECT OBJECT_CONSTRUCT('Key_One', PARSE_JSON('NULL'), 'Key_Two', NULL, 'Key_Thr
 
 -- databricks sql:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 SELECT
   STRUCT(
@@ -13,4 +14,6 @@ SELECT
 
 -- experimental sql:
 >>>>>>> 6de49dae (Improve coverage around snowflake functions (#860))
+=======
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
 SELECT STRUCT(PARSE_JSON('NULL') AS Key_One, NULL AS Key_Two, 'null' AS Key_Three) AS obj;

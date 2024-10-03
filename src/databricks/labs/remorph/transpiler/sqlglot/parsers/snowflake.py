@@ -488,7 +488,11 @@ class Snowflake(SqlglotSnowflake):
         FUNC_TOKENS = {*SqlglotSnowflake.Parser.FUNC_TOKENS, TokenType.COLLATE}
 
         COLUMN_OPERATORS = {
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             **SqlglotSnowflake.Parser.COLUMN_OPERATORS,
+=======
+            **Snowflake.Parser.COLUMN_OPERATORS,
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/snowflake.py
         }
 
         TIMESTAMPS: set[TokenType] = SqlglotSnowflake.Parser.TIMESTAMPS.copy() - {TokenType.TIME}
@@ -532,6 +536,7 @@ class Snowflake(SqlglotSnowflake):
 
             return self.expression(local_expression.Parameter, this=this, wrapped=wrapped, suffix=suffix)
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
         def _parse_window(self, this: exp.Expression | None, alias: bool = False) -> exp.Expression | None:
             window = super()._parse_window(this=this, alias=alias)
             # Adding default window frame for the rank-related functions in snowflake
@@ -592,6 +597,8 @@ class Snowflake(SqlglotSnowflake):
 
             return self.expression(exp.Bracket, this=this, expressions=[path])
 
+=======
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/snowflake.py
         def _parse_window(self, this: exp.Expression | None, alias: bool = False) -> exp.Expression | None:
             window = super()._parse_window(this=this, alias=alias)
             # Adding default window frame for the rank-related functions in snowflake
