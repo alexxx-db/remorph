@@ -11,6 +11,7 @@ import com.databricks.labs.remorph.parsers.intermediate.Literal
 import com.databricks.labs.remorph.generators.{Generator, GeneratorContext}
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 6328f493 (Feature: introduce core transpiler (#715))
 =======
 import com.databricks.labs.remorph.parsers.intermediate.RLike
@@ -18,6 +19,9 @@ import com.databricks.labs.remorph.parsers.intermediate.RLike
 =======
 >>>>>>> 4ad7a52c (Generate IN (#754))
 import com.databricks.labs.remorph.parsers.{intermediate => ir}
+=======
+import com.databricks.labs.remorph.{intermediate => ir}
+>>>>>>> 72f0f3a9 (Move intermediate package out of parsers (#972))
 import com.databricks.labs.remorph.transpilers.TranspileException
 
 import java.time._
