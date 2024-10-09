@@ -12,6 +12,7 @@ import com.databricks.labs.remorph.generators.{Generator, GeneratorContext}
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 6328f493 (Feature: introduce core transpiler (#715))
 =======
 import com.databricks.labs.remorph.parsers.intermediate.RLike
@@ -20,6 +21,9 @@ import com.databricks.labs.remorph.parsers.intermediate.RLike
 >>>>>>> 4ad7a52c (Generate IN (#754))
 import com.databricks.labs.remorph.parsers.{intermediate => ir}
 =======
+=======
+import com.databricks.labs.remorph.intermediate.UnexpectedNode
+>>>>>>> 3b69654a (Introduce typed errors (#981))
 import com.databricks.labs.remorph.{intermediate => ir}
 >>>>>>> 72f0f3a9 (Move intermediate package out of parsers (#972))
 import com.databricks.labs.remorph.transpilers.TranspileException
@@ -90,7 +94,7 @@ class ExpressionGenerator extends Generator[ir.Expression, String] {
       case fn: ir.Fn => s"${fn.prettyName}(${fn.children.map(expression(ctx, _)).mkString(", ")})"
 
       case null => "" // don't fail transpilation if the expression is null
-      case x => throw TranspileException(s"Unsupported expression: $x")
+      case x => throw unknown(x)
     }
   }
 
@@ -116,7 +120,7 @@ class ExpressionGenerator extends Generator[ir.Expression, String] {
       case ir.IntLiteral(value) => Seq(s"[$value]")
       case ir.StringLiteral(value) => Seq(s"['$value']")
       case ir.Dot(left, right) => jsonPath(left) ++ jsonPath(right)
-      case i: ir.Expression => throw TranspileException(s"Unsupported path: $i")
+      case i: ir.Expression => throw TranspileException(UnexpectedNode(i))
     }
   }
 
