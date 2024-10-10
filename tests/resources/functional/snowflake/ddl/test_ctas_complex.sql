@@ -36,4 +36,8 @@ SELECT
   YEAR(e.hire_date) AS hire_year
 FROM employee AS e
 JOIN department AS d
+<<<<<<< HEAD
   ON e.department_id = d.department_id ;
+=======
+  ON e.department_id = d.department_id ;
+>>>>>>> 6a06bc4e (Basic CTAS Implementation (#968))
