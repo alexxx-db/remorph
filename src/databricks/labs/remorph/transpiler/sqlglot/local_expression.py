@@ -161,12 +161,18 @@ class Ntile(Func):
 
 
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/local_expression.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/local_expression.py
+=======
+>>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/local_expression.py
 class ToArray(Func):
     arg_types = {"this": True, "expression": False}
 
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/local_expression.py
 =======
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/local_expression.py
+=======
+>>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/local_expression.py
 @dataclass
 class WithinGroupParams:
     agg_col: exp.Column

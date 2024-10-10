@@ -467,12 +467,16 @@ class Snowflake(SqlglotSnowflake):
             "PERCENT_RANK": local_expression.PercentRank.from_arg_list,
             "NTILE": local_expression.Ntile.from_arg_list,
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             "TO_ARRAY": local_expression.ToArray.from_arg_list,
             "SHA2": _parse_sha2,
             "LAST_DAY": _parse_last_day,
             "ARRAY_FLATTEN": exp.Flatten.from_arg_list,
 =======
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
+=======
+            "TO_ARRAY": local_expression.ToArray.from_arg_list,
+>>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/snowflake.py
         }
 
         FUNCTION_PARSERS = {

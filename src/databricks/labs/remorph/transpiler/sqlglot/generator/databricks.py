@@ -450,6 +450,10 @@ def _not_sql(self, expression: exp.Not) -> str:
     return f"NOT {self.sql(expression, 'this')}"
 
 
+def to_array(self, expression: exp.ToArray) -> str:
+    return f"IF({self.sql(expression.this)} IS NULL, NULL, {self.func('ARRAY', expression.this)})"
+
+
 class Databricks(org_databricks.Databricks):  #
     # Instantiate Databricks Dialect
     databricks = org_databricks.Databricks()
@@ -544,12 +548,15 @@ class Databricks(SqlglotDatabricks):  #
             exp.CurrentDate: _current_date,
             exp.Not: _not_sql,
             local_expression.ToArray: to_array,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
             local_expression.ArrayExists: rename_func("EXISTS"),
 =======
 >>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
 =======
             exp.Not: _not_sql,
 >>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/databricks.py
         }
 
         def preprocess(self, expression: exp.Expression) -> exp.Expression:
