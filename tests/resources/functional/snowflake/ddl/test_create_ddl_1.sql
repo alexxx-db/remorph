@@ -6,11 +6,16 @@ CREATE TABLE employee (employee_id INT,
   hire_date DATE,
   salary DECIMAL(10, 2),
 <<<<<<< HEAD
+<<<<<<< HEAD
   department_id INT,
   remarks VARIANT)
 =======
   department_id INT)
 >>>>>>> 2c98cd8a ([snowflake] cleanup functional tests (#831))
+=======
+  department_id INT,
+  remarks VARIANT)
+>>>>>>> cb75b481 (Add Variant Support (#998))
 ;
 
 -- databricks sql:
@@ -22,9 +27,14 @@ CREATE TABLE employee (
   hire_date DATE,
   salary DECIMAL(10, 2),
 <<<<<<< HEAD
+<<<<<<< HEAD
   department_id DECIMAL(38, 0),
   remarks VARIANT
 =======
   department_id DECIMAL(38, 0)
 >>>>>>> 2c98cd8a ([snowflake] cleanup functional tests (#831))
+=======
+  department_id DECIMAL(38, 0),
+  remarks VARIANT
+>>>>>>> cb75b481 (Add Variant Support (#998))
 );
