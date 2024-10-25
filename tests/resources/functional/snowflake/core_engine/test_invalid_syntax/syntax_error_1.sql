@@ -18,6 +18,7 @@ select col1,, col2 from table_name;
 /* The following issues were detected:
 
 <<<<<<< HEAD
+<<<<<<< HEAD
    Unparsed input - ErrorNode encountered
     Unparsable text: select col1,,
  */
@@ -40,50 +41,52 @@ select col1,, col2 from table_name;
 
 
 */
+=======
+   Unparsed input - ErrorNode encountered
+    Unparsable text: select col1,,
+ */
+>>>>>>> 34e4a547 (Implement text gatherers for additional error types (#1020))
 /* The following issues were detected:
 
-   Unparsed input - ErrorNode encountered:
-
-   Unparsable text: select
-
-Unparsable text: parser recovered by ignoring: select col1
-
-
-*/
+   Unparsed input - ErrorNode encountered
+    Unparsable text: select
+    Unparsable text: parser recovered by ignoring: select col1
+ */
 /* The following issues were detected:
 
-   Unimplemented visitor accept in class SnowflakeCommandBuilder:
-
-   Mocked string
-*/
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    Mocked string
+ */
 /* The following issues were detected:
 
-   Unimplemented visitor accept in class SnowflakeCommandBuilder:
-
-   col1,,
-*/
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    col1,,
+ */
 /* The following issues were detected:
 
-   Unimplemented visitor accept in class SnowflakeCommandBuilder:
-
-   Mocked string
-*/
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    Mocked string
+ */
 /* The following issues were detected:
 
-   Unimplemented visitor accept in class SnowflakeCommandBuilder:
-
-   col2 from
-*/
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    col2 from
+ */
 /* The following issues were detected:
 
-   Unimplemented visitor accept in class SnowflakeCommandBuilder:
-
-   Mocked string
-*/
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    Mocked string
+ */
 /* The following issues were detected:
 
+<<<<<<< HEAD
    Unimplemented visitor accept in class SnowflakeCommandBuilder:
 
    table_name
 */
 >>>>>>> 2145b51f (Improve error recovery code to preserve text in AST (#1014))
+=======
+   Unimplemented visitor accept in class SnowflakeCommandBuilder
+    table_name
+ */
+>>>>>>> 34e4a547 (Implement text gatherers for additional error types (#1020))

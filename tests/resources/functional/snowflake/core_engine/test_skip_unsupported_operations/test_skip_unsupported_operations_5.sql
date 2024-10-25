@@ -6,6 +6,7 @@ CREATE STREAM mystream ON TABLE mytable;
 /* The following issues were detected:
 
 <<<<<<< HEAD
+<<<<<<< HEAD
    CREATE STREAM UNSUPPORTED
     CREATE STREAM mystream ON TABLE mytable
  */
@@ -15,3 +16,8 @@ CREATE STREAM mystream ON TABLE mytable;
    CREATE STREAM mystream ON TABLE mytable
 */
 >>>>>>> 2145b51f (Improve error recovery code to preserve text in AST (#1014))
+=======
+   CREATE STREAM UNSUPPORTED
+    CREATE STREAM mystream ON TABLE mytable
+ */
+>>>>>>> 34e4a547 (Implement text gatherers for additional error types (#1020))
