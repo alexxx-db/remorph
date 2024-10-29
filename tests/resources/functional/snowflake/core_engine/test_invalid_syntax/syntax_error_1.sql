@@ -1,9 +1,13 @@
 -- Note that here we have two commas in the select clause and although in other circumstances,
 <<<<<<< HEAD
+<<<<<<< HEAD
 -- the parser could notice that is an additional comma, in this case it is not able to do so because
 =======
 -- the parser coudl notice that is an additional comma, in this case it is not able to do so because
 >>>>>>> 2145b51f (Improve error recovery code to preserve text in AST (#1014))
+=======
+-- the parser could notice that is an additional comma, in this case it is not able to do so because
+>>>>>>> 0acb9a51 (Improve Snowflake grammar to improve syntax error recovery (#1022))
 -- what can be in between the comma is just about anything. Then because any ID is accepted as
 -- possibly being some kind of command, then the parser has to assume that the following tokens
 -- are some valid command.
@@ -33,6 +37,7 @@ select col1,, col2 from table_name;
     Unparsable text: from
     Unparsable text: table_name
     Unparsable text: parser recovered by ignoring: select col1,, col2 from table_name;
+<<<<<<< HEAD
  */
 =======
    Unparsed input - ErrorNode encountered:
@@ -88,5 +93,7 @@ select col1,, col2 from table_name;
 =======
    Unimplemented visitor accept in class SnowflakeCommandBuilder
     table_name
+=======
+>>>>>>> 0acb9a51 (Improve Snowflake grammar to improve syntax error recovery (#1022))
  */
 >>>>>>> 34e4a547 (Implement text gatherers for additional error types (#1020))
