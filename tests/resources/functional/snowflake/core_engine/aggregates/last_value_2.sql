@@ -30,4 +30,8 @@ SELECT
       AND CURRENT ROW
   ) AS derived_col_a
 FROM
+<<<<<<< HEAD
   schema_a.table_a AS taba;
+=======
+  schema_a.table_a AS taba;
+>>>>>>> 77496af5 (Correctly generate `F.fn_name` for builtin PySpark functions (#1037))

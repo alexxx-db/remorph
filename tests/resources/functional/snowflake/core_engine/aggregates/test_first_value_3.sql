@@ -32,4 +32,8 @@ SELECT
   ) AS derived_col_a
 FROM
   schema_a.table_a AS taba
+<<<<<<< HEAD
   LEFT JOIN schema_b.table_b AS tabb ON taba.col_e = tabb.col_e;
+=======
+  LEFT JOIN schema_b.table_b AS tabb ON taba.col_e = tabb.col_e;
+>>>>>>> 77496af5 (Correctly generate `F.fn_name` for builtin PySpark functions (#1037))
