@@ -54,22 +54,26 @@ DATE_DELTA_INTERVAL = {
 rank_functions = (
     local_expression.CumeDist,
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
     exp.FirstValue,
     exp.LastValue,
     local_expression.NthValue,
     local_expression.Ntile,
 =======
     local_expression.DenseRank,
+=======
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/snowflake.py
     exp.FirstValue,
-    exp.Lag,
     exp.LastValue,
-    exp.Lead,
     local_expression.NthValue,
     local_expression.Ntile,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
     local_expression.PercentRank,
     local_expression.Rank,
     exp.RowNumber,
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
+=======
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/snowflake.py
 )
 
 

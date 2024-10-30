@@ -16,8 +16,11 @@ from databricks.labs.remorph.transpiler.sqlglot.lca_utils import unalias_lca_in_
 # pylint: disable=too-many-public-methods
 =======
 from databricks.labs.remorph.snow import lca_utils, local_expression
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 from databricks.labs.remorph.snow.snowflake import contains_expression, rank_functions
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +460,11 @@ def to_array(self, expression: exp.ToArray) -> str:
 class Databricks(org_databricks.Databricks):  #
     # Instantiate Databricks Dialect
     databricks = org_databricks.Databricks()
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 >>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
+=======
+    NULL_ORDERING = "nulls_are_small"
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
 
 
 def _not_sql(self, expression: exp.Not) -> str:
@@ -851,10 +858,14 @@ class Databricks(SqlglotDatabricks):  #
 
         def order_sql(self, expression: exp.Order, flat: bool = False) -> str:
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
             if isinstance(expression.parent, exp.Window):
 =======
             if isinstance(expression.parent, exp.Window) and contains_expression(expression.parent, rank_functions):
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+            if isinstance(expression.parent, exp.Window):
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
                 for ordered_expression in expression.expressions:
                     if isinstance(ordered_expression, exp.Ordered) and ordered_expression.args.get('desc') is None:
                         ordered_expression.args['desc'] = False
