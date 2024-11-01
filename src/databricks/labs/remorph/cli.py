@@ -44,6 +44,7 @@ proxy_command(remorph, "debug-script")
 proxy_command(remorph, "debug-me")
 proxy_command(remorph, "debug-coverage")
 <<<<<<< HEAD
+<<<<<<< HEAD
 proxy_command(remorph, "debug-estimate")
 proxy_command(remorph, "debug-bundle")
 
@@ -79,6 +80,9 @@ proxy_command(remorph, "debug-me")
 >>>>>>> 8ccbfb8f ([internal] added query plan debugger and dependency injection baseline (#854))
 =======
 >>>>>>> 83f2f724 (Make debug-coverage a proper command (#940))
+=======
+proxy_command(remorph, "debug-bundle")
+>>>>>>> 1a64c5d2 (Added `debug-bundle` command for folder-to-folder translation (#1045))
 
 
 @remorph.command
