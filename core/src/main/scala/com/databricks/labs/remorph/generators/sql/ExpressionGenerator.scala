@@ -40,17 +40,21 @@ import com.databricks.labs.remorph.{OkResult, Result, intermediate => ir}
 =======
 import com.databricks.labs.remorph.generators._
 <<<<<<< HEAD
+<<<<<<< HEAD
 import com.databricks.labs.remorph.{Generating, OkResult, Phase, Transformation, TransformationConstructors, intermediate => ir}
 >>>>>>> 50a3f234 (Introduce an abstraction for handling stateful traversal of the tree (#1018))
 =======
 import com.databricks.labs.remorph.{Generating, OkResult, Phase, TransformationConstructors, intermediate => ir}
 >>>>>>> 10568b0f (Use Transformation to get rid of the ctx parameter in generators (#1040))
+=======
+import com.databricks.labs.remorph.{Generating, OkResult, TransformationConstructors, intermediate => ir}
+>>>>>>> 3bde3be9 (Collect errors in `Phase` (#1046))
 
 import java.time._
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-class ExpressionGenerator extends BaseSQLGenerator[ir.Expression] with TransformationConstructors[Phase] {
+class ExpressionGenerator extends BaseSQLGenerator[ir.Expression] with TransformationConstructors {
   private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
   private val timeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"))
 
