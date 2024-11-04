@@ -86,6 +86,8 @@ commands:
   - name: debug-coverage
     description: "[INTERNAL] Run coverage tests"
     flags:
+      - name: dialect
+        description: sql dialect
       - name: src
         description: The parent directory under which test queries are laid out
       - name: dst
@@ -93,15 +95,30 @@ commands:
       - name: extractor
         description: The strategy for extracting queries from the test files. Valid strategies are "full" (when files contain only one input query) and "comment" (when files contain an input query and the corresponding translation, separated by a comment stating the dialect of each query).
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 83f2f724 (Make debug-coverage a proper command (#940))
 =======
+=======
+  - name: debug-estimate
+    description: "[INTERNAL] estimate migration effort"
+    flags:
+      - name: dialect
+        description: sql dialect
+      - name: source-queries
+        description: The folder with queries. Otherwise will attempt to fetch query history for a dialect
+      - name: console-output
+        default: true
+        description: Output results to a folder
+      - name: dst
+        description: The directory for report
+>>>>>>> 2df8105c ([chore] Improved `ApplicationContext` to generically parse `--dialect` and `--source-queries` flags (#1051))
   - name: debug-bundle
     description: "[INTERNAL] Generate bundle for the translated queries"
     flags:
       - name: dialect
         description: sql dialect
-      - name: src
-        description: The directory with source SQL files
+      - name: source-queries
+        description: The folder with queries. Otherwise will attempt to fetch query history for a dialect
       - name: dst
         description: The directory for generated files
 >>>>>>> 1a64c5d2 (Added `debug-bundle` command for folder-to-folder translation (#1045))

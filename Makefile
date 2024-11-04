@@ -57,12 +57,16 @@ coverage:
 	hatch run coverage && open htmlcov/index.html
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 clean_coverage_dir:
 	rm -fr ${OUTPUT_DIR}
 
 python_coverage_report:
 =======
 build_core_jar:
+=======
+build_core_jar: dev-cli
+>>>>>>> 2df8105c ([chore] Improved `ApplicationContext` to generically parse `--dialect` and `--source-queries` flags (#1051))
 	mvn --file pom.xml -pl core package
 
 <<<<<<< HEAD
@@ -125,5 +129,9 @@ dev-cli:
 =======
 
 estimate-coverage: build_core_jar
+<<<<<<< HEAD
 	java -jar $(wildcard core/target/remorph-core-*-SNAPSHOT.jar) '{"command": "debug-estimate", "flags":{"dst":"$(abspath ${OUTPUT_DIR})", "source-dialect": "snowflake", "console-output": "true"}}'
 >>>>>>> b0e33fe4 (Create repeatable estimator for Snowflake query history (#924))
+=======
+	databricks labs remorph debug-estimate --dst $(abspath ${OUTPUT_DIR}) --dialect snowflake --console-output true
+>>>>>>> 2df8105c ([chore] Improved `ApplicationContext` to generically parse `--dialect` and `--source-queries` flags (#1051))

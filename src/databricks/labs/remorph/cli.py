@@ -45,6 +45,9 @@ proxy_command(remorph, "debug-me")
 proxy_command(remorph, "debug-coverage")
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2df8105c ([chore] Improved `ApplicationContext` to generically parse `--dialect` and `--source-queries` flags (#1051))
 proxy_command(remorph, "debug-estimate")
 proxy_command(remorph, "debug-bundle")
 
