@@ -64,6 +64,16 @@ License - https://github.com/tototoshi/scala-csv/blob/master/LICENSE.txt
 This software contains code from the following open source projects, licensed under the BSD license:
 >>>>>>> 4968c611 ([internal] run queries over real backends (#727))
 
+circe - https://github.com/circe/circe
+Copyright (c) 2015, Ephox Pty Ltd, Mark Hibberd, Sean Parsons, Travis Brown, and other contributors. All rights reserved.
+https://github.com/circe/circe/blob/series/0.14.x/LICENSE
+
+circe-generic-extras - https://github.com/circe/circe-generic-extras
+https://github.com/circe/circe-generic-extras/blob/main/LICENSE
+
+circe-jackson - https://github.com/circe/circe-jackson
+https://github.com/circe/circe-jackson/blob/main/LICENSE
+
 This software contains code from the following open source projects, licensed under the BSD license:
 
 This software contains code from the following publicly available projects, licensed under the Databricks license:

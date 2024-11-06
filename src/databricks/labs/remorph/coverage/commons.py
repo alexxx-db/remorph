@@ -34,6 +34,7 @@ class ReportEntry:
     transpiled: int = 0  # 1 for success, 0 for failure
     transpiled_statements: int = 0  # number of statements transpiled
     failures: List[dict] = dataclasses.field(default_factory=lambda: [])
+<<<<<<< HEAD
 
 
 def sqlglot_run_coverage(dialect, subfolder):
@@ -76,6 +77,8 @@ def local_report(output_dir: Path):
             f"{project} -> {dialect}: {parse_ratio:.2%} parsed ({parsed}/{total}), "
             f"{transpile_ratio:.2%} transpiled ({transpiled}/{total})"
         )
+=======
+>>>>>>> a92b05c9 (Rework serialization using circe+jackson (#1163))
 
 
 def sqlglot_run_coverage(dialect, subfolder):
