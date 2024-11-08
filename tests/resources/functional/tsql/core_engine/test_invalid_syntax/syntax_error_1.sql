@@ -20,6 +20,9 @@ SELECT
    Unparsed input - ErrorNode encountered
     Unparsable text: unexpected extra input ',' while parsing a SELECT statement
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c6baa47b (Generic stored procedure parsing (#1047))
     expecting one of: $Currency, 'String', @@Reference, @Local, Float, Identifier, Integer, Operator, Real, Statement, '$ACTION', '$NODE_ID'...
     Unparsable text: ,
  */

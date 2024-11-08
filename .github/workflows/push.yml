@@ -455,7 +455,11 @@ jobs:
       - name: Run Lint Test with Maven
         run: mvn compile -DskipTests --update-snapshots -B exec:java -pl linter --file pom.xml -Dexec.args="-i core/src/main/antlr4 -o .venv/linter/grammar -c true"
 <<<<<<< HEAD
+<<<<<<< HEAD
         continue-on-error: true # Note - we need to fix existing issues before we can enforce this
 >>>>>>> 4a818601 ( Implement ANTLR4 grammar customized linter (#797))
 =======
 >>>>>>> 538b4122 (Greatly improve grammar for CREATE/ALTER (#805))
+=======
+        continue-on-error: true
+>>>>>>> c6baa47b (Generic stored procedure parsing (#1047))
