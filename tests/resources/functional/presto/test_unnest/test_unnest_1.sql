@@ -14,4 +14,8 @@ FROM
   default.sync_gold LATERAL VIEW EXPLODE(engine_waits) As col1,
   col2
 WHERE
+<<<<<<< HEAD
   (SIZE(engine_waits) > 0);
+=======
+  (SIZE(engine_waits) > 0);
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209))

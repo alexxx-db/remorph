@@ -136,7 +136,11 @@ def _generate_lateral_statement(self, select_contains_index, has_parse_json, gen
     return lateral_statement
 
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) -> str:
+=======
+def _lateral_view(self: org_databricks.Databricks.Generator, expression: exp.Lateral) -> str:
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
     has_parse_json = _has_parse_json(expression)
     this = expression.args['this']
     alias = expression.args['alias']
@@ -162,6 +166,7 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
                 is_outer = True
 
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
         if not generator_expr:
             generator_expr = expression.this.this
 
@@ -182,15 +187,30 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
             alias_str = f"{' ' + alias.name if isinstance(alias, exp.TableAlias) else ''} AS index, value"
         else:
             generator_function_str = f"VARIANT_EXPLODE({generator_expr})"
+=======
+        if not generator_expr:
+            generator_expr = expression.this.this
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
 
-    if is_outer:
-        generator_function_str = generator_function_str.replace("VARIANT_EXPLODE", "VARIANT_EXPLODE_OUTER")
+        generator_function_str, alias_str = _generate_function_str(
+            select_contains_index, has_parse_json, generator_expr, alias, is_outer, alias_str
+        )
 
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
     if select_contains_index:
         lateral_statement = self.sql(f"LATERAL VIEW OUTER {generator_function_str}{alias_str}")
     else:
         lateral_statement = self.sql(f", LATERAL {generator_function_str}{alias_str}")
 >>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/databricks.py
+=======
+    alias_cols = alias.columns if alias else []
+    if len(alias_cols) <= 2:
+        alias_str = f" As {', '.join([item.this for item in alias_cols])}"
+
+    lateral_statement = _generate_lateral_statement(
+        self, select_contains_index, has_parse_json, generator_function_str, alias_str
+    )
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
     return lateral_statement
 
 
