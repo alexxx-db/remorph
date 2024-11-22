@@ -2,8 +2,13 @@ import logging
 import re
 
 from sqlglot import expressions as exp
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 from sqlglot.dialects.databricks import Databricks as SqlglotDatabricks
 from sqlglot.dialects.hive import Hive
+=======
+from sqlglot.dialects import databricks as org_databricks
+from sqlglot.dialects import hive
+>>>>>>> 0f06d166 (Support multiple columns in order by clause in for ARRAYAGG (#1228)):src/databricks/labs/remorph/snow/databricks.py
 from sqlglot.dialects.dialect import if_sql
 from sqlglot.dialects.dialect import rename_func
 from sqlglot.errors import UnsupportedError
