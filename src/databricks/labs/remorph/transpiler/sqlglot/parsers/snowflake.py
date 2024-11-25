@@ -578,6 +578,7 @@ class Snowflake(SqlglotSnowflake):
                 return self._parse_csv(self._parse_field_def)
 
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/parsers/snowflake.py
             return self._parse_wrapped_csv(self._parse_add_column, optional=True)
 =======
             if isinstance(this, exp.Column) and this.table:
@@ -621,3 +622,6 @@ class Snowflake(SqlglotSnowflake):
                 )
             return window
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
+=======
+            return self._parse_wrapped_csv(self._parse_add_column, optional=True)
+>>>>>>> c1b4afd1 (bug fix for alter table add multiple columns (#1179)):src/databricks/labs/remorph/snow/snowflake.py

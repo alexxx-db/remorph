@@ -27,6 +27,8 @@ from databricks.labs.remorph.snow.snowflake import contains_expression, rank_fun
 =======
 >>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
 
+# pylint: disable=too-many-public-methods
+
 logger = logging.getLogger(__name__)
 
 VALID_DATABRICKS_TYPES = {
@@ -896,11 +898,17 @@ class Databricks(SqlglotDatabricks):  #
                         ordered_expression.args['desc'] = False
             return super().order_sql(expression, flat)
 <<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+>>>>>>> c1b4afd1 (bug fix for alter table add multiple columns (#1179)):src/databricks/labs/remorph/snow/databricks.py
 
         def add_column_sql(self, expression: exp.Alter) -> str:
             # Final output contains ADD COLUMN before each column
             # This function will handle this issue and return the final output
             columns = self.expressions(expression, key="actions", flat=True)
             return f"ADD COLUMN {columns}"
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
 =======
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> c1b4afd1 (bug fix for alter table add multiple columns (#1179)):src/databricks/labs/remorph/snow/databricks.py
