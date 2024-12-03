@@ -22,6 +22,7 @@ FROM VALUES
     (2, '{"order": {"id": 202,"items": [{"item_id": "C3","quantity": 4,"details": {"color": "green", "size": "L"}},{"item_id": "D4","quantity": 3,"details": {"color": "yellow", "size": "M"}}]}}')
 AS tt(id, resp)
 , LATERAL VARIANT_EXPLODE(PARSE_JSON(tt.resp):order.items) AS lit;
+<<<<<<< HEAD
 =======
 tt.id
 , PARSE_JSON(tt.details)
@@ -53,3 +54,5 @@ FROM VALUES
 AS tt(id, resp)
 , LATERAL VARIANT_EXPLODE(PARSE_JSON(tt.resp):order.items) AS lit;
 >>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
+=======
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

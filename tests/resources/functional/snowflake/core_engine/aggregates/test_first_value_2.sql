@@ -18,7 +18,11 @@ SELECT
   ) AS first_value_col1
 FROM
 <<<<<<< HEAD
+<<<<<<< HEAD
   tabl;
 =======
   tabl;
 >>>>>>> 77496af5 (Correctly generate `F.fn_name` for builtin PySpark functions (#1037))
+=======
+  tabl;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

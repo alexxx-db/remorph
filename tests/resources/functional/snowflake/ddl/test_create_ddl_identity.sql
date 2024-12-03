@@ -18,7 +18,11 @@ CREATE OR REPLACE TABLE sales_data (
     sale_date DATE,
     customer_id  DECIMAL(38, 0)
 <<<<<<< HEAD
+<<<<<<< HEAD
 );
 =======
 );
 >>>>>>> b96aa6af (Create Command Extended (#1033))
+=======
+);
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

@@ -33,7 +33,11 @@ SELECT
 FROM
   schema_a.table_a AS taba
 <<<<<<< HEAD
+<<<<<<< HEAD
   LEFT JOIN schema_b.table_b AS tabb ON taba.col_e = tabb.col_e;
 =======
   LEFT JOIN schema_b.table_b AS tabb ON taba.col_e = tabb.col_e;
 >>>>>>> 77496af5 (Correctly generate `F.fn_name` for builtin PySpark functions (#1037))
+=======
+  LEFT JOIN schema_b.table_b AS tabb ON taba.col_e = tabb.col_e;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

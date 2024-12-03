@@ -9,6 +9,7 @@ SELECT !(2 = 2) AS always_false;
 <<<<<<< HEAD
 -- !set exit_on_error = true;
 SELECT !(2 = 2) AS always_false
+<<<<<<< HEAD
 =======
 -- snowsql command:!'set exit_on_error = true';
 SELECT !(2 = 2) AS always_false
@@ -17,3 +18,5 @@ SELECT !(2 = 2) AS always_false
 -- !set exit_on_error = true;
 SELECT !(2 = 2) AS always_false
 >>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858))
+=======
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

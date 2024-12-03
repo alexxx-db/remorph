@@ -26,7 +26,11 @@ WHERE
   col2 > 10000
 GROUP BY
 <<<<<<< HEAD
+<<<<<<< HEAD
   col3;
 =======
   col3;
 >>>>>>> ea60dbb5 (Add an optimizer rule for SF's WITHIN GROUP clause (#844))
+=======
+  col3;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

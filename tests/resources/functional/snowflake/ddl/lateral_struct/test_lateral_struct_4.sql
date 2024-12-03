@@ -26,6 +26,7 @@ FROM (
     PARSE_JSON('{"id": 1, "responseBody": { "isMpfState": true }, "requestBody": { "deliveryLocation": { "city": "New-York" }, "store": {"storeAddress": {"zipCode": "100=01"}}}}')
     AS col
 ) AS tt;
+<<<<<<< HEAD
 =======
   tt.id AS tax_transaction_id,
   cast(tt.response_body:"isMpfState" AS BOOLEAN) AS is_mpf_state,
@@ -56,3 +57,5 @@ FROM (
     AS col
 ) AS tt;
 >>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
+=======
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

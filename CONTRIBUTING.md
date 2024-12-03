@@ -3,12 +3,17 @@
 ## First Principles
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Favoring standard libraries over external dependencies, especially in specific contexts like Databricks,
 is a best practice in software development.
 =======
 Favoring standard libraries over external dependencies, especially in specific contexts like Databricks, 
 is a best practice in software development. 
 >>>>>>> 48d8e92f (Update developer documentation to provide extra ANTLR instructions (#793))
+=======
+Favoring standard libraries over external dependencies, especially in specific contexts like Databricks,
+is a best practice in software development.
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
 
 There are several reasons why this approach is encouraged:
 - Standard libraries are typically well-vetted, thoroughly tested, and maintained by the official maintainers of the programming language or platform. This ensures a higher level of stability and reliability.
@@ -94,10 +99,14 @@ unit test coverage suite and the clear difference between _unit tests_ and _inte
 ## JVM Proxy
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
 =======
 In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`, 
 >>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
 so that `.databricks-login.json` file gets created with the following contents:
 
 ```
@@ -108,10 +117,14 @@ so that `.databricks-login.json` file gets created with the following contents:
 ```
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 then run `make dev-cli` to collect classpath information. And then invoke commands,
 =======
 then run `make dev-cli` to collect classpath information. And then invoke commands, 
 >>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+then run `make dev-cli` to collect classpath information. And then invoke commands,
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
 like `databricks labs remorph debug-script --name file`. Add `--debug` flag to recompile project each run.
 
 Example output is:
@@ -161,6 +174,7 @@ with all the necessary dependencies required to build and compile your project.
 make dev
 ```
 
+<<<<<<< HEAD
 The above statement  installs `Hatch` (Python Project Manager) which is used
 to create a virtual environment (`.venv/bin/python`) for your project inside the project directory with all
 the necessary libraries and project dependencies.
@@ -176,6 +190,9 @@ source .venv/bin/activate
 ```
 
 You can verify installation with
+=======
+Verify installation with
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
 ```shell
 make test
 ```
@@ -189,6 +206,11 @@ While you may choose an IDE of your choice (PyCharm, VS Code, IntelliJ IDEA), th
 You may download and install it from: [IntelliJ IDEA](https://www.jetbrains.com/idea/download/other.html)
 
 Configure your IDE to:
+<<<<<<< HEAD
+=======
+ - use OpenJDK11 as the SDK for the project
+ - install the IntelliJ Scala plugin version 2024.1.25. Do not use more recent versions, they don't work!!!
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
  - use this Python venv path so that you work within the virtual environment when developing the project:
 ![IDE Setup](docs/img/remorph_intellij.gif)
 

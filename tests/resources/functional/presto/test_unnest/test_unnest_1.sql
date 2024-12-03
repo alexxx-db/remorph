@@ -15,7 +15,11 @@ FROM
   col2
 WHERE
 <<<<<<< HEAD
+<<<<<<< HEAD
   (SIZE(engine_waits) > 0);
 =======
   (SIZE(engine_waits) > 0);
 >>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209))
+=======
+  (SIZE(engine_waits) > 0);
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

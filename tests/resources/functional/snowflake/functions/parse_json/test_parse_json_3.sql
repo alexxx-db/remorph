@@ -31,7 +31,11 @@ SELECT
 FROM
   users ,
 <<<<<<< HEAD
+<<<<<<< HEAD
   LATERAL VARIANT_EXPLODE(PARSE_JSON(json_data)) AS value
 =======
   LATERAL VARIANT_EXPLODE(PARSE_JSON(json_data)) AS value
 >>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209))
+=======
+  LATERAL VARIANT_EXPLODE(PARSE_JSON(json_data)) AS value
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

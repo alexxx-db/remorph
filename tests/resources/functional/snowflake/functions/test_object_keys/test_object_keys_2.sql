@@ -9,7 +9,11 @@ SELECT
 FROM table
 ORDER BY
 <<<<<<< HEAD
+<<<<<<< HEAD
   1 NULLS LAST;
 =======
   1 NULLS LAST;
 >>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
+=======
+  1 NULLS LAST;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

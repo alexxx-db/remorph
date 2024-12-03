@@ -37,7 +37,11 @@ SELECT
 FROM employee AS e
 JOIN department AS d
 <<<<<<< HEAD
+<<<<<<< HEAD
   ON e.department_id = d.department_id ;
 =======
   ON e.department_id = d.department_id ;
 >>>>>>> 6a06bc4e (Basic CTAS Implementation (#968))
+=======
+  ON e.department_id = d.department_id ;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

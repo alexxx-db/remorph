@@ -29,7 +29,11 @@ WHERE
     )
     AND (error_count > 0)
 <<<<<<< HEAD
+<<<<<<< HEAD
   );
 =======
   );
 >>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209))
+=======
+  );
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))

@@ -15,7 +15,11 @@ SELECT
 FROM bar
 WHERE
 <<<<<<< HEAD
+<<<<<<< HEAD
   x > z AND y = 'qux';
 =======
   x > z AND y = 'qux';
 >>>>>>> a989e005 ([snowflake] map more functions to Databricks SQL (#826))
+=======
+  x > z AND y = 'qux';
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
