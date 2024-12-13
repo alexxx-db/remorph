@@ -476,11 +476,14 @@ class Snowflake(SqlglotSnowflake):
             "SHA2": _parse_sha2,
             "LAST_DAY": _parse_last_day,
             "ARRAY_FLATTEN": exp.Flatten.from_arg_list,
+<<<<<<< HEAD
 =======
 >>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/snowflake.py
 =======
             "TO_ARRAY": local_expression.ToArray.from_arg_list,
 >>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/snowflake.py
+=======
+>>>>>>> 23daa625 (Added support for snowflake last_day, array_flatten functions (#1268))
         }
 
         FUNCTION_PARSERS = {
