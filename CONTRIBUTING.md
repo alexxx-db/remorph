@@ -2,8 +2,23 @@
 
 ## First Principles
 
+<<<<<<< HEAD
 Favoring standard libraries over external dependencies, especially in specific contexts like Databricks,
 is a best practice in software development.
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+Favoring standard libraries over external dependencies, especially in specific contexts like Databricks,
+is a best practice in software development.
+=======
+Favoring standard libraries over external dependencies, especially in specific contexts like Databricks, 
+is a best practice in software development. 
+>>>>>>> 48d8e92f (Update developer documentation to provide extra ANTLR instructions (#793))
+=======
+Favoring standard libraries over external dependencies, especially in specific contexts like Databricks,
+is a best practice in software development.
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
 
 There are several reasons why this approach is encouraged:
 - Standard libraries are typically well-vetted, thoroughly tested, and maintained by the official maintainers of the programming language or platform. This ensures a higher level of stability and reliability.
@@ -38,7 +53,12 @@ Register your PGP key in GitHub:
      - if your databricks email is not registered, register it
      - complete the verification before the next steps
 
+<<<<<<< HEAD
 Tell local git to signoff your commits using your PGP key
+=======
+Tell local git to signoff your commits using your PGP key:
+
+>>>>>>> databrickslabs-main
     - see full instructions here https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key
     - in short, you need to run the following commands from a terminal:
         - git config --global --unset gpg.format
@@ -53,6 +73,10 @@ Once all this is done, you can verify it's correct as follows:
     - git commit -m "test PGP"
     - git verify-commit <COMMIT>
 The last command should display something like the following:
+<<<<<<< HEAD
+=======
+
+>>>>>>> databrickslabs-main
 `gpg: Signature made Tue Nov 26 11:34:23 2024 CET
 gpg:                using RSA key FD4D754BB2B1D4F09F2BF658F4B0C73DFC65A17B
 gpg: Good signature from "GitHub <your.email@databricks.com>" [ultimate]
@@ -86,7 +110,19 @@ unit test coverage suite and the clear difference between _unit tests_ and _inte
 
 ## JVM Proxy
 
+<<<<<<< HEAD
 In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
+=======
+In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`, 
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+In order to use this, you have to install `remorph` on any workspace via `databricks labs install .`,
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
 so that `.databricks-login.json` file gets created with the following contents:
 
 ```
@@ -96,7 +132,19 @@ so that `.databricks-login.json` file gets created with the following contents:
 }
 ```
 
+<<<<<<< HEAD
 then run `make dev-cli` to collect classpath information. And then invoke commands,
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+then run `make dev-cli` to collect classpath information. And then invoke commands,
+=======
+then run `make dev-cli` to collect classpath information. And then invoke commands, 
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+then run `make dev-cli` to collect classpath information. And then invoke commands,
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
 like `databricks labs remorph debug-script --name file`. Add `--debug` flag to recompile project each run.
 
 Example output is:
@@ -113,6 +161,37 @@ Map(log_level -> disabled, name -> foo)
 This section provides a step-by-step guide to set up and start working on the project. These steps will help you set up your project environment and dependencies for efficient development.
 
 To begin, install prerequisites:
+<<<<<<< HEAD
+=======
+
+`wget` is used for downloading tools required by remote spark test suite.
+```shell
+brew install wget
+```
+
+
+### Python Configuration
+
+Once you are done with cloning this project to your local machine, you may follow the steps
+mentioned below.
+
+* We recommend using `pyenv` as Python Version Manager. While Remorph is currently developed and built on
+`Python 3.10`, having a version management tool like `pyenv` gives us the flexibility to manage the python versions easily for
+future enhancements while maintaining the standards.
+
+If you don't already have `pyenv` installed on your local machine, you can run the below command from
+the project directory to install it.
+
+```shell
+make setup_python
+```
+This installation uses python version `3.10`. After you run the above command, The Terminal output will contain and export command
+to update your PATH variable. Append the line (export PATH...) to your profile i.e `~/.zshrc` or `~/.bash_profile` or `~/.profile` and resource your profile for the changes in PATH variable to take effect.
+you might have to restart your terminal to reflect the changes (While it depends on the type of shell, restarting the terminal is always a best practice after updating a Profile variable).
+
+* Once you have `pyenv` installed on your local machine, you may run the below command which will setup the development environment for you
+with all the necessary dependencies required to build and compile your project.
+>>>>>>> databrickslabs-main
 
 `wget` is required by the maven installer
 ```shell
@@ -144,22 +223,56 @@ Then run project-specific install scripts
 make dev
 ```
 
+<<<<<<< HEAD
 Verify installation with
+=======
+<<<<<<< HEAD
+The above statement  installs `Hatch` (Python Project Manager) which is used
+to create a virtual environment (`.venv/bin/python`) for your project inside the project directory with all
+the necessary libraries and project dependencies.
+
+* If you don't want to use `pyenv`, make sure you have `python3.10` installed on you system. You can use your system `python3.10` interpreter to
+directly run `make dev`.
+
+* Once your virtual environment creation is complete. Make sure you have activated that on your terminal
+to start working on the project.
+
+```shell
+source .venv/bin/activate
+```
+
+You can verify installation with
+=======
+Verify installation with
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
 ```shell
 make test
 ```
 
 To ensure your integrated development environment (IDE) uses the newly created virtual environment, you can retrieve the Python path with this command:
 ```shell
-hatch run python -c "import sys; print(sys.executable)"
+hatch run python -c "import sys; print(sys.version); print(sys.executable)"
 ```
 
+<<<<<<< HEAD
 As of writing, we only support IntelliJ IDEA CE 2024.1. Development using more recent versions doesn't work (yet!).
 Download and install [IntelliJ IDEA](https://www.jetbrains.com/idea/download/other.html)
 
 Configure your IDE to:
  - use OpenJDK11 as the SDK for the project
  - install the IntelliJ Scala plugin version 2024.1.25. Do not use more recent versions, they don't work!!!
+=======
+While you may choose an IDE of your choice (PyCharm, VS Code, IntelliJ IDEA), the below IDE configuration is in reference with IntelliJ IDEA CE.
+You may download and install it from: [IntelliJ IDEA](https://www.jetbrains.com/idea/download/other.html)
+
+Configure your IDE to:
+<<<<<<< HEAD
+=======
+ - use OpenJDK11 as the SDK for the project
+ - install the IntelliJ Scala plugin version 2024.1.25. Do not use more recent versions, they don't work!!!
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
  - use this Python venv path so that you work within the virtual environment when developing the project:
 ![IDE Setup](docs/img/remorph_intellij.gif)
 

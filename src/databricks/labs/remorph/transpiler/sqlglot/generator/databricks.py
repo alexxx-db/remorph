@@ -2,17 +2,43 @@ import logging
 import re
 
 from sqlglot import expressions as exp
+<<<<<<< HEAD
 from sqlglot.dialects.databricks import Databricks as SqlglotDatabricks
 from sqlglot.dialects.hive import Hive
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+from sqlglot.dialects.databricks import Databricks as SqlglotDatabricks
+from sqlglot.dialects.hive import Hive
+=======
+from sqlglot.dialects import databricks as org_databricks
+from sqlglot.dialects import hive
+>>>>>>> 0f06d166 (Support multiple columns in order by clause in for ARRAYAGG (#1228)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
 from sqlglot.dialects.dialect import if_sql
 from sqlglot.dialects.dialect import rename_func
 from sqlglot.errors import UnsupportedError
 from sqlglot.helper import apply_index_offset, csv
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+>>>>>>> databrickslabs-main
 from databricks.labs.remorph.transpiler.sqlglot import local_expression
 from databricks.labs.remorph.transpiler.sqlglot.lca_utils import unalias_lca_in_select
 
 # pylint: disable=too-many-public-methods
+<<<<<<< HEAD
+=======
+=======
+from databricks.labs.remorph.snow import lca_utils, local_expression
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+from databricks.labs.remorph.snow.snowflake import contains_expression, rank_functions
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
+
+# pylint: disable=too-many-public-methods
+>>>>>>> databrickslabs-main
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +154,15 @@ def _generate_lateral_statement(self, select_contains_index, has_parse_json, gen
     return lateral_statement
 
 
+<<<<<<< HEAD
 def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) -> str:
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) -> str:
+=======
+def _lateral_view(self: org_databricks.Databricks.Generator, expression: exp.Lateral) -> str:
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
     has_parse_json = _has_parse_json(expression)
     this = expression.args['this']
     alias = expression.args['alias']
@@ -153,6 +187,11 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
             if node == "OUTER":
                 is_outer = True
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+>>>>>>> databrickslabs-main
         if not generator_expr:
             generator_expr = expression.this.this
 
@@ -167,6 +206,39 @@ def _lateral_view(self: SqlglotDatabricks.Generator, expression: exp.Lateral) ->
     lateral_statement = _generate_lateral_statement(
         self, select_contains_index, has_parse_json, generator_function_str, alias_str
     )
+<<<<<<< HEAD
+=======
+=======
+        if select_contains_index:
+            generator_function_str = f"POSEXPLODE({generator_expr})"
+            alias_str = f"{' ' + alias.name if isinstance(alias, exp.TableAlias) else ''} AS index, value"
+        else:
+            generator_function_str = f"VARIANT_EXPLODE({generator_expr})"
+=======
+        if not generator_expr:
+            generator_expr = expression.this.this
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
+
+        generator_function_str, alias_str = _generate_function_str(
+            select_contains_index, has_parse_json, generator_expr, alias, is_outer, alias_str
+        )
+
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+    if select_contains_index:
+        lateral_statement = self.sql(f"LATERAL VIEW OUTER {generator_function_str}{alias_str}")
+    else:
+        lateral_statement = self.sql(f", LATERAL {generator_function_str}{alias_str}")
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/databricks.py
+=======
+    alias_cols = alias.columns if alias else []
+    if len(alias_cols) <= 2:
+        alias_str = f" As {', '.join([item.this for item in alias_cols])}"
+
+    lateral_statement = _generate_lateral_statement(
+        self, select_contains_index, has_parse_json, generator_function_str, alias_str
+    )
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
     return lateral_statement
 
 
@@ -288,6 +360,13 @@ def _array_slice(self: SqlglotDatabricks.Generator, expression: local_expression
     return func_expr
 
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+>>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
 def _to_command(self, expr: exp.Command):
     this_sql = self.sql(expr, 'this')
     expression = self.sql(expr.expression, 'this')
@@ -295,10 +374,48 @@ def _to_command(self, expr: exp.Command):
     if this_sql == "!":
         return f"{prefix}{expression}"
     return f"{prefix} {expression}"
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+>>>>>>> databrickslabs-main
 
 
 def _parse_json(self, expression: exp.ParseJSON) -> str:
     return self.func("PARSE_JSON", expression.this, expression.expression)
+<<<<<<< HEAD
+=======
+=======
+def _to_command(self, expression: exp.Command):
+    this_sql = self.sql(expression, 'this')
+    prefix = '-- snowsql command:' if this_sql == '!' else '-- '
+    return f"{prefix}{this_sql}{self.sql(expression, 'expression')}"
+=======
+>>>>>>> 1ab2645f (extra ";" generation has been taken care for Bang command (#858)):src/databricks/labs/remorph/snow/databricks.py
+
+
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+def _parse_json(self, expr: exp.ParseJSON):
+    """
+    Converts `PARSE_JSON` function to `FROM_JSON` function.
+    Schema is a mandatory argument for Databricks `FROM_JSON` function
+    [FROM_JSON](https://docs.databricks.com/en/sql/language-manual/functions/from_json.html)
+    Need to explicitly specify the Schema {<COL_NAME>_SCHEMA} in the current execution environment
+    """
+    expr_this = self.sql(expr, "this")
+    # use column name as prefix or use JSON_COLUMN_SCHEMA when the expression is nested
+    column = expr_this.replace("'", "").upper() if isinstance(expr.this, exp.Column) else "JSON_COLUMN"
+    conv_expr = self.func("FROM_JSON", expr_this, f"{{{column}_SCHEMA}}")
+    warning_msg = (
+        f"***Warning***: you need to explicitly specify `SCHEMA` for `{column}` column in expression: `{conv_expr}`"
+    )
+    logger.warning(warning_msg)
+    return conv_expr
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
+=======
+def _parse_json(self, expression: exp.ParseJSON) -> str:
+    return self.func("PARSE_JSON", expression.this, expression.expression)
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
 
 
 def _to_number(self, expression: local_expression.ToNumber):
@@ -382,9 +499,35 @@ def _create_named_struct_for_cmp(wg_params: local_expression.WithinGroupParams) 
     return named_struct_func
 
 
+<<<<<<< HEAD
 def _current_date(self, expression: exp.CurrentDate) -> str:
     zone = self.sql(expression, "this")
     return f"CURRENT_DATE({zone})" if zone else "CURRENT_DATE()"
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+def _current_date(self, expression: exp.CurrentDate) -> str:
+    zone = self.sql(expression, "this")
+    return f"CURRENT_DATE({zone})" if zone else "CURRENT_DATE()"
+=======
+def _not_sql(self, expression: exp.Not) -> str:
+    if isinstance(expression.this, exp.Is):
+        return f"{expression.this.this} IS NOT {self.sql(expression.this, 'expression')}"
+    return f"NOT {self.sql(expression, 'this')}"
+
+
+def to_array(self, expression: exp.ToArray) -> str:
+    return f"IF({self.sql(expression.this)} IS NULL, NULL, {self.func('ARRAY', expression.this)})"
+
+
+class Databricks(org_databricks.Databricks):  #
+    # Instantiate Databricks Dialect
+    databricks = org_databricks.Databricks()
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+>>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
+=======
+    NULL_ORDERING = "nulls_are_small"
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
 
 
 def _not_sql(self, expression: exp.Not) -> str:
@@ -408,6 +551,18 @@ class Databricks(SqlglotDatabricks):  #
             "%-d": "dd",
         }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+    class Generator(org_databricks.Databricks.Generator):
+        INVERSE_TIME_MAPPING: dict[str, str] = {
+            **{v: k for k, v in org_databricks.Databricks.TIME_MAPPING.items()},
+            "%-d": "dd",
+        }
+
+>>>>>>> 6de49dae (Improve coverage around snowflake functions (#860)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
         COLLATE_IS_FUNC = True
         # [TODO]: Variant needs to be transformed better, for now parsing to string was deemed as the choice.
         TYPE_MAPPING = {
@@ -461,10 +616,27 @@ class Databricks(SqlglotDatabricks):  #
             exp.NullSafeEQ: lambda self, e: self.binary(e, "<=>"),
             exp.If: if_sql(false_value="NULL"),
             exp.Command: _to_command,
+<<<<<<< HEAD
             exp.CurrentDate: _current_date,
             exp.Not: _not_sql,
             local_expression.ToArray: to_array,
             local_expression.ArrayExists: rename_func("EXISTS"),
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+            exp.CurrentDate: _current_date,
+            exp.Not: _not_sql,
+            local_expression.ToArray: to_array,
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+            local_expression.ArrayExists: rename_func("EXISTS"),
+=======
+>>>>>>> 96c6764d (Added Translation Support for `!` as `commands` and `&` for `Parameters` (#771)):src/databricks/labs/remorph/snow/databricks.py
+=======
+            exp.Not: _not_sql,
+>>>>>>> a9ec5577 (Fix Query Generation IR for Select Distinct (#887)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> 6d5e808b (bug fix for to_array function (#961)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
         }
 
         def preprocess(self, expression: exp.Expression) -> exp.Expression:
@@ -758,14 +930,41 @@ class Databricks(SqlglotDatabricks):  #
             return self.func(self.sql(expression, "this"), *expression.expressions)
 
         def order_sql(self, expression: exp.Order, flat: bool = False) -> str:
+<<<<<<< HEAD
             if isinstance(expression.parent, exp.Window):
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+            if isinstance(expression.parent, exp.Window):
+=======
+            if isinstance(expression.parent, exp.Window) and contains_expression(expression.parent, rank_functions):
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+            if isinstance(expression.parent, exp.Window):
+>>>>>>> 448ea6a0 (Some window functions does not support window frame conditions (#999)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
                 for ordered_expression in expression.expressions:
                     if isinstance(ordered_expression, exp.Ordered) and ordered_expression.args.get('desc') is None:
                         ordered_expression.args['desc'] = False
             return super().order_sql(expression, flat)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+>>>>>>> c1b4afd1 (bug fix for alter table add multiple columns (#1179)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main
 
         def add_column_sql(self, expression: exp.Alter) -> str:
             # Final output contains ADD COLUMN before each column
             # This function will handle this issue and return the final output
             columns = self.expressions(expression, key="actions", flat=True)
             return f"ADD COLUMN {columns}"
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/generator/databricks.py
+=======
+>>>>>>> 8888a6a1 (Handling window frame of rank-related functions in snowflake (#833)):src/databricks/labs/remorph/snow/databricks.py
+=======
+>>>>>>> c1b4afd1 (bug fix for alter table add multiple columns (#1179)):src/databricks/labs/remorph/snow/databricks.py
+>>>>>>> databrickslabs-main

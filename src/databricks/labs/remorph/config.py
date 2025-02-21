@@ -4,25 +4,75 @@ from pathlib import Path
 
 from databricks.labs.remorph.transpiler.transpile_status import TranspileError
 from databricks.labs.remorph.reconcile.recon_config import Table
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> databrickslabs-main
 
 
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
+=======
+=======
+from databricks.labs.remorph.snow import databricks, oracle, snowflake, presto
+
+logger = logging.getLogger(__name__)
+
+SQLGLOT_DIALECTS: dict[str, DialectType] = {
+    "athena": Dialects.ATHENA,
+    "bigquery": Dialects.BIGQUERY,
+    "databricks": databricks.Databricks,
+    "mysql": Dialects.MYSQL,
+    "netezza": Dialects.POSTGRES,
+    "oracle": oracle.Oracle,
+    "postgresql": Dialects.POSTGRES,
+    "presto": presto.Presto,
+    "redshift": Dialects.REDSHIFT,
+    "snowflake": snowflake.Snow,
+    "sqlite": Dialects.SQLITE,
+    "teradata": Dialects.TERADATA,
+    "trino": Dialects.TRINO,
+    "tsql": Dialects.TSQL,
+    "vertica": Dialects.POSTGRES,
+}
+
+
+def get_dialect(engine: str) -> Dialect:
+    return Dialect.get_or_raise(SQLGLOT_DIALECTS.get(engine))
+
+
+def get_key_from_dialect(input_dialect: Dialect) -> str:
+    return [source_key for source_key, dialect in SQLGLOT_DIALECTS.items() if dialect == input_dialect][0]
+
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906))
+>>>>>>> databrickslabs-main
 
 @dataclass
 class TranspileConfig:
     __file__ = "config.yml"
+<<<<<<< HEAD
     __version__ = 2
+=======
+    __version__ = 3
+>>>>>>> databrickslabs-main
 
     transpiler_config_path: str
     source_dialect: str
     input_source: str | None = None
     output_folder: str | None = None
+<<<<<<< HEAD
+=======
+    error_file_path: str | None = None
+>>>>>>> databrickslabs-main
     sdk_config: dict[str, str] | None = None
     skip_validation: bool = False
     catalog_name: str = "remorph"
     schema_name: str = "transpiler"
+<<<<<<< HEAD
     mode: str = "current"
+=======
+>>>>>>> databrickslabs-main
 
     @property
     def transpiler_path(self):
@@ -39,8 +89,17 @@ class TranspileConfig:
         return None if self.output_folder is None else Path(self.output_folder)
 
     @property
+<<<<<<< HEAD
     def target_dialect(self):
         return "experimental" if self.mode == "experimental" else "databricks"
+=======
+    def error_path(self):
+        return Path(self.error_file_path) if self.error_file_path else None
+
+    @property
+    def target_dialect(self):
+        return "databricks"
+>>>>>>> databrickslabs-main
 
 
 @dataclass

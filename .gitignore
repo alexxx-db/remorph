@@ -7,6 +7,7 @@ dist
 /htmlcov/
 *.iml
 target/
+<<<<<<< HEAD
 .coverage*
 coverage.*
 *.iws
@@ -14,8 +15,60 @@ coverage.*
 /antlrlinter/gen/
 *.tokens
 spark-warehouse/
+=======
+<<<<<<< HEAD
+.coverage
+.coverage.*
+coverage.*
+*.iws
+/core/gen/
+<<<<<<< HEAD
+<<<<<<< HEAD
+/antlrlinter/gen/
+*.tokens
+spark-warehouse/
+<<<<<<< HEAD
+>>>>>>> databrickslabs-main
 remorph_transpile/
 /linter/gen/
 /linter/src/main/antlr4/library/gen/
 .databricks-login.json
 /core/src/main/antlr4/com/databricks/labs/remorph/parsers/*/gen/
+<<<<<<< HEAD
+=======
+=======
+.coverage*
+coverage.*
+*.iws
+<<<<<<< HEAD
+>>>>>>> d5d174bf (Adding Maven and Scala build infra (#193))
+=======
+/core/gen/
+>>>>>>> 387796ff (Added grammars and intermediate representation (#230))
+=======
+*.tokens
+>>>>>>> b410d42f (Implement basic arithmetic and bitwise operators (#295))
+=======
+remorph_transpile/
+>>>>>>> 7b18a32a ([internal] Port subset of Apache Spark's Catalyst into remorph-core IR (#704))
+=======
+/antlrlinter/gen/
+*.tokens
+spark-warehouse/
+remorph_transpile/
+<<<<<<< HEAD
+>>>>>>> 4a818601 ( Implement ANTLR4 grammar customized linter (#797))
+=======
+/linter/gen/
+/linter/src/main/antlr4/library/gen/
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 6f0987ee (TSQL: Resolve orphaned grammar rules / grammar cleanup (#802))
+=======
+.databricks-login.json
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+.databricks-login.json
+/core/src/main/antlr4/com/databricks/labs/remorph/parsers/*/gen/
+>>>>>>> c6baa47b (Generic stored procedure parsing (#1047))
+>>>>>>> databrickslabs-main

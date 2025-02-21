@@ -15,6 +15,7 @@ updates:
     ignore:
       # Ignore updates for Databricks Connect: the version in use needs to match the testing infrastructure.
       - dependency-name: "com.databricks:databricks-connect"
+<<<<<<< HEAD
       # Ignore non-patch updates for Scala: we manually manage the Scala version.
       - dependency-name: "org.scala-lang:scala-library"
         update-types:
@@ -25,3 +26,7 @@ updates:
       - dependency-name: "org.mockito:mockito-core"
         versions:
           - ">=5.0.0"
+=======
+      # Ignore updates for Scala: we manage this dependency manually.
+      - dependency-name: "org.scala-lang:scala-library"
+>>>>>>> databrickslabs-main

@@ -1,5 +1,9 @@
 remorph:
   version: 1
+<<<<<<< HEAD
+=======
+  name: test-transpiler
+>>>>>>> databrickslabs-main
   dialects:
     - snowflake
   environment:
@@ -7,5 +11,9 @@ remorph:
   command_line:
     - python
     - lsp_server.py
+<<<<<<< HEAD
+=======
+    - --stuff=12
+>>>>>>> databrickslabs-main
 custom:
   whatever: xyz

@@ -18,6 +18,13 @@ def proxy_command(app: App, command: str):
 
 
 class JvmProxy:
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    # TODO Refactor this class to use LSP protocol instead
+=======
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+>>>>>>> databrickslabs-main
     def __init__(self):
         self._root = find_project_root(__file__)
         databricks_logger = logging.getLogger("databricks")

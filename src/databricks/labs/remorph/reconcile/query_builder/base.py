@@ -4,13 +4,20 @@ from abc import ABC
 import sqlglot.expressions as exp
 from sqlglot import Dialect, parse_one
 
+<<<<<<< HEAD
 from databricks.labs.remorph.transpiler.sqlglot.dialect_utils import SQLGLOT_DIALECTS
+=======
+>>>>>>> databrickslabs-main
 from databricks.labs.remorph.reconcile.exception import InvalidInputException
 from databricks.labs.remorph.reconcile.query_builder.expression_generator import (
     DataType_transform_mapping,
     transform_expression,
 )
 from databricks.labs.remorph.reconcile.recon_config import Schema, Table, Aggregate
+<<<<<<< HEAD
+=======
+from databricks.labs.remorph.transpiler.sqlglot.dialect_utils import get_dialect, SQLGLOT_DIALECTS
+>>>>>>> databrickslabs-main
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +98,21 @@ class QueryBuilder(ABC):
             with_transform.append(alias.transform(self._user_transformer, self.user_transformations))
         return with_transform
 
+<<<<<<< HEAD
     @staticmethod
     def _user_transformer(node: exp.Expression, user_transformations: dict[str, str]) -> exp.Expression:
         if isinstance(node, exp.Column) and user_transformations:
             column_name = node.name
             if column_name in user_transformations.keys():
                 return parse_one(user_transformations.get(column_name, column_name))
+=======
+    def _user_transformer(self, node: exp.Expression, user_transformations: dict[str, str]) -> exp.Expression:
+        if isinstance(node, exp.Column) and user_transformations:
+            dialect = self.engine if self.layer == "source" else get_dialect("databricks")
+            column_name = node.name
+            if column_name in user_transformations.keys():
+                return parse_one(user_transformations.get(column_name, column_name), read=dialect)
+>>>>>>> databrickslabs-main
         return node
 
     def _apply_default_transformation(

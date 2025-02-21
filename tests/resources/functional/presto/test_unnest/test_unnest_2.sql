@@ -28,4 +28,16 @@ WHERE
       event_type = 'fp_daemon_crit_errors_v2'
     )
     AND (error_count > 0)
+<<<<<<< HEAD
   );
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+  );
+=======
+  );
+>>>>>>> 3163132f (Handling presto Unnest cross join to Databricks lateral view (#1209))
+=======
+  );
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main

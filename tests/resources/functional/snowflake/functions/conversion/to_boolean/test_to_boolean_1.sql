@@ -21,4 +21,16 @@ SELECT
              ELSE CAST(col1 AS DOUBLE) != 0.0
              END
      ELSE RAISE_ERROR('Invalid parameter type for TO_BOOLEAN')
+<<<<<<< HEAD
      END;
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+     END;
+=======
+     END;
+>>>>>>> c333275e (Improve coverage test success rate around snowflake's conversion functions (#841))
+=======
+     END;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main

@@ -8,8 +8,18 @@ from sqlglot.errors import ErrorLevel, ParseError, TokenError, UnsupportedError
 from sqlglot.expressions import Expression, Select
 from sqlglot.optimizer.scope import Scope, build_scope
 
+<<<<<<< HEAD
 from databricks.labs.remorph.transpiler.transpile_status import ValidationError
 from databricks.labs.remorph.transpiler.sqlglot.local_expression import AliasInfo
+=======
+<<<<<<< HEAD:src/databricks/labs/remorph/transpiler/sqlglot/lca_utils.py
+from databricks.labs.remorph.transpiler.transpile_status import TranspileError, ErrorKind, ErrorSeverity
+from databricks.labs.remorph.transpiler.sqlglot.local_expression import AliasInfo
+=======
+from databricks.labs.remorph.helpers.morph_status import ValidationError
+from databricks.labs.remorph.snow.local_expression import AliasInfo
+>>>>>>> 30dc687c (Added support for `PARSE_JSON` and `VARIANT` datatype (#906)):src/databricks/labs/remorph/snow/lca_utils.py
+>>>>>>> databrickslabs-main
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +28,11 @@ def check_for_unsupported_lca(
     from_dialect: Dialect,
     source_sql: str,
     file_path: Path,
+<<<<<<< HEAD
 ) -> ValidationError | None:
+=======
+) -> TranspileError | None:
+>>>>>>> databrickslabs-main
     """
     Check for presence of unsupported lateral column aliases in window expressions and where clauses
     :return: An error if found
@@ -51,7 +65,11 @@ def check_for_unsupported_lca(
     if aliases_in_window:
         err_messages.append(f"Lateral column aliases `{', '.join(aliases_in_window)}` found in window expressions.")
 
+<<<<<<< HEAD
     return ValidationError(file_path, " ".join(err_messages))
+=======
+    return TranspileError("UNSUPPORTED_LCA", ErrorKind.ANALYSIS, ErrorSeverity.ERROR, file_path, " ".join(err_messages))
+>>>>>>> databrickslabs-main
 
 
 def unalias_lca_in_select(expr: exp.Expression) -> exp.Expression:

@@ -1,2 +1,17 @@
+<<<<<<< HEAD
 # We may add certain file to ignore in the codecov coverage report
 ignore:
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+# We may add certain file to ignore in the codecov coverage report
+ignore:
+=======
+ignore:
+  - core/src/main/scala/com/databricks/labs/remorph/parsers/FunctionBuilder.scala
+>>>>>>> 80828ca7 (Rework functions to remove overly explicit definitions in the grammar (#345))
+=======
+# We may add certain file to ignore in the codecov coverage report
+ignore:
+>>>>>>> 8a2f12ef (Create full coverage for the FunctionBuilder (#384))
+>>>>>>> databrickslabs-main

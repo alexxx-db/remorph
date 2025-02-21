@@ -27,4 +27,16 @@ ORDER BY col2 DESC;
   GROUP BY
     col2
   ORDER BY
+<<<<<<< HEAD
     col2 DESC NULLS FIRST;
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+    col2 DESC NULLS FIRST;
+=======
+    col2 DESC NULLS FIRST;
+>>>>>>> ea60dbb5 (Add an optimizer rule for SF's WITHIN GROUP clause (#844))
+=======
+    col2 DESC NULLS FIRST;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main

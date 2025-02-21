@@ -1,5 +1,9 @@
 """
+<<<<<<< HEAD
     Test Cases to validate source Snowflake dialect
+=======
+Test Cases to validate source Snowflake dialect
+>>>>>>> databrickslabs-main
 """
 
 

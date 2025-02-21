@@ -12,4 +12,16 @@ SELECT
   CAST('12345' AS STRING) AS string_val,
   CAST('12345' AS STRING) AS text_val,
   CAST('A' AS STRING) AS char_val,
+<<<<<<< HEAD
   CAST('A' AS STRING) AS character_val;
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+  CAST('A' AS STRING) AS character_val;
+=======
+  CAST('A' AS STRING) AS character_val;
+>>>>>>> ae9cf349 ([snowflake] fix data type mapping and explain `UnparsedType` (#810))
+=======
+  CAST('A' AS STRING) AS character_val;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main

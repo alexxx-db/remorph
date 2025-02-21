@@ -2,10 +2,14 @@
 name: remorph
 description: Code Transpiler and Data Reconciliation tool for Accelerating Data onboarding to Databricks from EDW, CDW and other ETL sources.
 install:
+<<<<<<< HEAD
   min_runtime_version: 13.3
   require_running_cluster: false
   require_databricks_connect: true
   script: src/databricks/labs/remorph/install.py
+=======
+  script: src/databricks/labs/remorph/base_install.py
+>>>>>>> databrickslabs-main
 uninstall:
   script: src/databricks/labs/remorph/uninstall.py
 entrypoint: src/databricks/labs/remorph/cli.py
@@ -24,7 +28,14 @@ commands:
         description: Input SQL Folder or File
       - name: output-folder
         default: None
+<<<<<<< HEAD
         description: Output Location For Storing Transpiled Cod
+=======
+        description: Output Location For Storing Transpiled Code, defaults to input-source folder
+      - name: error-file-path
+        default: None
+        description: Output Location For Storing Errors, defaults to input-source folder
+>>>>>>> databrickslabs-main
       - name: skip-validation
         default: true
         description: Validate Transpiled Code, default True validation skipped, False validate
@@ -34,9 +45,12 @@ commands:
       - name: schema-name
         default: None
         description: Schema Name Applicable only when Validation Mode is DATABRICKS
+<<<<<<< HEAD
       - name: mode
         default: current
         description: Run in Current or Experimental Mode, Accepted Values [experimental, current], Default current, experimental mode will execute including any Private Preview features
+=======
+>>>>>>> databrickslabs-main
 
     table_template: |-
       total_files_processed\ttotal_queries_processed\tno_of_sql_failed_while_parsing\tno_of_sql_failed_while_validating\terror_log_file
@@ -47,7 +61,11 @@ commands:
   - name: aggregates-reconcile
     description: Aggregates Reconcile is an utility to streamline the reconciliation process, specific aggregate metric is compared between source and target data residing on Databricks.
   - name: generate-lineage
+<<<<<<< HEAD
     description: Utility to generate a lineage of the SQL files
+=======
+    description: "[INTERNAL] Utility to generate a lineage of the SQL files"
+>>>>>>> databrickslabs-main
     flags:
       - name: transpiler-config-path
         description: Path to the transpiler configuration file
@@ -61,15 +79,40 @@ commands:
         description: Directory to store the generated lineage file
   - name: configure-secrets
     description: Utility to setup Scope and Secrets on Databricks Workspace
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  - name: debug-me
+    description: "[INTERNAL] Debug SDK connectivity"
+  - name: install-assessment
+    description: "Install Assessment"
+  - name: install-transpile
+    description: "Install Transpile"
+  - name: install-reconcile
+    description: "Install Reconcile"
+=======
+>>>>>>> databrickslabs-main
   - name: debug-script
     description: "[INTERNAL] Debug Script"
     flags:
       - name: name
         description: Filename to debug
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9782fb3c ([internal] added JVM command proxy in development mode (#843))
+=======
+>>>>>>> databrickslabs-main
       - name: dialect
         description: sql dialect
   - name: debug-me
     description: "[INTERNAL] Debug SDK connectivity"
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 8ccbfb8f ([internal] added query plan debugger and dependency injection baseline (#854))
+=======
+>>>>>>> databrickslabs-main
   - name: debug-coverage
     description: "[INTERNAL] Run coverage tests"
     flags:
@@ -81,6 +124,14 @@ commands:
         description: The directory under which the report files will be written
       - name: extractor
         description: The strategy for extracting queries from the test files. Valid strategies are "full" (when files contain only one input query) and "comment" (when files contain an input query and the corresponding translation, separated by a comment stating the dialect of each query).
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 83f2f724 (Make debug-coverage a proper command (#940))
+=======
+=======
+>>>>>>> databrickslabs-main
   - name: debug-estimate
     description: "[INTERNAL] estimate migration effort"
     flags:
@@ -93,6 +144,10 @@ commands:
         description: Output results to a folder
       - name: dst
         description: The directory for report
+<<<<<<< HEAD
+=======
+>>>>>>> 2df8105c ([chore] Improved `ApplicationContext` to generically parse `--dialect` and `--source-queries` flags (#1051))
+>>>>>>> databrickslabs-main
   - name: debug-bundle
     description: "[INTERNAL] Generate bundle for the translated queries"
     flags:
@@ -102,3 +157,7 @@ commands:
         description: The folder with queries. Otherwise will attempt to fetch query history for a dialect
       - name: dst
         description: The directory for generated files
+<<<<<<< HEAD
+=======
+>>>>>>> 1a64c5d2 (Added `debug-bundle` command for folder-to-folder translation (#1045))
+>>>>>>> databrickslabs-main

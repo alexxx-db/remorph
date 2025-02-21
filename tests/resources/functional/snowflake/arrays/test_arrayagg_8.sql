@@ -29,4 +29,16 @@ ORDER BY col2 DESC;
   GROUP BY
     col2
   ORDER BY
+<<<<<<< HEAD
     col2 DESC NULLS FIRST;
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+    col2 DESC NULLS FIRST;
+=======
+    col2 DESC NULLS FIRST;
+>>>>>>> 0f06d166 (Support multiple columns in order by clause in for ARRAYAGG (#1228))
+=======
+    col2 DESC NULLS FIRST;
+>>>>>>> 9ffc6a0d (EditorConfig setup for project (#1246))
+>>>>>>> databrickslabs-main
