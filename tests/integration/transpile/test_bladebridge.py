@@ -52,6 +52,12 @@ async def _transpile_informatica_with_sparksql(
     assert (output_folder / "wf_m_employees_load_params.py").exists()
     # Output from: wf_demo_large_mapping_load.xml
     # TODO: Currently not transpiled properly.
+    # assert (output_folder / "wf_demo_large_mapping_load.xml").exists()
+    # assert (output_folder / "wf_demo_large_mapping_load_params.py").exists()
+    # assert (output_folder / "cmd1.py").exists()
+    # assert (output_folder / "wf_demo_large_mapping_load.json").exists()
+    # assert (output_folder / "m_employees_load_lkp.py").exists()
+    # assert (output_folder / "m_DM_DEMO_LOAD.py").exists()
     # Output from: wf_週次_個人保険_All_Info_Ncnt.XML
     assert (output_folder / "週次_個人保険_All_Info_Ncnt.py").exists()
     assert (output_folder / "wf_週次_個人保険_All_Info_Ncnt.json").exists()
