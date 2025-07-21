@@ -46,6 +46,16 @@ async def _transpile_informatica_with_sparksql(
     # TODO: This seems to be flaky; debug logging to help diagnose the flakiness.
     files = [f.name for f in output_folder.iterdir()]
     logger.debug(f"Transpiled files: {files}")
+    # Output from: wf_m_employees_load.XML
     assert (output_folder / "m_employees_load.py").exists()
     assert (output_folder / "wf_m_employees_load.json").exists()
     assert (output_folder / "wf_m_employees_load_params.py").exists()
+    # Output from: wf_demo_large_mapping_load.xml
+    # TODO: Currently not transpiled properly.
+    # Output from: wf_週次_個人保険_All_Info_Ncnt.XML
+    assert (output_folder / "週次_個人保険_All_Info_Ncnt.py").exists()
+    assert (output_folder / "wf_週次_個人保険_All_Info_Ncnt.json").exists()
+    assert (output_folder / "wf_週次_個人保険_All_Info_Ncnt_params.py").exists()
+    assert (output_folder / "m_週次新契約VA_APE計算方法変更.py").exists()
+    assert (output_folder / "m_週次新契約個保統一作成.py").exists()
+    assert (output_folder / "m_週次新契約個保統一作成_ENCRYPT.py").exists()
