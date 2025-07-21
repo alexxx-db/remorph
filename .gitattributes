@@ -14,5 +14,7 @@
 *.whl -text
 
 # Specific test examples.
-tests/resources/functional/dbt/sub/sub-query-bom.sql              text working-tree-encoding=UTF-16
-tests/resources/functional/informatica/wf_m_employees_load.XML    text working-tree-encoding=WINDOWS-1252 eol=crlf
+tests/resources/functional/dbt/sub/sub-query-bom.sql                   text working-tree-encoding=UTF-16
+tests/resources/functional/informatica/wf_m_employees_load.XML         text working-tree-encoding=WINDOWS-1252 eol=crlf
+tests/resources/functional/informatica/wf_demo_large_mapping_load.xml  text working-tree-encoding=UTF-16 eol=crlf
+tests/resources/functional/informatica/wf_*_All_Info_Ncnt.XML          text working-tree-encoding=UTF-8 eol=crlf

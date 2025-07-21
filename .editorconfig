@@ -28,3 +28,11 @@ charset = utf-16le
 charset = latin1
 end_of_line = crlf
 insert_final_newline = false
+[tests/resources/functional/informatica/wf_demo_large_mapping_load.xml]
+charset = utf-16le
+end_of_line = crlf
+insert_final_newline = false
+[tests/resources/functional/informatica/wf_*_All_Info_Ncnt.XML]
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = false
