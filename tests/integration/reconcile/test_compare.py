@@ -112,7 +112,6 @@ def test_compare_data_for_report_hash(mock_spark, tmp_path: Path):
 
     assert actual.mismatch.mismatch_df is None
     assert not actual.mismatch.mismatch_columns
-
     assert actual.missing_in_src is not None
     assert expected.missing_in_src is not None
     assert actual.missing_in_tgt is not None

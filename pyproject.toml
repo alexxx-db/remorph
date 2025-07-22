@@ -149,7 +149,7 @@ lint.ignore = [
   "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 ]
 extend-exclude = [
-  "notebooks/*.py",
+  "notebooks/*.py"
 ]
 
 
