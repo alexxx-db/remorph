@@ -21,10 +21,11 @@ concurrency:
 jobs:
   integration:
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    strategy:
+      matrix:
+        runner: [larger, windows-server-2022-latest]
     environment: tool
-    runs-on:
-      group: larger-runners
-      labels: larger
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -42,6 +43,7 @@ jobs:
         run: pip install hatch==1.9.4
 
       - name: Install MSSQL ODBC Driver
+        if: runner.os != 'Windows'
         run: |
           chmod +x $GITHUB_WORKSPACE/.github/scripts/setup_mssql_odbc.sh
           $GITHUB_WORKSPACE/.github/scripts/setup_mssql_odbc.sh
@@ -57,4 +59,3 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
           TEST_ENV: 'ACCEPTANCE'
-
