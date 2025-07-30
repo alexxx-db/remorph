@@ -14,19 +14,20 @@ class SynapseQueries:
                """
 
     @staticmethod
-    def list_tables() -> str:
+    def list_tables(pool_name: str) -> str:
         """Get list of tables"""
-        return """
+        return f"""
                SELECT
                    TABLE_CATALOG,
                    TABLE_SCHEMA,
                    TABLE_NAME,
-                   TABLE_TYPE
+                   TABLE_TYPE,
+                   '{pool_name}' as POOL_NAME
                FROM INFORMATION_SCHEMA.TABLES ;
                """
 
     @staticmethod
-    def list_columns() -> str:
+    def list_columns(pool_name: str) -> str:
         """Get list of columns"""
         return """
                SELECT
@@ -52,7 +53,8 @@ class SynapseQueries:
                    COLLATION_NAME,
                    DOMAIN_CATALOG,
                    DOMAIN_SCHEMA,
-                   DOMAIN_NAME
+                   DOMAIN_NAME,
+                   '{pool_name}' as POOL_NAME
                FROM INFORMATION_SCHEMA.COLUMNS ;
                """
 
@@ -88,40 +90,142 @@ class SynapseQueries:
                        IS_DETERMINISTIC,
                        SQL_DATA_ACCESS,
                        IS_NULL_CALL,
+                       -- TODO: Add missing columns from DDL: CREATED, IS_IMPLICITLY_INVOCABLE, IS_USER_DEFINED_CAST, LAST_ALTERED, MAX_DYNAMIC_RESULT_SETS, NUMERIC_PRECISION_RADIX, SCHEMA_LEVEL_ROUTINE, SPECIFIC_CATALOG, SPECIFIC_NAME, SPECIFIC_SCHEMA
                        '[REDACTED]' as ROUTINE_DEFINITION
                    FROM information_schema.routines
                    """
 
     @staticmethod
-    def list_sessions(last_login_time: str | None = None) -> str:
+    def list_dedicated_sessions(pool_name: str, last_login_time: str | None = None) -> str:
         """Get session list with transformed login names and client IDs"""
-        return """
+        cond = "AND login_time > '" + last_login_time + "'" if last_login_time else ""
+        return f"""
                      SELECT
-                      *,
-                      CURRENT_TIMESTAMP as extract_ts
+                      APP_NAME,
+                      CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', CLIENT_ID), 2) as CLIENT_ID,
+                      IS_TRANSACTIONAL,
+                      CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', LOGIN_NAME), 2) as LOGIN_NAME,
+                      LOGIN_TIME,
+                      QUERY_COUNT,
+                      REQUEST_ID,
+                      SESSION_ID,
+                      SQL_SPID,
+                      STATUS,
+                      '{pool_name}' as POOL_NAME,
+                      CURRENT_TIMESTAMP as EXTRACT_TS
                      FROM SYS.DM_PDW_EXEC_SESSIONS
-                     WHERE start_time IS NOT NULL
-                       AND command IS NOT NULL
+                     where CHARINDEX('system', LOWER(login_name)) = 0
+                         {cond}
                      """
 
     @staticmethod
-    def list_requests(min_end_time: str | None = None) -> str:
+    def list_requests(pool_name: str, min_end_time: str | None = None, redact_sql_text: bool = True) -> str:
         """Get session request list with command type classification"""
-        base_query = """
-                              SELECT *
-                                  CURRENT_TIMESTAMP as extract_ts
-                            FROM SYS.DM_PDW_EXEC_REQUESTS
-                            WHERE start_time IS NOT NULL
-                            AND command IS NOT NULL
-                            {end_time_filter}
-                     """
+        command_col = "'[REDACTED]' as COMMAND" if redact_sql_text else "COMMAND"
+        end_time_filter = f"AND END_TIME > '{min_end_time}'" if min_end_time else ""
+        return f"""
+            SELECT
+                CLIENT_CORRELATION_ID,
+                {command_col},
+                COMMAND2,
+                COMMAND_TYPE,
+                DATABASE_ID,
+                END_COMPILE_TIME,
+                END_TIME,
+                ERROR_ID,
+                GROUP_NAME,
+                IMPORTANCE,
+                [LABEL],
+                REQUEST_ID,
+                RESOURCE_ALLOCATION_PERCENTAGE,
+                RESOURCE_CLASS,
+                RESULT_CACHE_HIT,
+                SESSION_ID,
+                START_TIME,
+                STATUS,
+                SUBMIT_TIME,
+                TOTAL_ELAPSED_TIME,
+                '{pool_name}' AS POOL_NAME,
+                CURRENT_TIMESTAMP AS EXTRACT_TS
+            FROM (
+                SELECT
+                    *,
+                    -- Extract the first word from command
+                    UPPER(
+                        LEFT(
+                            LTRIM(command),
+                            PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1
+                        )
+                    ) AS command_w1,
 
-        end_time_filter = f"AND end_time > '{min_end_time}'" if min_end_time else ""
-        command_redaction = "'[REDACTED]' as command"
+                    -- Extract the second word from command (approximation)
+                    UPPER(
+                        RTRIM(
+                            LEFT(
+                                LTRIM(
+                                    RIGHT(
+                                        command,
+                                        LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ')
+                                    )
+                                ),
+                                PATINDEX(
+                                    '%[^A-Za-z]%',
+                                    LTRIM(
+                                        RIGHT(command, LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' '))
+                                    ) + ' '
+                                ) - 1
+                            )
+                        )
+                    ) AS command_w2,
 
-        return (
-            base_query.format(end_time_filter=end_time_filter, command_redaction=command_redaction).strip().rstrip(';')
-        )
+                    -- Classify command type
+                    CASE
+                        WHEN UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) IN ('SELECT', 'WITH')
+                            THEN 'QUERY'
+                        WHEN UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1))
+                            IN ('INSERT', 'UPDATE', 'MERGE', 'DELETE', 'TRUNCATE', 'COPY', 'IF', 'BEGIN', 'DECLARE', 'BUILDREPLICATEDTABLECACHE')
+                            THEN 'DML'
+                        WHEN UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) IN ('CREATE', 'DROP', 'ALTER')
+                            THEN 'DDL'
+                        WHEN UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) IN ('EXEC', 'EXECUTE')
+                            THEN 'ROUTINE'
+                        WHEN
+                            UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) = 'BEGIN'
+                            AND UPPER(RTRIM(
+                                LEFT(
+                                    LTRIM(
+                                        RIGHT(command, LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' '))
+                                    ),
+                                    PATINDEX('%[^A-Za-z]%', LTRIM(
+                                        RIGHT(command, LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' '))
+                                    ) + ' ') - 1
+                                )
+                            )) IN ('TRAN', 'TRANSACTION')
+                            THEN 'TRANSACTION_CONTROL'
+                        WHEN
+                            UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) = 'END'
+                            AND UPPER(RTRIM(
+                                LEFT(
+                                    LTRIM(
+                                        RIGHT(command, LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' '))
+                                    ),
+                                    PATINDEX('%[^A-Za-z]%', LTRIM(
+                                        RIGHT(command, LEN(command) - PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' '))
+                                    ) + ' ') - 1
+                                )
+                            )) IN ('TRAN', 'TRANSACTION')
+                            THEN 'TRANSACTION_CONTROL'
+                        WHEN UPPER(LEFT(LTRIM(command), PATINDEX('%[^A-Za-z]%', LTRIM(command) + ' ') - 1)) IN ('COMMIT', 'ROLLBACK')
+                            THEN 'TRANSACTION_CONTROL'
+                        ELSE 'OTHER'
+                    END AS command_type
+
+                FROM SYS.DM_PDW_EXEC_REQUESTS
+                WHERE START_TIME IS NOT NULL
+                AND COMMAND IS NOT NULL
+                {end_time_filter}
+            ) requests
+        """
 
     @staticmethod
     def get_db_storage_info() -> str:
@@ -218,4 +322,28 @@ class SynapseQueries:
 
     @staticmethod
     def query_requests_history(min_end_time) -> str:
+        # Serverless Request History
         return f"""SELECT * FROM sys.dm_exec_requests_history {"WHERE end_time > '"+min_end_time+"'" if min_end_time else ""}"""
+
+    @staticmethod
+    def data_processed():
+        return """
+        SELECT
+            data_processed_mb,
+            type,
+            pool_name,
+            CURRENT_TIMESTAMP AS extract_ts
+        """
+
+    # TODO: Missing queries for DDL tables - need to implement:
+    # 1. workspace_workspace_info - Query for workspace information
+    # 2. workspace_sql_pools - Query for SQL pool information
+    # 3. workspace_spark_pools - Query for Spark pool information
+    # 4. workspace_datasets - Query for dataset information
+    # 5. workspace_dataflows - Query for dataflow information
+    # 6. workspace_linked_services - Query for linked service information
+    # 7. workspace_notebooks - Query for notebook information
+    # 8. workspace_pipelines - Query for pipeline information
+    # 9. workspace_sql_scripts - Query for SQL script information
+    # 10. workspace_pipeline_runs - Query for pipeline run information
+    # 11. serverless_routines - Query for serverless routines (different from dedicated)

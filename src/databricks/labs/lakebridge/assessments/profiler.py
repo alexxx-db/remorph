@@ -10,11 +10,11 @@ from databricks.labs.lakebridge.connections.credential_manager import (
 from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 
 _PLATFORM_TO_SOURCE_TECHNOLOGY = {
-    "Synapse": "src/databricks/labs/lakebridge/resources/assessments/synapse/pipeline_config.yml",
+    "synapse": "src/databricks/labs/lakebridge/resources/assessments/synapse/pipeline_config.yml",
 }
 
 _CONNECTOR_REQUIRED = {
-    "Synapse": False,
+    "synapse": False,
 }
 
 PRODUCT_NAME = "lakebridge"
@@ -38,6 +38,7 @@ class Profiler:
         return config
 
     def profile(self, platform: str, extractor: DatabaseManager | None = None, config_file: str | Path | None = None):
+        platform = platform.lower()
         if config_file:
             pipeline_config = PipelineClass.load_config_from_yaml(config_file)
         else:

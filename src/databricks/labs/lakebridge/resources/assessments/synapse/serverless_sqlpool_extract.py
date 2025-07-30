@@ -55,7 +55,7 @@ def execute():
                     connection = get_sqlpool_reader(config, db_name, 'serverless_sql_endpoint')
                     # tables
                     table_name = 'serverless_tables'
-                    table_query = SynapseQueries.list_tables()
+                    table_query = SynapseQueries.list_tables(db_name)
                     logger.info(f"Loading '{table_name}' for pool: %s", db_name)
                     print(f"Loading '{table_name}' for pool: {db_name}")
                     result = connection.execute(text(table_query))
@@ -77,25 +77,17 @@ def execute():
                     result = connection.execute(text(view_query))
                     save_resultset_to_db(result, table_name, db_path, mode=mode)
 
-                    # routines
-                    table_name = "serverless_routines"
-                    routine_query = SynapseQueries.list_routines()
-                    logger.info(f"Loading '{table_name}' for pool: %s", db_name)
-                    print(f"Loading '{table_name}' for pool: {db_name}")
-                    result = connection.execute(text(routine_query))
-                    save_resultset_to_db(result, table_name, db_path, mode=mode)
-
                     mode = "append"
 
             # Activity Extract:
-            table_name = "sessions"
+            table_name = "serverless_sessions"
             prev_max_login_time = get_max_column_value_duckdb("login_time", table_name, db_path)
             session_query = SynapseQueries.list_sessions(prev_max_login_time)
 
             session_result = connection.execute(text(session_query))
             save_resultset_to_db(session_result, table_name, db_path, mode="append")
 
-            table_name = "session_request"
+            table_name = "serverless_session_request"
             prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
             session_request_query = SynapseQueries.list_requests(prev_max_end_time)
 

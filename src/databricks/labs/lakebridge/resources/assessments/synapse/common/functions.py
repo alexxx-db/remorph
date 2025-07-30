@@ -146,66 +146,90 @@ def get_azure_metrics_query_client():
     return MetricsQueryClient(credential=DefaultAzureCredential())
 
 
-def save_resultset_to_db(result, table_name: str, db_path: str, mode: str, batch_size: int = 1000):
+def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
     """
     Enhanced version of save_resultset_to_db with predetermined schemas.
     """
 
     # Predetermined schemas
     schemas = {
-        "columns": "CHARACTER_MAXIMUM_LENGTH BIGINT, CHARACTER_OCTET_LENGTH BIGINT, CHARACTER_SET_NAME VARCHAR, COLLATION_NAME VARCHAR, COLUMN_DEFAULT VARCHAR, COLUMN_NAME VARCHAR, DATA_TYPE VARCHAR, DATETIME_PRECISION BIGINT, IS_NULLABLE VARCHAR, NUMERIC_PRECISION BIGINT, NUMERIC_PRECISION_RADIX BIGINT, NUMERIC_SCALE BIGINT, ORDINAL_POSITION BIGINT, TABLE_CATALOG VARCHAR, TABLE_NAME VARCHAR, TABLE_SCHEMA VARCHAR, pool_name VARCHAR",
-        "routines": "CREATED VARCHAR, IS_DETERMINISTIC VARCHAR, IS_IMPLICITLY_INVOCABLE VARCHAR, IS_USER_DEFINED_CAST VARCHAR, LAST_ALTERED VARCHAR, MAX_DYNAMIC_RESULT_SETS BIGINT, ROUTINE_BODY VARCHAR, ROUTINE_CATALOG VARCHAR, ROUTINE_DEFINITION VARCHAR, ROUTINE_NAME VARCHAR, ROUTINE_SCHEMA VARCHAR, ROUTINE_TYPE VARCHAR, SCHEMA_LEVEL_ROUTINE VARCHAR, SPECIFIC_CATALOG VARCHAR, SPECIFIC_NAME VARCHAR, SPECIFIC_SCHEMA VARCHAR, SQL_DATA_ACCESS VARCHAR, pool_name VARCHAR",
-        "session_request": "classifier_name VARCHAR, command VARCHAR, command2 VARCHAR, command_type VARCHAR, command_w1 VARCHAR, command_w2 VARCHAR, database_id BIGINT, end_compile_time VARCHAR, end_time VARCHAR, error_id VARCHAR, extract_ts VARCHAR, group_name VARCHAR, importance VARCHAR, label VARCHAR, request_id VARCHAR, resource_allocation_percentage DOUBLE, resource_class VARCHAR, result_cache_hit BIGINT, session_id VARCHAR, start_time VARCHAR",
-        "sessions": "app_name VARCHAR, client_id_sha2 VARCHAR, extract_ts VARCHAR, is_transactional BOOLEAN, login_time VARCHAR, login_user VARCHAR, login_user_sha2 VARCHAR, login_user_type VARCHAR, query_count BIGINT, request_id VARCHAR, session_id VARCHAR, sql_spid BIGINT, status VARCHAR, pool_name VARCHAR",
-        "storage_info": "ReservedSpaceMB BIGINT, UsedSpaceMB BIGINT, extract_ts VARCHAR, node_id BIGINT, pool_name VARCHAR",
-        "tables": "TABLE_CATALOG VARCHAR, TABLE_NAME VARCHAR, TABLE_SCHEMA VARCHAR, TABLE_TYPE VARCHAR, pool_name VARCHAR",
-        "views": "CHECK_OPTION VARCHAR, IS_UPDATABLE VARCHAR, TABLE_CATALOG VARCHAR, TABLE_NAME VARCHAR, TABLE_SCHEMA VARCHAR, VIEW_DEFINITION VARCHAR, pool_name VARCHAR",
-        "metrics_dedicated_sql_pool_metrics": "average DOUBLE, maximum DOUBLE, minimum DOUBLE, name VARCHAR, pool_name VARCHAR, timestamp VARCHAR, total BIGINT",
+        "dedicated_databases": "NAME STRING, DATABASE_ID BIGINT, CREATE_DATE STRING, STATE STRING, STATE_DESC STRING, COLLATION_NAME STRING",
+        "serverless_databases": "NAME STRING, DATABASE_ID BIGINT, CREATE_DATE STRING, STATE STRING, STATE_DESC STRING, COLLATION_NAME STRING",
+        "dedicated_tables": "TABLE_CATALOG STRING, TABLE_NAME STRING, TABLE_SCHEMA STRING, TABLE_TYPE STRING, POOL_NAME STRING",
+        "serverless_tables": "TABLE_CATALOG STRING, TABLE_NAME STRING, TABLE_SCHEMA STRING, TABLE_TYPE STRING, POOL_NAME STRING",
+        "dedicated_columns": "TABLE_CATALOG STRING, TABLE_SCHEMA STRING, TABLE_NAME STRING, COLUMN_NAME STRING, ORDINAL_POSITION BIGINT, COLUMN_DEFAULT STRING, IS_NULLABLE STRING, DATA_TYPE STRING, CHARACTER_MAXIMUM_LENGTH BIGINT, CHARACTER_OCTET_LENGTH BIGINT, NUMERIC_PRECISION BIGINT, NUMERIC_PRECISION_RADIX BIGINT, NUMERIC_SCALE BIGINT, DATETIME_PRECISION BIGINT, CHARACTER_SET_CATALOG STRING, CHARACTER_SET_SCHEMA STRING, CHARACTER_SET_NAME STRING, COLLATION_CATALOG STRING, COLLATION_SCHEMA STRING, COLLATION_NAME STRING, DOMAIN_CATALOG STRING, DOMAIN_SCHEMA STRING, DOMAIN_NAME STRING, POOL_NAME STRING",
+        "serverless_columns": "TABLE_CATALOG STRING, TABLE_SCHEMA STRING, TABLE_NAME STRING, COLUMN_NAME STRING, ORDINAL_POSITION BIGINT, COLUMN_DEFAULT STRING, IS_NULLABLE STRING, DATA_TYPE STRING, CHARACTER_MAXIMUM_LENGTH BIGINT, CHARACTER_OCTET_LENGTH BIGINT, NUMERIC_PRECISION BIGINT, NUMERIC_PRECISION_RADIX BIGINT, NUMERIC_SCALE BIGINT, DATETIME_PRECISION BIGINT, CHARACTER_SET_CATALOG STRING, CHARACTER_SET_SCHEMA STRING, CHARACTER_SET_NAME STRING, COLLATION_CATALOG STRING, COLLATION_SCHEMA STRING, COLLATION_NAME STRING, DOMAIN_CATALOG STRING, DOMAIN_SCHEMA STRING, DOMAIN_NAME STRING, POOL_NAME STRING",
+        "dedicated_views": "CHECK_OPTION STRING, IS_UPDATABLE STRING, TABLE_CATALOG STRING, TABLE_NAME STRING, TABLE_SCHEMA STRING, VIEW_DEFINITION STRING, POOL_NAME STRING",
+        "serverless_views": "CHECK_OPTION STRING, IS_UPDATABLE STRING, TABLE_CATALOG STRING, TABLE_NAME STRING, TABLE_SCHEMA STRING, VIEW_DEFINITION STRING, POOL_NAME STRING",
+        "dedicated_routines": "ROUTINE_CATALOG STRING, ROUTINE_SCHEMA STRING, ROUTINE_NAME STRING, ROUTINE_TYPE STRING, DATA_TYPE STRING, CHARACTER_MAXIMUM_LENGTH BIGINT, NUMERIC_PRECISION BIGINT, NUMERIC_SCALE BIGINT, DATETIME_PRECISION BIGINT, ROUTINE_BODY STRING, IS_DETERMINISTIC STRING, SQL_DATA_ACCESS STRING, IS_NULL_CALL STRING, ROUTINE_DEFINITION STRING, POOL_NAME STRING",
+        # Session metadata - matches list_sessions() (SYS.DM_PDW_EXEC_SESSIONS + extract_ts)
+        "dedicated_sessions": "APP_NAME STRING, CLIENT_ID STRING, IS_TRANSACTIONAL BOOLEAN, LOGIN_NAME STRING, LOGIN_TIME STRING, QUERY_COUNT BIGINT, REQUEST_ID STRING, SESSION_ID STRING, SQL_SPID BIGINT, STATUS STRING, POOL_NAME STRING, EXTRACT_TS STRING",
+        # Serverless sessions - matches SYS.DM_PDW_EXEC_SESSIONS for serverless
+        "serverless_sessions": "ANSI_DEFAULTS BOOLEAN, ANSI_NULL_DFLT_ON BOOLEAN, ANSI_NULLS BOOLEAN, ANSI_PADDING BOOLEAN, ANSI_WARNINGS BOOLEAN, ARITHABORT BOOLEAN, AUTHENTICATING_DATABASE_ID BIGINT, CLIENT_INTERFACE_NAME STRING, CLIENT_VERSION BIGINT, CONCAT_NULL_YIELDS_NULL BOOLEAN, CONTEXT_INFO STRING, CPU_TIME BIGINT, DATABASE_ID BIGINT, DATE_FIRST BIGINT, DATE_FORMAT STRING, DEADLOCK_PRIORITY BIGINT, ENDPOINT_ID BIGINT, GROUP_ID BIGINT, HOST_NAME STRING, HOST_PROCESS_ID BIGINT, IS_FILTERED BOOLEAN, IS_USER_PROCESS BOOLEAN, LANGUAGE STRING, LAST_REQUEST_END_TIME STRING, LAST_REQUEST_START_TIME STRING, LOCK_TIMEOUT BIGINT, LOGICAL_READS BIGINT, LOGIN_NAME STRING, LOGIN_TIME STRING, MEMORY_USAGE BIGINT, NT_DOMAIN STRING, NT_USER_NAME STRING, OPEN_TRANSACTION_COUNT BIGINT, ORIGINAL_LOGIN_NAME STRING, ORIGINAL_SECURITY_ID STRING, PAGE_SERVER_READS BIGINT, PREV_ERROR BIGINT, PROGRAM_NAME STRING, QUOTED_IDENTIFIER BOOLEAN, READS BIGINT, ROW_COUNT BIGINT, SECURITY_ID STRING, SESSION_ID BIGINT, STATUS STRING, TEXT_SIZE BIGINT, TOTAL_ELAPSED_TIME BIGINT, TOTAL_SCHEDULED_TIME BIGINT, TRANSACTION_ISOLATION_LEVEL BIGINT, WRITES BIGINT, POOL_NAME STRING, EXTRACT_TS STRING",
+        # Session requests metadata - matches list_requests() (SYS.DM_PDW_EXEC_REQUESTS + extract_ts)
+        "dedicated_session_requests": "CLIENT_CORRELATION_ID STRING, COMMAND STRING, COMMAND2 STRING,COMMAND_TYPE STRING, DATABASE_ID BIGINT, END_COMPILE_TIME STRING, END_TIME STRING, ERROR_ID STRING, GROUP_NAME STRING, IMPORTANCE STRING, LABEL STRING, REQUEST_ID STRING, RESOURCE_ALLOCATION_PERCENTAGE DOUBLE, RESOURCE_CLASS STRING, RESULT_CACHE_HIT BIGINT, SESSION_ID STRING, START_TIME STRING, STATUS STRING, SUBMIT_TIME STRING, TOTAL_ELAPSED_TIME BIGINT, POOL_NAME STRING, EXTRACT_TS STRING",
+        # Serverless session requests - matches SYS.DM_PDW_EXEC_REQUESTS for serverless
+        "serverless_session_requests": "ANSI_DEFAULTS BOOLEAN, ANSI_NULL_DFLT_ON BOOLEAN, ANSI_NULLS BOOLEAN, ANSI_PADDING BOOLEAN, ANSI_WARNINGS BOOLEAN, ARITHABORT BOOLEAN, BLOCKING_SESSION_ID BIGINT, COMMAND STRING, CONCAT_NULL_YIELDS_NULL BOOLEAN, CONNECTION_ID STRING, CONTEXT_INFO STRING, CPU_TIME BIGINT, DATABASE_ID BIGINT, DATE_FIRST BIGINT, DATE_FORMAT STRING, DEADLOCK_PRIORITY BIGINT, DIST_STATEMENT_ID STRING, DOP BIGINT, ESTIMATED_COMPLETION_TIME BIGINT, EXECUTING_MANAGED_CODE BOOLEAN, GRANTED_QUERY_MEMORY BIGINT, GROUP_ID BIGINT, IS_RESUMABLE BOOLEAN, LANGUAGE STRING, LAST_WAIT_TYPE STRING, LOCK_TIMEOUT BIGINT, LOGICAL_READS BIGINT, NEST_LEVEL BIGINT, OPEN_RESULTSET_COUNT BIGINT, OPEN_TRANSACTION_COUNT BIGINT, PAGE_SERVER_READS BIGINT, PERCENT_COMPLETE DOUBLE, PLAN_HANDLE STRING, PREV_ERROR BIGINT, QUERY_HASH STRING, QUERY_PLAN_HASH STRING, QUOTED_IDENTIFIER BOOLEAN, READS BIGINT, REQUEST_ID BIGINT, ROW_COUNT BIGINT, SCHEDULER_ID BIGINT, SESSION_ID BIGINT, SQL_HANDLE STRING, START_TIME STRING, STATEMENT_END_OFFSET BIGINT, STATEMENT_START_OFFSET BIGINT, STATUS STRING, TASK_ADDRESS STRING, TEXT_SIZE BIGINT, TOTAL_ELAPSED_TIME BIGINT, TRANSACTION_ID BIGINT, TRANSACTION_ISOLATION_LEVEL BIGINT, USER_ID BIGINT, WAIT_RESOURCE STRING, WAIT_TIME BIGINT, WAIT_TYPE STRING, WRITES BIGINT, POOL_NAME STRING, EXTRACT_TS STRING",
+        # Database storage info
+        "dedicated_storage_info": "NODE_ID BIGINT, RESERVEDSPACEMB DOUBLE, USEDSPACEMB DOUBLE, EXTRACT_TS STRING",
+        # Table storage info - matches get_table_storage_info()
+        "table_storage_info": "SCHEMA_NAME STRING, TABLE_NAME STRING, INDEX_NAME STRING, INDEX_TYPE STRING, ROW_COUNT BIGINT, COMPRESSION_TYPE STRING, TOTAL_SIZE_MB DOUBLE, USED_SIZE_MB DOUBLE, EXTRACT_TS STRING",
+        # Query performance stats - matches get_query_performance_stats()
+        "query_performance_stats": "EXECUTION_COUNT BIGINT, TOTAL_ELAPSED_TIME_SEC DOUBLE, TOTAL_WORKER_TIME_SEC DOUBLE, TOTAL_LOGICAL_READS BIGINT, TOTAL_PHYSICAL_READS BIGINT, TOTAL_LOGICAL_WRITES BIGINT, LAST_EXECUTION_TIME STRING, CREATION_TIME STRING, LAST_ELAPSED_TIME_SEC DOUBLE, LAST_WORKER_TIME_SEC DOUBLE, LAST_LOGICAL_READS BIGINT, LAST_PHYSICAL_READS BIGINT, LAST_LOGICAL_WRITES BIGINT, TOTAL_ROWS BIGINT, LAST_ROWS BIGINT, MIN_ROWS BIGINT, MAX_ROWS BIGINT, STATEMENT_START_OFFSET BIGINT, STATEMENT_END_OFFSET BIGINT, EXTRACT_TS STRING",
+        # Query stats - matches list_query_stats() (sys.dm_exec_query_stats + statement_text)
+        "query_stats": "SQL_HANDLE STRING, PLAN_HANDLE STRING, STATEMENT_START_OFFSET BIGINT, STATEMENT_END_OFFSET BIGINT, CREATION_TIME STRING, LAST_EXECUTION_TIME STRING, EXECUTION_COUNT BIGINT, TOTAL_WORKER_TIME BIGINT, LAST_WORKER_TIME BIGINT, MIN_WORKER_TIME BIGINT, MAX_WORKER_TIME BIGINT, TOTAL_ELAPSED_TIME BIGINT, LAST_ELAPSED_TIME BIGINT, MIN_ELAPSED_TIME BIGINT, MAX_ELAPSED_TIME BIGINT, TOTAL_LOGICAL_READS BIGINT, LAST_LOGICAL_READS BIGINT, MIN_LOGICAL_READS BIGINT, MAX_LOGICAL_READS BIGINT, TOTAL_PHYSICAL_READS BIGINT, LAST_PHYSICAL_READS BIGINT, MIN_PHYSICAL_READS BIGINT, MAX_PHYSICAL_READS BIGINT, TOTAL_LOGICAL_WRITES BIGINT, LAST_LOGICAL_WRITES BIGINT, MIN_LOGICAL_WRITES BIGINT, MAX_LOGICAL_WRITES BIGINT, TOTAL_ROWS BIGINT, LAST_ROWS BIGINT, MIN_ROWS BIGINT, MAX_ROWS BIGINT, QUERY_HASH STRING, QUERY_PLAN_HASH STRING, STATEMENT_TEXT STRING",
+        # Requests history - matches query_requests_history() (sys.dm_exec_requests_history)
+        "requests_history": "REQUEST_ID BIGINT, SESSION_ID BIGINT, COMMAND STRING, START_TIME STRING, END_TIME STRING, STATUS STRING, DATABASE_ID BIGINT, USER_ID BIGINT, CONNECTION_ID STRING, BLOCKING_SESSION_ID BIGINT, WAIT_TYPE STRING, WAIT_TIME BIGINT, WAIT_RESOURCE STRING, LAST_WAIT_TYPE STRING, WRITES BIGINT, LOGICAL_READS BIGINT, PHYSICAL_READS BIGINT, CPU_TIME BIGINT, TOTAL_ELAPSED_TIME BIGINT, ROW_COUNT BIGINT, PREV_ERROR BIGINT, NEST_LEVEL BIGINT, GRANTED_QUERY_MEMORY BIGINT, EXECUTING_MANAGED_CODE BOOLEAN, GROUP_ID BIGINT, QUERY_HASH STRING, QUERY_PLAN_HASH STRING, STATEMENT_END_OFFSET BIGINT, STATEMENT_START_OFFSET BIGINT, SQL_HANDLE STRING, PLAN_HANDLE STRING, TASK_ADDRESS STRING, PERCENT_COMPLETE DOUBLE, ESTIMATED_COMPLETION_TIME BIGINT, DOP BIGINT, IS_RESUMABLE BOOLEAN, DIST_STATEMENT_ID STRING, EXTRACT_TS STRING",
+        # Data processed info
+        "serverless_data_processed": "DATA_PROCESSED_MB BIGINT, TYPE STRING, POOL_NAME STRING",
     }
 
     try:
+        columns = result.keys()
+        # Convert result to DataFrame
+        df = pd.DataFrame(result.fetchall(), columns=columns)
+
+        # Fetch the first batch
+        if df.empty:
+            logging.info(f"No data to save for table {table_name}.")
+            return
+
+        # Use predetermined schema if available, otherwise raise error
+        if table_name in schemas:
+            schema = schemas[table_name]
+            logger.info(f"Using predetermined schema: {schema} for table: {table_name}")
+        else:
+            available_tables = list(schemas.keys())
+            error_msg = f"Table '{table_name}' not found in predetermined schemas. Available tables: {available_tables}"
+            logging.error(error_msg)
+            raise ValueError(error_msg)
+
         with duckdb.connect(db_path) as conn:
-            columns = result.keys()
+            print(f"Connected to DuckDB database at {db_path}")
+            tables = conn.execute(
+                """
+                                  SELECT table_name
+                                  FROM information_schema.tables
+                                  WHERE table_schema='main' AND table_type='BASE TABLE';
+                                  """
+            ).fetchall()
 
-            # Use predetermined schema if available, otherwise raise error
-            if table_name in schemas:
-                schema = schemas[table_name]
-                print(f"Using predetermined schema: {schema} for table: {table_name}")
-            else:
-                available_tables = list(schemas.keys())
-                error_msg = (
-                    f"Table '{table_name}' not found in predetermined schemas. Available tables: {available_tables}"
-                )
-                logging.error(error_msg)
-                raise ValueError(error_msg)
-
-            # Fetch the first batch
-            first_rows = result.fetchmany(batch_size)
-            print(first_rows)
-            if not first_rows:
-                logging.info(f"No data to save for table {table_name}.")
-                return
-
+            # Flatten the result
+            list_tables = [row[0] for row in tables]
             # Handle write modes
-            if mode == 'overwrite':
-                conn.execute(f"CREATE OR REPLACE TABLE {table_name} ({schema})")
-            elif mode == 'append' and table_name not in conn.get_table_names(""):
+            if mode == "overwrite":
+                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+                conn.execute(f"CREATE TABLE {table_name} ({schema})")
+            elif mode == "append" and table_name not in list_tables:
                 conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
+
             print("Tables created *********")
+            conn.register("df_view", df)
+            # Insert data from the DataFrame view
+            conn.execute(f"INSERT INTO {table_name} SELECT * FROM df_view")
 
-            # Batch insert using prepared statements
-            placeholders = ', '.join(['?' for _ in columns])
-            insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
-
-            # Insert the first batch
-            conn.executemany(insert_query, first_rows)
-
-            # Continue with the rest
-            while True:
-                rows = result.fetchmany(batch_size)
-                if not rows:
-                    break
-                conn.executemany(insert_query, rows)
+        print(f"Successfully saved resultset to DuckDB table {table_name} in {db_path}")
+        logging.info(f"Successfully saved resultset to DuckDB table {table_name} in {db_path}")
     except Exception as e:
         logging.error(f"Error in save_resultset_to_db for table {table_name}: {str(e)}")
         print(f"ERROR: save_resultset_to_db for table {table_name}: {e}")
@@ -220,7 +244,7 @@ def get_max_column_value_duckdb(column_name, table_name, db_path):
         # Check if table exists
         table_exists = table_name in conn.execute("SHOW TABLES").fetchdf()['name'].values
         if not table_exists:
-            print(f"INFO: Table {table_name} does not exist in DuckDB. Returning None.")
+            logger.info(f"Table {table_name} does not exist in DuckDB. Returning None.")
             conn.close()
             return None
         max_column_query = f"SELECT MAX({column_name}) AS last_{column_name} FROM {table_name}"
