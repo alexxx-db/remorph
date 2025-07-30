@@ -14,38 +14,38 @@ def test_supported_source_technologies() -> None:
     profiler = Profiler()
     supported_platforms = profiler.supported_source_technologies()
     assert isinstance(supported_platforms, list)
-    assert "Synapse" in supported_platforms
+    assert "synapse" in supported_platforms
 
 
 def test_profile_unsupported_platform() -> None:
     """Test that profiling an unsupported platform raises ValueError"""
     profiler = Profiler()
-    with pytest.raises(ValueError, match="Unsupported platform: InvalidPlatform"):
+    with pytest.raises(ValueError, match="Unsupported platform: invalidplatform"):
         profiler.profile("InvalidPlatform")
 
 
 @patch(
     'databricks.labs.lakebridge.assessments.profiler._PLATFORM_TO_SOURCE_TECHNOLOGY',
-    {"Synapse": "tests/resources/assessments/pipeline_config_main.yml"},
+    {"synapse": "tests/resources/assessments/pipeline_config_main.yml"},
 )
 @patch('databricks.labs.lakebridge.assessments.profiler.PRODUCT_PATH_PREFIX', Path(__file__).parent / "../../../")
 def test_profile_execution() -> None:
     """Test successful profiling execution using actual pipeline configuration"""
     profiler = Profiler()
-    profiler.profile("Synapse")
+    profiler.profile("synapse")
     assert Path("/tmp/profiler_main/profiler_extract.db").exists(), "Profiler extract database should be created"
 
 
 @patch(
     'databricks.labs.lakebridge.assessments.profiler._PLATFORM_TO_SOURCE_TECHNOLOGY',
-    {"Synapse": "tests/resources/assessments/synapse/pipeline_config_main.yml"},
+    {"synapse": "tests/resources/assessments/synapse/pipeline_config_main.yml"},
 )
 def test_profile_execution_with_invalid_config() -> None:
     """Test profiling execution with invalid configuration"""
     with patch('pathlib.Path.exists', return_value=False):
         profiler = Profiler()
         with pytest.raises(FileNotFoundError):
-            profiler.profile("Synapse")
+            profiler.profile("synapse")
 
 
 def test_profile_execution_config_override() -> None:
