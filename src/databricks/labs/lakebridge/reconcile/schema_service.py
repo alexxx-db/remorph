@@ -35,8 +35,10 @@ class SchemaService:
 
     @staticmethod
     def _normalize_schema_column(data_source: DataSource, column: Schema) -> Schema:
-        return Schema(
-            column_name=data_source.normalize_identifier(column.column_name),
+        return Schema.create(
+            column_name=column.column_name,
+            ansi_normalized_column_name=data_source.normalize_identifier(column.column_name),
+            source_normalized_column_name=data_source.normalize_identifier(column.column_name),
             data_type=column.data_type,
             is_escaped=True,
         )

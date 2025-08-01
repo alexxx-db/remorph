@@ -24,6 +24,7 @@ class SchemaCompare:
     _schema_compare_schema: StructType = StructType(
         [
             StructField("source_column", StringType(), False),
+            StructField("source_column_ansi", StringType(), False),
             StructField("source_datatype", StringType(), False),
             StructField("databricks_column", StringType(), True),
             StructField("databricks_datatype", StringType(), True),
@@ -47,14 +48,16 @@ class SchemaCompare:
         target_column_map = table_conf.to_src_col_map or {}
         master_schema_match_res = [
             SchemaMatchResult(
-                source_column=s.column_name,
-                databricks_column=target_column_map.get(s.column_name, s.column_name),
+                source_column=s.source_normalized_column_name,
+                source_column_ansi=s.ansi_normalized_column_name,
+                databricks_column=target_column_map.get(s.ansi_normalized_column_name, s.ansi_normalized_column_name),
                 source_datatype=s.data_type,
                 databricks_datatype=next(
                     (
                         tgt.data_type
                         for tgt in databricks_schema
-                        if tgt.column_name == target_column_map.get(s.column_name, s.column_name)
+                        if tgt.ansi_normalized_column_name
+                        == target_column_map.get(s.ansi_normalized_column_name, s.ansi_normalized_column_name)
                     ),
                     "",
                 ),
@@ -88,7 +91,7 @@ class SchemaCompare:
 
     @classmethod
     def _validate_parsed_query(cls, master: SchemaMatchResult, parsed_query) -> None:
-        databricks_query = f"create table dummy ({master.source_column} {master.databricks_datatype})"
+        databricks_query = f"create table dummy ({master.source_column_ansi} {master.databricks_datatype})"
         logger.info(
             f"""
         Source datatype: create table dummy ({master.source_column} {master.source_datatype})

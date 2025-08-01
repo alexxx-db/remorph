@@ -322,6 +322,7 @@ def test_reconcile_data_with_mismatches_and_missing(
         [
             Row(
                 source_column="s_suppkey",
+                source_column_ansi="s_suppkey",
                 source_datatype="number",
                 databricks_column="s_suppkey_t",
                 databricks_datatype="number",
@@ -329,6 +330,7 @@ def test_reconcile_data_with_mismatches_and_missing(
             ),
             Row(
                 source_column="s_name",
+                source_column_ansi="s_name",
                 source_datatype="varchar",
                 databricks_column="s_name",
                 databricks_datatype="varchar",
@@ -336,6 +338,7 @@ def test_reconcile_data_with_mismatches_and_missing(
             ),
             Row(
                 source_column="s_address",
+                source_column_ansi="s_address",
                 source_datatype="varchar",
                 databricks_column="s_address_t",
                 databricks_datatype="varchar",
@@ -343,6 +346,7 @@ def test_reconcile_data_with_mismatches_and_missing(
             ),
             Row(
                 source_column="s_nationkey",
+                source_column_ansi="s_nationkey",
                 source_datatype="number",
                 databricks_column="s_nationkey_t",
                 databricks_datatype="number",
@@ -350,6 +354,7 @@ def test_reconcile_data_with_mismatches_and_missing(
             ),
             Row(
                 source_column="s_phone",
+                source_column_ansi="s_phone",
                 source_datatype="varchar",
                 databricks_column="s_phone_t",
                 databricks_datatype="varchar",
@@ -357,6 +362,7 @@ def test_reconcile_data_with_mismatches_and_missing(
             ),
             Row(
                 source_column="s_acctbal",
+                source_column_ansi="s_acctbal",
                 source_datatype="number",
                 databricks_column="s_acctbal_t",
                 databricks_datatype="number",

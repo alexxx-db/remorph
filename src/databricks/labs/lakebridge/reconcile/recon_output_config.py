@@ -32,6 +32,7 @@ class DataReconcileOutput:
 @dataclass
 class SchemaMatchResult:
     source_column: str
+    source_column_ansi: str
     source_datatype: str
     databricks_column: str
     databricks_datatype: str
