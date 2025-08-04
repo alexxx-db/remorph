@@ -223,7 +223,7 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
             elif mode == "append" and table_name not in list_tables:
                 conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
 
-            print("Tables created *********")
+            print("Tables created")
             conn.register("df_view", df)
             # Insert data from the DataFrame view
             conn.execute(f"INSERT INTO {table_name} SELECT * FROM df_view")
