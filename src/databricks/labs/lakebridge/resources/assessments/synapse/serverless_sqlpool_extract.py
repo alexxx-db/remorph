@@ -41,7 +41,6 @@ def execute():
             save_resultset_to_db(result, "serverless_databases", db_path, mode="overwrite")
 
             serverless_database_groups_in_scope = get_serverless_database_groups(db_path)
-            print("*************************************")
             print(serverless_database_groups_in_scope)
 
             for idx, collation_name in enumerate(serverless_database_groups_in_scope):

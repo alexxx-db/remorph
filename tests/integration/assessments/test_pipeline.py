@@ -58,9 +58,6 @@ def python_failure_config():
 def test_run_pipeline(extractor, pipeline_config, get_logger):
     pipeline = PipelineClass(config=pipeline_config, executor=extractor)
     results = pipeline.execute()
-    print("*******************\n")
-    print(results)
-    print("\n*******************")
 
     # Verify all steps completed successfully
     for result in results:
