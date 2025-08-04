@@ -524,16 +524,3 @@ class SynapseQueries:
             CURRENT_TIMESTAMP AS EXTRACT_TS
             FROM SYS.DM_EXTERNAL_DATA_PROCESSED
         """
-
-    # TODO: Missing queries for DDL tables - need to implement:
-    # 1. workspace_workspace_info - Query for workspace information
-    # 2. workspace_sql_pools - Query for SQL pool information
-    # 3. workspace_spark_pools - Query for Spark pool information
-    # 4. workspace_datasets - Query for dataset information
-    # 5. workspace_dataflows - Query for dataflow information
-    # 6. workspace_linked_services - Query for linked service information
-    # 7. workspace_notebooks - Query for notebook information
-    # 8. workspace_pipelines - Query for pipeline information
-    # 9. workspace_sql_scripts - Query for SQL script information
-    # 10. workspace_pipeline_runs - Query for pipeline run information
-    # 11. serverless_routines - Query for serverless routines (different from dedicated)
