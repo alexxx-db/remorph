@@ -81,6 +81,7 @@ def databricks_databricks_schema():
         schema_fixture_factory("col_num10", "decimal(10,1)"),
         schema_fixture_factory("col_dec", "decimal(20,2)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
+        schema_fixture_factory("col_escaped", "string", "`col_escaped`", "`col_escaped`"),
         schema_fixture_factory("dummy", "string"),
     ]
     tgt_schema = [
@@ -92,6 +93,7 @@ def databricks_databricks_schema():
         schema_fixture_factory("col_num10", "decimal(10,1)"),
         schema_fixture_factory("col_dec", "decimal(20,1)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
+        schema_fixture_factory("col_escaped", "string", "`col_escaped`", "`col_escaped`"),
     ]
     return src_schema, tgt_schema
 
@@ -124,6 +126,7 @@ def oracle_databricks_schema():
         schema_fixture_factory("col_anytype", "anytype"),
         schema_fixture_factory("col_anydata", "anydata"),
         schema_fixture_factory("col_anydataset", "anydataset"),
+        schema_fixture_factory("col_escaped", "varchar2(255)", "`col_escaped`", "\"col_escaped\""),
         schema_fixture_factory("dummy", "string"),
     ]
 
@@ -154,6 +157,7 @@ def oracle_databricks_schema():
         schema_fixture_factory("col_anytype", "string"),
         schema_fixture_factory("col_anydata", "string"),
         schema_fixture_factory("col_anydataset", "string"),
+        schema_fixture_factory("col_escaped", "string", "`col_escaped`", "`col_escaped`"),
     ]
 
     return src_schema, tgt_schema
@@ -210,6 +214,7 @@ def test_databricks_schema_compare(schemas, mock_spark):
             "col_num10",
             "col_dec",
             "col_numeric_2",
+            "col_escaped",
         ],
         column_mapping=[
             ColumnMapping(source_name="col_char", target_name="char"),
@@ -225,8 +230,8 @@ def test_databricks_schema_compare(schemas, mock_spark):
     df = schema_compare_output.compare_df
 
     assert not schema_compare_output.is_valid
-    assert df.count() == 8
-    assert df.filter("is_valid = 'true'").count() == 7
+    assert df.count() == 9
+    assert df.filter("is_valid = 'true'").count() == 8
     assert df.filter("is_valid = 'false'").count() == 1
 
 
@@ -251,19 +256,19 @@ def test_oracle_schema_compare(schemas, mock_spark):
     df = schema_compare_output.compare_df
 
     assert schema_compare_output.is_valid
-    assert df.count() == 26
-    assert df.filter("is_valid = 'true'").count() == 26
+    assert df.count() == 27
+    assert df.filter("is_valid = 'true'").count() == 27
     assert df.filter("is_valid = 'false'").count() == 0
 
 
 def test_schema_compare(mock_spark):
     src_schema = [
-        schema_fixture_factory("col1", "int"),
-        schema_fixture_factory("col2", "string"),
+        schema_fixture_factory("col1", "int", "`col1`", "`col1`"),
+        schema_fixture_factory("col2", "string", "`col2`", "`col2`"),
     ]
     tgt_schema = [
-        schema_fixture_factory("col1", "int"),
-        schema_fixture_factory("col2", "string"),
+        schema_fixture_factory("col1", "int", "`col1`", "`col1`"),
+        schema_fixture_factory("col2", "string", "`col2`", "`col2`"),
     ]
     spark = mock_spark
     table_conf = Table(

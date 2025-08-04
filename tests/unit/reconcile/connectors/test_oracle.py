@@ -183,9 +183,9 @@ def test_normalize_identifier():
     data_source = OracleDataSource(engine, spark, ws, scope)
 
     assert data_source.normalize_identifier("col1") == NormalizedIdentifier("`col1`", "\"col1\"")
-    assert data_source.normalize_identifier("\"col1\"") == NormalizedIdentifier(
+    assert data_source.normalize_identifier("\"col1\"") == NormalizedIdentifier(  # Oracle delimiter
         "`col1`", "\"col1\""
-    )  # Oracle delimiter
-    assert data_source.normalize_identifier("`col1`") == NormalizedIdentifier(
+    )
+    assert data_source.normalize_identifier("`col1`") == NormalizedIdentifier(  # ANSI SQL delimiter
         "`col1`", "\"col1\""
-    )  # ANSI SQL delimiter
+    )
