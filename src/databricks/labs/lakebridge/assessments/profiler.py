@@ -61,11 +61,8 @@ class Profiler:
             if extractor is None:
                 extractor = self._setup_extractor(platform)
 
-            results = PipelineClass(pipeline_config, extractor).execute()
-
-            for result in results:
-                logger.info(f"Step: {result.step_name}, Status: {result.status}, Error: {result.error_message}")
-
+            result = PipelineClass(pipeline_config, extractor).execute()
+            logger.info(f"Profile execution has completed successfully for {platform} for more info check: {result}.")
         except FileNotFoundError as e:
             logging.error(f"Configuration file not found for source {platform}: {e}")
             raise FileNotFoundError(f"Configuration file not found for source {platform}: {e}") from e

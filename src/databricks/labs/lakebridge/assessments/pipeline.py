@@ -44,13 +44,29 @@ class PipelineClass:
     def execute(self) -> list[StepExecutionResult]:
         logging.info(f"Pipeline initialized with config: {self.config.name}, version: {self.config.version}")
         execution_results: list[StepExecutionResult] = []
+        error_flag = False
         for step in self.config.steps:
-            logging.info(f"Executing step: {step.name}")
+            logger.info(f"Executing step: {step.name}")
             result = self._process_step(step)
             execution_results.append(result)
-            logging.info(f"Step '{step.name}' completed with status: {result.status}")
+            logger.info(f"Step '{step.name}' completed with status: {result.status}")
 
-        logging.info("Pipeline execution completed")
+            # Check step execution status
+            if result.status == StepExecutionStatus.ERROR:
+                logger.error(f"Step {result.step_name} failed with error: {result.error_message}")
+                error_flag = True
+            elif result.status == StepExecutionStatus.SKIPPED:
+                logger.info(f"Step {result.step_name} was skipped.")
+            else:
+                logger.info(f"Step {result.step_name} has completed successfully.")
+
+        if error_flag:
+            failed_steps = [r for r in execution_results if r.status == StepExecutionStatus.ERROR]
+            error_msg = (
+                f"Pipeline execution failed due to errors in steps: {', '.join(r.step_name for r in failed_steps)}"
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         return execution_results
 
     def _process_step(self, step: Step) -> StepExecutionResult:
@@ -183,12 +199,18 @@ class PipelineClass:
         if output_lines:
             try:
                 output = json.loads(output_lines[-1])
-                if output.get("status") == "success":
-                    logging.info(f"Python script completed: {output['message']}")
-                else:
-                    raise RuntimeError(f"Script reported error: {output.get('message', 'Unknown error')}")
             except json.JSONDecodeError:
                 logging.info("Could not parse script output as JSON.")
+                output = {
+                    "status": "error",
+                    "message": "Could not parse script output as JSON, manually validate the logs.",
+                }
+
+            if output.get("status") == "success":
+                logging.info(f"Python script completed: {output['message']}")
+            else:
+                raise RuntimeError(f"Script reported error: {output.get('message', 'Unknown error')}")
+
         if process.returncode != 0:
             raise RuntimeError(f"Script execution failed with exit code {process.returncode}")
 

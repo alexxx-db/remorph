@@ -29,7 +29,7 @@ class SynapseQueries:
     @staticmethod
     def list_columns(pool_name: str) -> str:
         """Get list of columns"""
-        return """
+        return f"""
                SELECT
                    TABLE_CATALOG,
                    TABLE_SCHEMA,
@@ -59,7 +59,7 @@ class SynapseQueries:
                """
 
     @staticmethod
-    def list_views(redact_sql_text: bool = False) -> str:
+    def list_views(pool_name, redact_sql_text: bool = False) -> str:
         """Get list of views"""
         return """
                SELECT
@@ -68,30 +68,39 @@ class SynapseQueries:
                    TABLE_NAME,
                    CHECK_OPTION,
                    IS_UPDATABLE,
-                   '[REDACTED]' as VIEW_DEFINITION
+                   '[REDACTED]' as VIEW_DEFINITION,
+                   '{pool_name}' as POOL_NAME
                FROM INFORMATION_SCHEMA.VIEWS
                """
 
     @staticmethod
-    def list_routines(redact_sql_text: bool = False) -> str:
+    def list_routines(pool_name, redact_sql_text: bool = False) -> str:
         """Get list of routines (functions + procedures)"""
-        return """
-                   SELECT
-                       ROUTINE_CATALOG,
-                       ROUTINE_SCHEMA,
-                       ROUTINE_NAME,
-                       ROUTINE_TYPE,
-                       DATA_TYPE,
-                       CHARACTER_MAXIMUM_LENGTH,
-                       NUMERIC_PRECISION,
-                       NUMERIC_SCALE,
-                       DATETIME_PRECISION,
-                       ROUTINE_BODY,
-                       IS_DETERMINISTIC,
-                       SQL_DATA_ACCESS,
-                       IS_NULL_CALL,
-                       -- TODO: Add missing columns from DDL: CREATED, IS_IMPLICITLY_INVOCABLE, IS_USER_DEFINED_CAST, LAST_ALTERED, MAX_DYNAMIC_RESULT_SETS, NUMERIC_PRECISION_RADIX, SCHEMA_LEVEL_ROUTINE, SPECIFIC_CATALOG, SPECIFIC_NAME, SPECIFIC_SCHEMA
-                       '[REDACTED]' as ROUTINE_DEFINITION
+        return f"""
+               SELECT
+                   CREATED,
+                   DATA_TYPE,
+                   IS_DETERMINISTIC,
+                   IS_IMPLICITLY_INVOCABLE,
+                   IS_NULL_CALL,
+                   IS_USER_DEFINED_CAST,
+                   LAST_ALTERED,
+                   MAX_DYNAMIC_RESULT_SETS,
+                   NUMERIC_PRECISION,
+                   NUMERIC_PRECISION_RADIX,
+                   NUMERIC_SCALE,
+                   ROUTINE_BODY,
+                   ROUTINE_CATALOG,
+                   '[REDACTED]' as ROUTINE_DEFINITION,
+                   ROUTINE_NAME,
+                   ROUTINE_SCHEMA,
+                   ROUTINE_TYPE,
+                   SCHEMA_LEVEL_ROUTINE,
+                   SPECIFIC_CATALOG,
+                   SPECIFIC_NAME,
+                   SPECIFIC_SCHEMA,
+                   SQL_DATA_ACCESS,
+                   '{pool_name}' as POOL_NAME
                    FROM information_schema.routines
                    """
 
@@ -119,7 +128,69 @@ class SynapseQueries:
                      """
 
     @staticmethod
-    def list_requests(pool_name: str, min_end_time: str | None = None, redact_sql_text: bool = True) -> str:
+    def list_serverless_sessions(pool_name, min_last_request_start_time: str | None = None) -> str:
+        """Get session list with transformed login names and client IDs"""
+        cond = (
+            "AND last_request_start_time > '" + min_last_request_start_time + "'" if min_last_request_start_time else ""
+        )
+        return f"""SELECT
+          ANSI_DEFAULTS,
+          ANSI_NULL_DFLT_ON,
+          ANSI_NULLS,
+          ANSI_PADDING,
+          ANSI_WARNINGS,
+          ARITHABORT,
+          AUTHENTICATING_DATABASE_ID,
+          CLIENT_INTERFACE_NAME,
+          CLIENT_VERSION,
+          CONCAT_NULL_YIELDS_NULL,
+          CONTEXT_INFO,
+          CPU_TIME,
+          DATABASE_ID,
+          DATE_FIRST,
+          DATE_FORMAT,
+          DEADLOCK_PRIORITY,
+          ENDPOINT_ID,
+          GROUP_ID,
+          HOST_NAME,
+          HOST_PROCESS_ID,
+          IS_FILTERED,
+          IS_USER_PROCESS,
+          LANGUAGE,
+          LAST_REQUEST_END_TIME,
+          LAST_REQUEST_START_TIME,
+          LOCK_TIMEOUT,
+          LOGICAL_READS,
+          CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', LOGIN_NAME), 2) as LOGIN_NAME,
+          LOGIN_TIME,
+          MEMORY_USAGE,
+          NT_DOMAIN,
+          NT_USER_NAME,
+          OPEN_TRANSACTION_COUNT,
+          CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', ORIGINAL_LOGIN_NAME), 2) as ORIGINAL_LOGIN_NAME,
+          ORIGINAL_SECURITY_ID,
+          PAGE_SERVER_READS,
+          PREV_ERROR,
+          PROGRAM_NAME,
+          QUOTED_IDENTIFIER,
+          READS,
+          ROW_COUNT,
+          SECURITY_ID,
+          SESSION_ID,
+          STATUS,
+          TEXT_SIZE,
+          TOTAL_ELAPSED_TIME,
+          TOTAL_SCHEDULED_TIME,
+          TRANSACTION_ISOLATION_LEVEL,
+          WRITES,
+          '{pool_name}' as POOL_NAME,
+          CURRENT_TIMESTAMP as EXTRACT_TS
+           FROM sys.dm_exec_sessions
+           WHERE is_user_process = 'True' {cond}
+        """
+
+    @staticmethod
+    def list_dedicated_requests(pool_name: str, min_end_time: str | None = None, redact_sql_text: bool = True) -> str:
         """Get session request list with command type classification"""
         command_col = "'[REDACTED]' as COMMAND" if redact_sql_text else "COMMAND"
         end_time_filter = f"AND END_TIME > '{min_end_time}'" if min_end_time else ""
@@ -228,19 +299,88 @@ class SynapseQueries:
         """
 
     @staticmethod
-    def get_db_storage_info() -> str:
+    def get_db_storage_info(pool_name) -> str:
         """Get database storage information"""
-        return """
-               SELECT *, CURRENT_TIMESTAMP AS EXTRACT_TS
-               FROM (
-                        SELECT
-                            PDW_NODE_ID AS NODE_ID,
-                            (SUM(RESERVED_PAGE_COUNT) * 8) / 1024 AS RESERVEDSPACEMB,
-                            (SUM(USED_PAGE_COUNT)  * 8) / 1024 AS USEDSPACEMB
-                        FROM SYS.DM_PDW_NODES_DB_PARTITION_STATS
-                        GROUP BY PDW_NODE_ID
-                    ) X
+        return f"""SELECT
+                       PDW_NODE_ID AS NODE_ID,
+                       (SUM(RESERVED_PAGE_COUNT) * 8) / 1024 AS RESERVEDSPACEMB,
+                       (SUM(USED_PAGE_COUNT)  * 8) / 1024 AS USEDSPACEMB,
+                       '{pool_name}' as POOL_NAME,
+                        CURRENT_TIMESTAMP AS EXTRACT_TS
+                    FROM SYS.DM_PDW_NODES_DB_PARTITION_STATS
+                    GROUP BY PDW_NODE_ID
                """
+
+    @staticmethod
+    def list_serverless_requests(pool_name, min_start_time):
+        """
+        Get list of requests with start time filter
+        """
+
+        return f"""
+          SELECT
+              ANSI_DEFAULTS,
+              ANSI_NULL_DFLT_ON,
+              ANSI_NULLS,
+              ANSI_PADDING,
+              ANSI_WARNINGS,
+              ARITHABORT,
+              BLOCKING_SESSION_ID,
+              COMMAND,
+              CONCAT_NULL_YIELDS_NULL,
+              CONNECTION_ID,
+              CONTEXT_INFO,
+              CPU_TIME,
+              DATABASE_ID,
+              DATE_FIRST,
+              DATE_FORMAT,
+              DEADLOCK_PRIORITY,
+              DIST_STATEMENT_ID,
+              DOP,
+              ESTIMATED_COMPLETION_TIME,
+              EXECUTING_MANAGED_CODE,
+              GRANTED_QUERY_MEMORY,
+              GROUP_ID,
+              IS_RESUMABLE,
+              LANGUAGE,
+              LAST_WAIT_TYPE,
+              LOCK_TIMEOUT,
+              LOGICAL_READS,
+              NEST_LEVEL,
+              OPEN_RESULTSET_COUNT,
+              OPEN_TRANSACTION_COUNT,
+              PAGE_SERVER_READS,
+              PERCENT_COMPLETE,
+              PLAN_HANDLE,
+              PREV_ERROR,
+              QUERY_HASH,
+              QUERY_PLAN_HASH,
+              QUOTED_IDENTIFIER,
+              READS,
+              REQUEST_ID,
+              ROW_COUNT,
+              SCHEDULER_ID,
+              SESSION_ID,
+              SQL_HANDLE,
+              START_TIME,
+              STATEMENT_END_OFFSET,
+              STATEMENT_START_OFFSET,
+              STATUS,
+              TASK_ADDRESS,
+              TEXT_SIZE,
+              TOTAL_ELAPSED_TIME,
+              TRANSACTION_ID,
+              TRANSACTION_ISOLATION_LEVEL,
+              USER_ID,
+              WAIT_RESOURCE,
+              WAIT_TIME,
+              WAIT_TYPE,
+              WRITES,
+              '{pool_name}' as POOL_NAME,
+              CURRENT_TIMESTAMP as EXTRACT_TS
+            FROM sys.dm_exec_requests
+          {"WHERE start_time > '"+min_start_time+"'" if min_start_time else ""}
+        """
 
     @staticmethod
     def get_table_storage_info() -> str:
@@ -302,37 +442,87 @@ class SynapseQueries:
 
         """
         return f"""
-      SELECT QS.*,
-        SUBSTRING(
-          ST.text,
-          (QS.statement_start_offset / 2) + 1,
-          (
+      SELECT
+          SQL_HANDLE,
+          PLAN_HANDLE,
+          STATEMENT_START_OFFSET,
+          STATEMENT_END_OFFSET,
+          CREATION_TIME,
+          LAST_EXECUTION_TIME,
+          EXECUTION_COUNT,
+          TOTAL_WORKER_TIME,
+          LAST_WORKER_TIME,
+          MIN_WORKER_TIME,
+          MAX_WORKER_TIME,
+          TOTAL_ELAPSED_TIME,
+          LAST_ELAPSED_TIME,
+          MIN_ELAPSED_TIME,
+          MAX_ELAPSED_TIME,
+          TOTAL_LOGICAL_READS,
+          LAST_LOGICAL_READS,
+          MIN_LOGICAL_READS,
+          MAX_LOGICAL_READS,
+          TOTAL_PHYSICAL_READS,
+          LAST_PHYSICAL_READS,
+          MIN_PHYSICAL_READS,
+          MAX_PHYSICAL_READS,
+          TOTAL_LOGICAL_WRITES,
+          LAST_LOGICAL_WRITES,
+          MIN_LOGICAL_WRITES,
+          MAX_LOGICAL_WRITES,
+          TOTAL_ROWS,
+          LAST_ROWS,
+          MIN_ROWS,
+          MAX_ROWS,
+          QUERY_HASH,
+          QUERY_PLAN_HASH,
+          SUBSTRING(
+            ST.text,
+            (QS.statement_start_offset / 2) + 1,
             (
-              CASE
-                statement_end_offset
-                WHEN -1 THEN DATALENGTH(ST.text)
-                ELSE QS.statement_end_offset
-              END - QS.statement_start_offset
-            ) / 2
-          ) + 1
-        ) AS statement_text
+              (
+                CASE
+                  statement_end_offset
+                  WHEN -1 THEN DATALENGTH(ST.text)
+                  ELSE QS.statement_end_offset
+                END - QS.statement_start_offset
+              ) / 2
+            ) + 1
+                ) AS statement_text
       FROM sys.dm_exec_query_stats AS QS
-        CROSS APPLY sys.dm_exec_sql_text(QS.sql_handle) as ST
+      CROSS APPLY sys.dm_exec_sql_text(QS.sql_handle) as ST
       {"WHERE QS.last_execution_time > '"+min_last_execution_time+"'" if min_last_execution_time else ""}"""
 
     @staticmethod
     def query_requests_history(min_end_time) -> str:
         # Serverless Request History
-        return f"""SELECT * FROM sys.dm_exec_requests_history {"WHERE end_time > '"+min_end_time+"'" if min_end_time else ""}"""
+        return f"""SELECT
+          STATUS,
+          TRANSACTION_ID,
+          DISTRIBUTED_STATEMENT_ID,
+          QUERY_HASH,
+          LOGIN_NAME,
+          START_TIME,
+          ERROR_CODE,
+          REJECTED_ROWS_PATH,
+          END_TIME,
+          COMMAND,
+          QUERY_TEXT,
+          TOTAL_ELAPSED_TIME_MS,
+          DATA_PROCESSED_MB,
+          ERROR
+        FROM sys.dm_exec_requests_history
+        {"WHERE end_time > '"+min_end_time+"'" if min_end_time else ""}"""
 
     @staticmethod
-    def data_processed():
-        return """
+    def data_processed(pool_name):
+        return f"""
         SELECT
-            data_processed_mb,
-            type,
-            pool_name,
-            CURRENT_TIMESTAMP AS extract_ts
+            DATA_PROCESSED_MB,
+            TYPE,
+            '{pool_name}' as POOL_NAME,
+            CURRENT_TIMESTAMP AS EXTRACT_TS
+            FROM SYS.DM_EXTERNAL_DATA_PROCESSED
         """
 
     # TODO: Missing queries for DDL tables - need to implement:
