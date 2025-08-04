@@ -67,42 +67,47 @@ def execute():
             logger.info(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
 
             mode = "overwrite" if idx == 0 else "append"
-
+            pool_name = entry['name']
             # tables
-            table_query = SynapseQueries.list_tables()
-            connection = get_sqlpool_reader(config, entry['name'])
-            logger.info("Loading 'tables' for pool: %s", entry['name'])
-            print(f"Loading 'tables' for pool: {entry['name']}")
+            table_name = "dedicated_tables"
+            table_query = SynapseQueries.list_tables(pool_name)
+            connection = get_sqlpool_reader(config, pool_name)
+            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+            print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(table_query))
-            save_resultset_to_db(result, "tables", db_path, mode=mode)
+            save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # columns
-            column_query = SynapseQueries.list_columns()
-            logger.info("Loading 'columns' for pool: %s", entry['name'])
-            print(f"Loading 'columns' for pool: {entry['name']}")
+            table_name = "dedicated_columns"
+            column_query = SynapseQueries.list_columns(pool_name)
+            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+            print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(column_query))
-            save_resultset_to_db(result, "columns", db_path, mode=mode)
+            save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # views
-            view_query = SynapseQueries.list_views()
-            logger.info("Loading 'views' for pool: %s", entry['name'])
-            print(f"Loading 'views' for pool: {entry['name']}")
+            table_name = "dedicated_views"
+            view_query = SynapseQueries.list_views(pool_name)
+            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+            print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(view_query))
-            save_resultset_to_db(result, "views", db_path, mode=mode)
+            save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # routines
-            routine_query = SynapseQueries.list_routines()
-            logger.info("Loading 'routines' for pool: %s", entry['name'])
-            print(f"Loading 'routines' for pool: {entry['name']}")
+            table_name = "dedicated_routines"
+            routine_query = SynapseQueries.list_routines(pool_name)
+            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+            print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(routine_query))
-            save_resultset_to_db(result, "routines", db_path, mode=mode)
+            save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # storage_info
-            storage_info_query = SynapseQueries.get_db_storage_info()
-            logger.info("Loading 'storage_info' for pool: %s", entry['name'])
-            print(f"Loading 'storage_info' for pool: {entry['name']}")
+            table_name = "dedicated_storage_info"
+            storage_info_query = SynapseQueries.get_db_storage_info(pool_name)
+            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+            print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(storage_info_query))
-            save_resultset_to_db(result, "storage_info", db_path, mode=mode)
+            save_resultset_to_db(result, table_name, db_path, mode=mode)
 
         # Activity: Extract
         sqlpool_names_to_profile = ",".join([entry['name'] for entry in live_dedicated_pools_to_profile])
@@ -116,16 +121,18 @@ def execute():
             print(f"INFO: sqlpool_name → {sqlpool_name}")
             connection = get_sqlpool_reader(config, sqlpool_name)
 
-            table_name = "sessions"
+            table_name = "dedicated_sessions"
             prev_max_login_time = get_max_column_value_duckdb("login_time", table_name, db_path)
-            session_query = SynapseQueries.list_sessions(prev_max_login_time)
+            session_query = SynapseQueries.list_dedicated_sessions(
+                pool_name=sqlpool_name, last_login_time=prev_max_login_time
+            )
 
             session_result = connection.execute(text(session_query))
             save_resultset_to_db(session_result, table_name, db_path, mode="append")
 
-            table_name = "session_request"
+            table_name = "dedicated_session_requests"
             prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
-            session_request_query = SynapseQueries.list_requests(prev_max_end_time)
+            session_request_query = SynapseQueries.list_dedicated_requests(prev_max_end_time)
 
             session_request_result = connection.execute(text(session_request_query))
             save_resultset_to_db(session_request_result, table_name, db_path, mode="append")

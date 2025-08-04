@@ -72,11 +72,6 @@ def execute():
             msg = f"Pool names to extract metrics: {[entry['name'] for entry in dedicated_pools_to_profile]}"
             logger.info(msg)
 
-        if exclude_dedicated_sql_pools:
-            logger.info(
-                f" exclude_dedicated_sql_pools is set to {exclude_dedicated_sql_pools}, Skipping metrics extract for Dedicated SQL pools"
-            )
-        else:
             pools_df = pd.DataFrame()
             for idx, pool in enumerate(dedicated_pools_to_profile):
                 pool_name = pool['name']
@@ -112,6 +107,7 @@ def execute():
                 f" exclude_spark_pools is set to {exclude_spark_pools}, Skipping metrics extract for Spark pools"
             )
         else:
+            print("Starting Execution for Spark Pools Metrics Extraction")
             spark_pools_iter = workspace.list_bigdata_pools()
             all_spark_pool_list = [pool for poolPages in spark_pools_iter for pool in poolPages]
             spark_pools_to_profile = (
@@ -121,12 +117,8 @@ def execute():
             )
 
             logger.info(f" Pool names to extract metrics: {[entry['name'] for entry in spark_pools_to_profile]}")
+            print(f" Pool names to extract metrics: {[entry['name'] for entry in spark_pools_to_profile]}")
 
-        if exclude_spark_pools:
-            logger.info(
-                f" exclude_spark_pools is set to {exclude_spark_pools}, Skipping metrics extract for Spark pools"
-            )
-        else:
             spark_pools_df = pd.DataFrame()
             for idx, pool in enumerate(spark_pools_to_profile):
                 pool_name = pool['name']
@@ -138,7 +130,7 @@ def execute():
 
                 step_name = "spark_pool_metrics"
 
-                spark_pool_metrics_df = synapse_metrics.get_dedicated_sql_pool_metrics(pool_resoure_id)
+                spark_pool_metrics_df = synapse_metrics.get_spark_pool_metrics(pool_resoure_id)
                 if idx == 0:
                     spark_pools_df = spark_pool_metrics_df
                 else:

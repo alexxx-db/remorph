@@ -1,5 +1,5 @@
 from pathlib import Path
-from subprocess import run, CalledProcessError, Popen, PIPE, STDOUT
+from subprocess import run, CalledProcessError, Popen, PIPE, STDOUT, DEVNULL
 from dataclasses import dataclass
 from enum import Enum
 
@@ -39,16 +39,34 @@ class PipelineClass:
         self.config = config
         self.executor = executor
         self.db_path_prefix = Path(config.extract_folder)
+        self._create_dir(self.db_path_prefix)
 
     def execute(self) -> list[StepExecutionResult]:
         logging.info(f"Pipeline initialized with config: {self.config.name}, version: {self.config.version}")
         execution_results: list[StepExecutionResult] = []
+        error_flag = False
         for step in self.config.steps:
+            logger.info(f"Executing step: {step.name}")
             result = self._process_step(step)
             execution_results.append(result)
-            logging.info(f"Step '{step.name}' completed with status: {result.status}")
+            logger.info(f"Step '{step.name}' completed with status: {result.status}")
 
-        logging.info("Pipeline execution completed")
+            # Check step execution status
+            if result.status == StepExecutionStatus.ERROR:
+                logger.error(f"Step {result.step_name} failed with error: {result.error_message}")
+                error_flag = True
+            elif result.status == StepExecutionStatus.SKIPPED:
+                logger.info(f"Step {result.step_name} was skipped.")
+            else:
+                logger.info(f"Step {result.step_name} has completed successfully.")
+
+        if error_flag:
+            failed_steps = [r for r in execution_results if r.status == StepExecutionStatus.ERROR]
+            error_msg = (
+                f"Pipeline execution failed due to errors in steps: {', '.join(r.step_name for r in failed_steps)}"
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         return execution_results
 
     def _process_step(self, step: Step) -> StepExecutionResult:
@@ -107,7 +125,7 @@ class PipelineClass:
             venv_python = venv_dir / "bin" / "python"
             venv_pip = venv_dir / "bin" / "pip"
 
-            logger.info(f"Creating a virtual environment for Python script execution: ${venv_dir}")
+            logger.info(f"Creating a virtual environment for Python script execution: {venv_dir} for step: {step.name}")
             if step.dependencies:
                 self._install_dependencies(venv_pip, step.dependencies)
 
@@ -118,8 +136,35 @@ class PipelineClass:
         logging.info(f"Installing dependencies: {', '.join(dependencies)}")
         try:
             logging.debug("Upgrading local pip")
-            run([str(venv_pip), "install", "--upgrade", "pip"], check=True)
-            run([str(venv_pip), "install", *dependencies], check=True)
+            run(
+                [
+                    str(venv_pip),
+                    "install",
+                    "--upgrade",
+                    "pip",
+                    "--require-virtualenv",
+                    "--quiet",
+                    "--no-input",
+                    "--disable-pip-version-check",
+                ],
+                check=True,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
+            )
+            run(
+                [
+                    str(venv_pip),
+                    "install",
+                    *dependencies,
+                    "--require-virtualenv",
+                    "--quiet",
+                    "--no-input",
+                    "--disable-pip-version-check",
+                ],
+                check=True,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
+            )
         except CalledProcessError as e:
             logging.error(f"Failed to install dependencies: {e.stderr}")
             raise RuntimeError(f"Failed to install dependencies: {e.stderr}") from e
@@ -154,17 +199,22 @@ class PipelineClass:
         if output_lines:
             try:
                 output = json.loads(output_lines[-1])
-                if output.get("status") == "success":
-                    logging.info(f"Python script completed: {output['message']}")
-                else:
-                    raise RuntimeError(f"Script reported error: {output.get('message', 'Unknown error')}")
             except json.JSONDecodeError:
                 logging.info("Could not parse script output as JSON.")
+                output = {
+                    "status": "error",
+                    "message": "Could not parse script output as JSON, manually validate the logs.",
+                }
+
+            if output.get("status") == "success":
+                logging.info(f"Python script completed: {output['message']}")
+            else:
+                raise RuntimeError(f"Script reported error: {output.get('message', 'Unknown error')}")
+
         if process.returncode != 0:
             raise RuntimeError(f"Script execution failed with exit code {process.returncode}")
 
     def _save_to_db(self, result, step_name: str, mode: str, batch_size: int = 1000):
-        self._create_dir(self.db_path_prefix)
         db_path = str(self.db_path_prefix / DB_NAME)
 
         with duckdb.connect(db_path) as conn:
@@ -195,7 +245,7 @@ class PipelineClass:
             dir_path.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def load_config_from_yaml(file_path: str) -> PipelineConfig:
+    def load_config_from_yaml(file_path: str | Path) -> PipelineConfig:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = yaml.safe_load(file)
         steps = [Step(**step) for step in data['steps']]
