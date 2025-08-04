@@ -292,27 +292,7 @@ class Schema:
     data_type: str
     ansi_normalized_column_name: str
     source_normalized_column_name: str
-    is_escaped: bool
-
-    def __init__(self, column_name: str, data_type: str, is_escaped: bool = False):
-        self.column_name = column_name
-        self.ansi_normalized_column_name = column_name
-        self.source_normalized_column_name = column_name
-        self.data_type = data_type
-        self.is_escaped = is_escaped
-
-    @staticmethod
-    def create(
-        column_name: str,
-        data_type: str,
-        ansi_normalized_column_name: str,
-        source_normalized_column_name: str,
-        is_escaped: bool = False,
-    ):
-        schema = Schema(column_name, data_type, is_escaped)
-        schema.ansi_normalized_column_name = ansi_normalized_column_name
-        schema.source_normalized_column_name = source_normalized_column_name
-        return schema
+    is_escaped: bool = False
 
 
 @dataclass

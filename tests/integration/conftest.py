@@ -6,7 +6,6 @@ import pytest
 from pyspark.sql import SparkSession
 from databricks.labs.lakebridge.__about__ import __version__
 
-
 logging.getLogger("tests").setLevel("DEBUG")
 logging.getLogger("databricks.labs.lakebridge").setLevel("DEBUG")
 

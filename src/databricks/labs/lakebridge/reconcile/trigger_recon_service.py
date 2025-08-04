@@ -137,7 +137,7 @@ class TriggerReconService:
         data_reconcile_output = DataReconcileOutput()
 
         try:
-            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
+            src_schema, tgt_schema = SchemaService.get_schemas(
                 source=reconciler.source,
                 target=reconciler.target,
                 table_conf=table_conf,

@@ -6,7 +6,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import Schema, Table
 class SchemaService:
 
     @staticmethod
-    def get_normalized_schemas(
+    def get_schemas(
         source: DataSource,
         target: DataSource,
         table_conf: Table,
@@ -24,21 +24,4 @@ class SchemaService:
             table=table_conf.target_name,
         )
 
-        sanitized_src_schema = SchemaService.normalize_schema(source, src_schema)
-        sanitized_tgt_schema = SchemaService.normalize_schema(target, tgt_schema)
-
-        return sanitized_src_schema, sanitized_tgt_schema
-
-    @staticmethod
-    def normalize_schema(data_source: DataSource, columns: list[Schema]) -> list[Schema]:
-        return [SchemaService._normalize_schema_column(data_source, c) for c in columns]
-
-    @staticmethod
-    def _normalize_schema_column(data_source: DataSource, column: Schema) -> Schema:
-        return Schema.create(
-            column_name=column.column_name,
-            ansi_normalized_column_name=data_source.normalize_identifier(column.column_name),
-            source_normalized_column_name=data_source.normalize_identifier(column.column_name),
-            data_type=column.data_type,
-            is_escaped=True,
-        )
+        return src_schema, tgt_schema

@@ -42,7 +42,7 @@ class TriggerReconAggregateService:
             ).normalize_recon_table_config(table_conf)
             recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
             try:
-                src_schema, tgt_schema = SchemaService.get_normalized_schemas(
+                src_schema, tgt_schema = SchemaService.get_schemas(
                     source=reconciler.source,
                     target=reconciler.target,
                     table_conf=normalized_table_conf,
