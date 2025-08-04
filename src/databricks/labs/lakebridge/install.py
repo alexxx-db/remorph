@@ -2,7 +2,6 @@ import re
 import abc
 import dataclasses
 import shutil
-from collections.abc import Iterable
 from json import loads, dump
 import logging
 import os
@@ -32,14 +31,12 @@ from databricks.labs.lakebridge.config import (
     DatabaseConfig,
     LakebridgeConfiguration,
     ReconcileMetadataConfig,
-    LSPConfigOptionV1,
 )
-
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.helpers.file_utils import chdir
 from databricks.labs.lakebridge.reconcile.constants import ReconReportType, ReconSourceType
-from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPConfig
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 logger = logging.getLogger(__name__)
 
@@ -47,39 +44,8 @@ TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
 
 
 class TranspilerInstaller(abc.ABC):
-
-    @classmethod
-    def labs_path(cls) -> Path:
-        return Path.home() / ".databricks" / "labs"
-
-    @classmethod
-    def transpilers_path(cls) -> Path:
-        return cls.labs_path() / "remorph-transpilers"
-
-    @classmethod
-    def install_from_pypi(cls, product_name: str, pypi_name: str, artifact: Path | None = None) -> Path | None:
-        installer = WheelInstaller(product_name, pypi_name, artifact)
-        return installer.install()
-
-    @classmethod
-    def install_from_maven(
-        cls, product_name: str, group_id: str, artifact_id: str, artifact: Path | None = None
-    ) -> Path | None:
-        installer = MavenInstaller(product_name, group_id, artifact_id, artifact)
-        return installer.install()
-
-    @classmethod
-    def get_installed_version(cls, product_name: str, is_transpiler=True) -> str | None:
-        product_path = (cls.transpilers_path() if is_transpiler else cls.labs_path()) / product_name
-        current_version_path = product_path / "state" / "version.json"
-        if not current_version_path.exists():
-            return None
-        text = current_version_path.read_text("utf-8")
-        data: dict[str, Any] = loads(text)
-        version: str | None = data.get("version", None)
-        if not version or not version.startswith("v"):
-            return None
-        return version[1:]
+    def __init__(self, repository: TranspilerRepository) -> None:
+        self._repository = repository
 
     _version_pattern = re.compile(r"[_-](\d+(?:[.\-_]\w*\d+)+)")
 
@@ -98,65 +64,6 @@ class TranspilerInstaller(abc.ABC):
         if group.endswith("-py3"):
             group = group[:-4]
         return group
-
-    @classmethod
-    def all_transpiler_configs(cls) -> dict[str, LSPConfig]:
-        all_configs = cls._all_transpiler_configs()
-        return {config.name: config for config in all_configs}
-
-    @classmethod
-    def all_transpiler_names(cls) -> set[str]:
-        all_configs = cls.all_transpiler_configs()
-        return set(all_configs.keys())
-
-    @classmethod
-    def all_dialects(cls) -> set[str]:
-        all_dialects: set[str] = set()
-        for config in cls._all_transpiler_configs():
-            all_dialects = all_dialects.union(config.remorph.dialects)
-        return all_dialects
-
-    @classmethod
-    def transpilers_with_dialect(cls, dialect: str) -> set[str]:
-        configs = filter(lambda cfg: dialect in cfg.remorph.dialects, cls.all_transpiler_configs().values())
-        return set(config.name for config in configs)
-
-    @classmethod
-    def transpiler_config_path(cls, transpiler_name) -> Path:
-        config = cls.all_transpiler_configs().get(transpiler_name, None)
-        if not config:
-            raise ValueError(f"No such transpiler: {transpiler_name}")
-        return config.path
-
-    @classmethod
-    def transpiler_config_options(cls, transpiler_name, source_dialect) -> list[LSPConfigOptionV1]:
-        config = cls.all_transpiler_configs().get(transpiler_name, None)
-        if not config:
-            return []  # gracefully returns an empty list, since this can only happen during testing
-        return config.options_for_dialect(source_dialect)
-
-    @classmethod
-    def _all_transpiler_configs(cls) -> Iterable[LSPConfig]:
-        path = cls.transpilers_path()
-        if path.exists():
-            all_files = os.listdir(path)
-            for file in all_files:
-                config = cls._transpiler_config(cls.transpilers_path() / file)
-                if config:
-                    yield config
-
-    @classmethod
-    def _transpiler_config(cls, path: Path) -> LSPConfig | None:
-        if not path.is_dir() or not (path / "lib").is_dir():
-            return None
-        config_path = path / "lib" / "config.yml"
-        if not config_path.is_file():
-            return None
-        try:
-            return LSPConfig.load(config_path)
-        except ValueError as e:
-            logger.error(f"Could not load config: {path!s}", exc_info=e)
-            return None
 
     @classmethod
     def _store_product_state(cls, product_path: Path, version: str) -> None:
@@ -182,7 +89,14 @@ class WheelInstaller(TranspilerInstaller):
             logger.error(f"Error while fetching PyPI metadata: {product_name}", exc_info=e)
             return None
 
-    def __init__(self, product_name: str, pypi_name: str, artifact: Path | None = None):
+    def __init__(
+        self,
+        repository: TranspilerRepository,
+        product_name: str,
+        pypi_name: str,
+        artifact: Path | None = None,
+    ) -> None:
+        super().__init__(repository)
         self._product_name = product_name
         self._pypi_name = pypi_name
         self._artifact = artifact
@@ -200,7 +114,7 @@ class WheelInstaller(TranspilerInstaller):
             logger.warning(f"Could not determine the latest version of {self._pypi_name}")
             logger.error(f"Failed to install transpiler: {self._product_name}")
             return None
-        installed_version = self.get_installed_version(self._product_name)
+        installed_version = self._repository.get_installed_version(self._product_name)
         if installed_version == latest_version:
             logger.info(f"{self._pypi_name} v{latest_version} already installed")
             return None
@@ -208,14 +122,12 @@ class WheelInstaller(TranspilerInstaller):
 
     def _install_latest_version(self, version: str) -> Path | None:
         logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        # use type(self) to workaround a mock bug on class methods
-        self._product_path = type(self).transpilers_path() / self._product_name
+        self._product_path = self._repository.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if self._product_path.exists():
             os.rename(self._product_path, backup_path)
-        self._product_path.mkdir(parents=True, exist_ok=True)
         self._install_path = self._product_path / "lib"
-        self._install_path.mkdir(exist_ok=True)
+        self._install_path.mkdir(parents=True, exist_ok=True)
         try:
             result = self._unsafe_install_latest_version(version)
             logger.info(f"Successfully installed {self._pypi_name} v{version}")
@@ -416,7 +328,15 @@ class MavenInstaller(TranspilerInstaller):
         logger.info(f"Successfully installed: {group_id}:{artifact_id}:{version}")
         return True
 
-    def __init__(self, product_name: str, group_id: str, artifact_id: str, artifact: Path | None = None):
+    def __init__(
+        self,
+        repository: TranspilerRepository,
+        product_name: str,
+        group_id: str,
+        artifact_id: str,
+        artifact: Path | None = None,
+    ) -> None:
+        super().__init__(repository)
         self._product_name = product_name
         self._group_id = group_id
         self._artifact_id = artifact_id
@@ -434,7 +354,7 @@ class MavenInstaller(TranspilerInstaller):
             logger.warning(f"Could not determine the latest version of Databricks {self._product_name} transpiler")
             logger.error("Failed to install transpiler: Databricks {self._product_name} transpiler")
             return None
-        installed_version = self.get_installed_version(self._product_name)
+        installed_version = self._repository.get_installed_version(self._product_name)
         if installed_version == latest_version:
             logger.info(f"Databricks {self._product_name} transpiler v{latest_version} already installed")
             return None
@@ -442,8 +362,7 @@ class MavenInstaller(TranspilerInstaller):
 
     def _install_version(self, version: str) -> Path | None:
         logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        # use type(self) to workaround a mock bug on class methods
-        self._product_path = type(self).transpilers_path() / self._product_name
+        self._product_path = self._repository.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if backup_path.exists():
             rmtree(backup_path)
@@ -495,6 +414,7 @@ class WorkspaceInstaller:
         resource_configurator: ResourceConfigurator,
         workspace_installation: WorkspaceInstallation,
         environ: dict[str, str] | None = None,
+        transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
     ):
         self._ws = ws
         self._prompts = prompts
@@ -503,6 +423,7 @@ class WorkspaceInstaller:
         self._product_info = product_info
         self._resource_configurator = resource_configurator
         self._ws_installation = workspace_installation
+        self._transpiler_repository = transpiler_repository
 
         if not environ:
             environ = dict(os.environ.items())
@@ -528,15 +449,14 @@ class WorkspaceInstaller:
         logger.info("Installation completed successfully! Please refer to the documentation for the next steps.")
         return config
 
-    @classmethod
-    def install_bladebridge(cls, artifact: Path | None = None):
+    def install_bladebridge(self, artifact: Path | None = None) -> None:
         local_name = "bladebridge"
         pypi_name = "databricks-bb-plugin"
-        TranspilerInstaller.install_from_pypi(local_name, pypi_name, artifact)
+        wheel_installer = WheelInstaller(self._transpiler_repository, local_name, pypi_name, artifact)
+        wheel_installer.install()
 
-    @classmethod
-    def install_morpheus(cls, artifact: Path | None = None):
-        if not cls.is_java_version_okay():
+    def install_morpheus(self, artifact: Path | None = None) -> None:
+        if not self.is_java_version_okay():
             logger.error(
                 "The morpheus transpiler requires Java 11 or above. Please install Java and re-run 'install-transpile'."
             )
@@ -544,7 +464,8 @@ class WorkspaceInstaller:
         product_name = "databricks-morph-plugin"
         group_id = "com.databricks.labs"
         artifact_id = product_name
-        TranspilerInstaller.install_from_maven(product_name, group_id, artifact_id, artifact)
+        maven_installer = MavenInstaller(self._transpiler_repository, product_name, group_id, artifact_id, artifact)
+        maven_installer.install()
 
     @classmethod
     def is_java_version_okay(cls) -> bool:
@@ -566,16 +487,15 @@ class WorkspaceInstaller:
             case _:
                 return True
 
-    @classmethod
-    def install_artifact(cls, artifact: str):
+    def install_artifact(self, artifact: str):
         path = Path(artifact)
         if not path.exists():
             logger.error(f"Could not locate artifact {artifact}")
             return
         if "databricks-morph-plugin" in path.name:
-            cls.install_morpheus(path)
+            self.install_morpheus(path)
         elif "databricks_bb_plugin" in path.name:
-            cls.install_bladebridge(path)
+            self.install_bladebridge(path)
         else:
             logger.fatal(f"Cannot install unsupported artifact: {artifact}")
 
@@ -699,19 +619,19 @@ class WorkspaceInstaller:
         return config
 
     def _all_installed_dialects(self) -> list[str]:
-        return sorted(TranspilerInstaller.all_dialects())
+        return sorted(self._transpiler_repository.all_dialects())
 
     def _transpilers_with_dialect(self, dialect: str) -> list[str]:
-        return sorted(TranspilerInstaller.transpilers_with_dialect(dialect))
+        return sorted(self._transpiler_repository.transpilers_with_dialect(dialect))
 
     def _transpiler_config_path(self, transpiler: str) -> Path:
-        return TranspilerInstaller.transpiler_config_path(transpiler)
+        return self._transpiler_repository.transpiler_config_path(transpiler)
 
     def _prompt_for_new_transpile_installation(self) -> TranspileConfig:
         install_later = "Set it later"
         # TODO tidy this up, logger might not display the below in console...
         logger.info("Please answer a few questions to configure lakebridge `transpile`")
-        all_dialects = [install_later] + self._all_installed_dialects()
+        all_dialects = [install_later, *self._all_installed_dialects()]
         source_dialect: str | None = self._prompts.choice("Select the source dialect:", all_dialects, sort=False)
         if source_dialect == install_later:
             source_dialect = None
@@ -762,14 +682,12 @@ class WorkspaceInstaller:
         )
 
     def _prompt_for_transpiler_options(self, transpiler_name: str, source_dialect: str) -> dict[str, Any] | None:
-        config_options = TranspilerInstaller.transpiler_config_options(transpiler_name, source_dialect)
+        config_options = self._transpiler_repository.transpiler_config_options(transpiler_name, source_dialect)
         if len(config_options) == 0:
             return None
         return {option.flag: option.prompt_for_value(self._prompts) for option in config_options}
 
-    def _configure_catalog(
-        self,
-    ) -> str:
+    def _configure_catalog(self) -> str:
         return self._resource_configurator.prompt_for_catalog_setup()
 
     def _configure_schema(
