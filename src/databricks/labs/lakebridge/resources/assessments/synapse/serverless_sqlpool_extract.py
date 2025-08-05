@@ -1,12 +1,12 @@
 import json
 import sys
-import logging
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
     get_config,
     save_resultset_to_db,
     get_serverless_database_groups,
     get_max_column_value_duckdb,
+    set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import (
@@ -17,8 +17,7 @@ from sqlalchemy import text
 
 
 def execute():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+    logger = set_logger(__name__)
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Serverless SQL Pool Extract Script")
 
     cred_manager = create_credential_manager(creds_file)

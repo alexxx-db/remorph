@@ -1,6 +1,5 @@
 import json
 import sys
-import logging
 import urllib3
 import zoneinfo
 import pandas as pd
@@ -15,12 +14,12 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.functions i
     get_config,
     get_azure_metrics_query_client,
     get_synapse_artifacts_client,
+    set_logger,
 )
 
 
 def execute():
-    logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+    logger = set_logger(__name__)
 
     db_path, creds_file = arguments_loader(desc="Monitoring Metrics Extract Script")
 

@@ -1,6 +1,5 @@
 import json
 import sys
-import logging
 from datetime import date, timedelta
 import zoneinfo
 import pandas as pd
@@ -9,13 +8,13 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.functions i
     insert_df_to_duckdb,
     get_config,
     get_synapse_artifacts_client,
+    set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import SynapseWorkspace
 
 
 def execute():
-    logging.basicConfig(level=logging.INFO, stream=sys.stderr, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+    logger = set_logger(__name__)
 
     db_path, creds_file = arguments_loader(desc="Workspace Extract")
 

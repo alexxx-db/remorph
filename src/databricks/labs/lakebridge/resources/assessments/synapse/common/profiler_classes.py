@@ -267,7 +267,6 @@ class SynapseWorkspace(AzureArtifact):
         last_updated_before = datetime.combine(last_updated_date, timex(23, 59, 59, 999999)).replace(
             tzinfo=self.tz_info
         )
-        print(f"INFO: Running {self.__class__.__name__}::list_pipeline_runs with last_updated_date={last_updated_date}")
 
         # set RunFilterParameters
         run_filter_params = AzureArtifact.create_run_filter_parameters(last_updated_after, last_updated_before)
@@ -285,7 +284,6 @@ class SynapseWorkspace(AzureArtifact):
         last_updated_before = datetime.combine(last_updated_date, timex(23, 59, 59, 999999)).replace(
             tzinfo=self.tz_info
         )
-        print(f"INFO: Running {self.__class__.__name__}::list_trigger_runs with last_updated_date={last_updated_date}")
 
         # set RunFilterParameters
         run_filter_params = AzureArtifact.create_run_filter_parameters(last_updated_after, last_updated_before)

@@ -1,12 +1,12 @@
 import json
 import sys
-import logging
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
     get_config,
     get_synapse_artifacts_client,
     save_resultset_to_db,
     get_max_column_value_duckdb,
+    set_logger,
 )
 import zoneinfo
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import SynapseWorkspace
@@ -19,8 +19,7 @@ from sqlalchemy import text
 
 
 def execute():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+    logger = set_logger(__file__)
 
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Dedicated SQL Pool Extract Script")
 
@@ -41,7 +40,7 @@ def execute():
         if exclude_dedicated_sql_pools:
             msg = f"exclude_dedicated_sql_pools is set to {exclude_dedicated_sql_pools}, Skipping metrics extract for Dedicated SQL pools"
             logger.info(msg)
-            print(json.dumps({"status": "success", "message": msg}))
+            # print(json.dumps({"status": "success", "message": msg}))
             return
 
         dedicated_sqlpools = workspace.list_sql_pools()
@@ -54,8 +53,6 @@ def execute():
             dedicated_pools_to_profile = all_dedicated_pools_list
 
         logger.info("Pool names to extract metrics...")
-        for idx, entry in enumerate(dedicated_pools_to_profile):
-            print(f"\t {idx+1}  {entry['name'].ljust(50, '.')}{entry['status']}")
 
         live_dedicated_pools_to_profile = [entry for entry in dedicated_pools_to_profile if entry['status'] == 'Online']
         logger.info(f"live_dedicated_pools_to_profile: {[entry['name'] for entry in live_dedicated_pools_to_profile]}")
@@ -63,7 +60,7 @@ def execute():
         # Info: Extract
         for idx, entry in enumerate(live_dedicated_pools_to_profile):
             entry_info = f"{entry['name']} [{entry['status']}]"
-            print(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
+            # print(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
             logger.info(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
 
             mode = "overwrite" if idx == 0 else "append"
@@ -73,7 +70,7 @@ def execute():
             table_query = SynapseQueries.list_tables(pool_name)
             connection = get_sqlpool_reader(config, pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            print(f"Loading '{table_name}' for pool: {pool_name}")
+            # print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(table_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
@@ -81,7 +78,7 @@ def execute():
             table_name = "dedicated_columns"
             column_query = SynapseQueries.list_columns(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            print(f"Loading '{table_name}' for pool: {pool_name}")
+            # print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(column_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
@@ -89,7 +86,7 @@ def execute():
             table_name = "dedicated_views"
             view_query = SynapseQueries.list_views(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            print(f"Loading '{table_name}' for pool: {pool_name}")
+            # print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(view_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
@@ -97,7 +94,7 @@ def execute():
             table_name = "dedicated_routines"
             routine_query = SynapseQueries.list_routines(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            print(f"Loading '{table_name}' for pool: {pool_name}")
+            # print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(routine_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
@@ -105,7 +102,7 @@ def execute():
             table_name = "dedicated_storage_info"
             storage_info_query = SynapseQueries.get_db_storage_info(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            print(f"Loading '{table_name}' for pool: {pool_name}")
+            # print(f"Loading '{table_name}' for pool: {pool_name}")
             result = connection.execute(text(storage_info_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
@@ -113,12 +110,12 @@ def execute():
         sqlpool_names_to_profile = ",".join([entry['name'] for entry in live_dedicated_pools_to_profile])
         msg = f"Running 04_dedicated_sqlpools_activity_extract with sqlpool_names  → [{sqlpool_names_to_profile}] ..."
         logger.info(msg)
-        print(sqlpool_names_to_profile)
+        # print(sqlpool_names_to_profile)
         sqlpool_names_to_profile_list = [
             entry for entry in sqlpool_names_to_profile.strip().split(",") if len(entry.strip())
         ]
         for idx, sqlpool_name in enumerate(sqlpool_names_to_profile_list):
-            print(f"INFO: sqlpool_name → {sqlpool_name}")
+            # print(f"INFO: sqlpool_name → {sqlpool_name}")
             connection = get_sqlpool_reader(config, sqlpool_name)
 
             table_name = "dedicated_sessions"
