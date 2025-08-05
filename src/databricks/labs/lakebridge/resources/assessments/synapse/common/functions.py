@@ -9,7 +9,20 @@ from azure.identity import DefaultAzureCredential
 from azure.monitor.query import MetricsQueryClient
 from azure.synapse.artifacts import ArtifactsClient
 
-logger = logging.getLogger(__name__)
+
+def set_logger(name: str = __name__) -> logging.Logger:
+    log = logging.getLogger(name)
+    if log.handlers:
+        return log
+    handler = logging.StreamHandler(sys.stderr)
+    log.setLevel(logging.INFO)
+    log.addHandler(handler)
+
+    log.propagate = False
+    return log
+
+
+logger = set_logger(__name__)
 
 
 def arguments_loader(desc: str):
@@ -51,16 +64,14 @@ def insert_df_to_duckdb(df: pd.DataFrame, db_path: str, table_name: str) -> None
             if len(df.columns) > 0:
                 # Create empty table with the same schema
                 conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df LIMIT 0")
-                logging.info(f"Created empty table {table_name} with schema: {df.columns.tolist()}")
-                print(f"Created empty table {table_name} with schema: {df.columns.tolist()}")
+                logger.info(f"Created empty table {table_name} with schema: {df.columns.tolist()}")
             else:
-                logging.warning(f"Skipping table {table_name} creation as DataFrame has no columns")
+                logger.warning(f"Skipping table {table_name} creation as DataFrame has no columns")
             conn.close()
             return
         # Create the table with the DataFrame's schema and insert data
         conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
-        logging.info(f"Successfully inserted {len(df)} rows into {table_name} table")
-        print(f"Successfully inserted {len(df)} rows into {table_name} table")
+        logger.info(f"Successfully inserted {len(df)} rows into {table_name} table")
 
         # Close connection
         conn.close()
@@ -187,7 +198,8 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
         columns = result.keys()
         # Convert result to DataFrame
         df = pd.DataFrame(result.fetchall(), columns=columns)
-        print(df.columns)
+        # print(df.columns)
+        logger.debug(df.columns)
 
         # Fetch the first batch
         if df.empty:
@@ -205,7 +217,7 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
             raise ValueError(error_msg)
 
         with duckdb.connect(db_path) as conn:
-            print(f"Connected to DuckDB database at {db_path}")
+            logger.info(f"Connected to DuckDB database at {db_path}")
             tables = conn.execute(
                 """
                                   SELECT table_name
@@ -223,16 +235,14 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
             elif mode == "append" and table_name not in list_tables:
                 conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
 
-            print("Tables created")
+            logger.info(f"Tables created: {table_name}")
             conn.register("df_view", df)
             # Insert data from the DataFrame view
             conn.execute(f"INSERT INTO {table_name} SELECT * FROM df_view")
 
-        print(f"Successfully saved resultset to DuckDB table {table_name} in {db_path}")
-        logging.info(f"Successfully saved resultset to DuckDB table {table_name} in {db_path}")
+        logger.info(f"Successfully saved resultset to DuckDB table {table_name} in {db_path}")
     except Exception as e:
-        logging.error(f"Error in save_resultset_to_db for table {table_name}: {str(e)}")
-        print(f"ERROR: save_resultset_to_db for table {table_name}: {e}")
+        logger.error(f"Error in save_resultset_to_db for table {table_name}: {str(e)}")
 
 
 def get_max_column_value_duckdb(column_name, table_name, db_path):
@@ -248,13 +258,13 @@ def get_max_column_value_duckdb(column_name, table_name, db_path):
             conn.close()
             return None
         max_column_query = f"SELECT MAX({column_name}) AS last_{column_name} FROM {table_name}"
-        print(f"INFO: get_max_column_value_duckdb:: query {max_column_query}")
+        logger.info(f"get_max_column_value_duckdb:: query {max_column_query}")
         rows = conn.execute(max_column_query).fetchall()
         max_column_val = rows[0][0] if rows else None
         conn.close()
     except Exception as e:
-        print(f"ERROR: {e}")
-    print(f"INFO: max_column_val = {max_column_val}")
+        logger.error(f"ERROR: {e}")
+    logger.info(f"max_column_val = {max_column_val}")
     return max_column_val
 
 
