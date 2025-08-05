@@ -14,8 +14,6 @@ def set_logger(name: str = __name__) -> logging.Logger:
     log = logging.getLogger(name)
     if log.handlers:
         return log
-    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # handler.setFormatter(formatter)
     handler = logging.StreamHandler(sys.stderr)
     log.setLevel(logging.INFO)
     log.addHandler(handler)
