@@ -47,7 +47,7 @@ def execute():
         workspace_resource_id = workspace_info["id"]
         logger.info(f"workspace_resource_id  →  {workspace_resource_id}")
         metrics_df = synapse_metrics.get_workspace_level_metrics(workspace_resource_id)
-        insert_df_to_duckdb(metrics_df, db_path, "workspace_level_metrics")
+        insert_df_to_duckdb(metrics_df, db_path, "metrics_workspace_level_metrics")
 
         # SQL Pool Metrics
 
@@ -90,7 +90,7 @@ def execute():
                     pools_df = pools_df.union(pool_metrics_df)
 
             # Insert the combined metrics into DuckDB
-            step_name = "dedicated_pool_metrics"
+            step_name = "metrics_dedicated_pool_metrics"
             print(f"Loading data for {step_name}")
             insert_df_to_duckdb(pools_df, db_path, step_name)
 
@@ -128,7 +128,7 @@ def execute():
                 logger.info(f"{idx+1}) Pool Name: {pool_name}")
                 logger.info(f"   Resource id: {pool_resoure_id}")
 
-                step_name = "spark_pool_metrics"
+                step_name = "metrics_spark_pool_metrics"
 
                 spark_pool_metrics_df = synapse_metrics.get_spark_pool_metrics(pool_resoure_id)
                 if idx == 0:
