@@ -43,7 +43,7 @@ class DataSource(ABC):
         raise DataSourceRuntimeException(error_msg) from exception
 
     def _map_meta_column(self, meta_column) -> Schema:
-        name = meta_column.col_name
+        name = meta_column.col_name.strip().lower()
         dtype = meta_column.data_type.strip().lower()
         normalized = self.normalize_identifier(name)
         return Schema(name, dtype, normalized.ansi_normalized, normalized.source_normalized)
