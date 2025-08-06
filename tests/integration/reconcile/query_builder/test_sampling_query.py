@@ -11,6 +11,8 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 )
 from tests.conftest import schema_fixture_factory
 
+from tests.conftest import schema_fixture_factory
+
 
 def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
     spark = mock_spark

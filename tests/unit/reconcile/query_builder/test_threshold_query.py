@@ -14,6 +14,8 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
     Transformation,
 )
 
+from tests.conftest import schema_fixture_factory
+
 
 def test_threshold_comparison_query_with_one_threshold(table_conf_with_opts, table_schema):
     # table conf
