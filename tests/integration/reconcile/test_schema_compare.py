@@ -36,6 +36,8 @@ def snowflake_databricks_schema():
         schema_fixture_factory("col_dec", "number(20,2)"),
         schema_fixture_factory("col_numeric_2", "numeric(38,0)"),
         schema_fixture_factory("col_escaped", "float", "`col_escaped`", "\"col_escaped\""),
+        schema_fixture_factory("\"col_escaped2\"", "float", "`col_escaped2`", "\"col_escaped2\""),
+        schema_fixture_factory("`col_escaped3`", "float", "`col_escaped3`", "\"col_escaped3\""),
         schema_fixture_factory("dummy", "string"),
     ]
     tgt_schema = [
@@ -67,6 +69,8 @@ def snowflake_databricks_schema():
         schema_fixture_factory("col_dec", "decimal(20,1)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
         schema_fixture_factory("col_escaped", "double", "`col_escaped`", "`col_escaped`"),
+        schema_fixture_factory("`col_escaped2`", "double", "`col_escaped2`", "`col_escaped2`"),
+        schema_fixture_factory("col_escaped3", "double", "`col_escaped3`", "`col_escaped3`"),
     ]
     return src_schema, tgt_schema
 
@@ -192,10 +196,9 @@ def test_snowflake_schema_compare(schemas, mock_spark):
         table_conf,
     )
     df = schema_compare_output.compare_df
-    df.show(30)
     assert not schema_compare_output.is_valid
-    assert df.count() == 28
-    assert df.filter("is_valid = 'true'").count() == 26
+    assert df.count() == 30
+    assert df.filter("is_valid = 'true'").count() == 28
     assert df.filter("is_valid = 'false'").count() == 2
 
 
