@@ -15,6 +15,8 @@ from pyspark.sql.types import (
 )
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
+
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.recon_config import (
     Table,
     JdbcReaderOptions,
@@ -45,6 +47,17 @@ def column_mapping():
         ColumnMapping(source_name="s_comment", target_name="s_comment_t"),
     ]
 
+@pytest.fixture
+def column_mapping_normalized():
+    return [
+        ColumnMapping(source_name="`s$suppkey`", target_name="`s$suppkey_t`"),
+        ColumnMapping(source_name="`s$address`", target_name="`s$address_t`"),
+        ColumnMapping(source_name="`s$nationkey`", target_name="`s$nationkey_t`"),
+        ColumnMapping(source_name="`s$phone`", target_name="`s$phone_t`"),
+        ColumnMapping(source_name="`s$acctbal`", target_name="`s$acctbal_t`"),
+        ColumnMapping(source_name="`s$comment`", target_name="`s$comment_t`"),
+    ]
+
 
 @pytest.fixture
 def table_conf_with_opts(column_mapping):
@@ -67,6 +80,32 @@ def table_conf_with_opts(column_mapping):
             ColumnThresholds(column_name="s_acctbal", lower_bound="0", upper_bound="100", type="int"),
         ],
         filters=Filters(source="s_name='t' and s_address='a'", target="s_name='t' and s_address_t='a'"),
+        table_thresholds=[
+            TableThresholds(lower_bound="0", upper_bound="100", model="mismatch"),
+        ],
+    )
+
+@pytest.fixture
+def table_conf_with_opts_normalized(column_mapping_normalized):
+    return Table(
+        source_name="supplier",
+        target_name="target_supplier",
+        jdbc_reader_options=JdbcReaderOptions(
+            number_partitions=100, partition_column="`s$nationkey`", lower_bound="0", upper_bound="100"
+        ),
+        join_columns=["`s$suppkey`", "`s$nationkey`"],
+        select_columns=["`s$suppkey`", "`s$name`", "`s$address`", "`s$phone`", "`s$acctbal`", "`s$nationkey`"],
+        drop_columns=["`s$comment`"],
+        column_mapping=column_mapping_normalized,
+        transformations=[
+            Transformation(column_name="`s$address`", source="trim(`s$address`)", target="trim(`s$address_t`)"),
+            Transformation(column_name="`s$phone`", source="trim(`s$phone`)", target="trim(`s$phone_t`)"),
+            Transformation(column_name="`s$name`", source="trim(`s$name`)", target="trim(`s$name`)"),
+        ],
+        column_thresholds=[
+            ColumnThresholds(column_name="`s$acctbal`", lower_bound="0", upper_bound="100", type="int"),
+        ],
+        filters=Filters(source="`s$name`='t' and `s$address`='a'", target="`s$name`='t' and `s$address_t`='a'"),
         table_thresholds=[
             TableThresholds(lower_bound="0", upper_bound="100", model="mismatch"),
         ],
@@ -112,6 +151,30 @@ def table_schema():
         schema_fixture_factory("s_phone_t", "varchar"),
         schema_fixture_factory("s_acctbal_t", "number"),
         schema_fixture_factory("s_comment_t", "varchar"),
+    ]
+
+    return sch, sch_with_alias
+
+@pytest.fixture
+def table_schema_with_special_chars():
+    sch = [
+        schema_fixture_factory_and_normalize("s$suppkey", "number"),
+        schema_fixture_factory_and_normalize("s$name", "varchar"),
+        schema_fixture_factory_and_normalize("s$address", "varchar"),
+        schema_fixture_factory_and_normalize("s$nationkey", "number"),
+        schema_fixture_factory_and_normalize("s$phone", "varchar"),
+        schema_fixture_factory_and_normalize("s$acctbal", "number"),
+        schema_fixture_factory_and_normalize("s$comment", "varchar"),
+    ]
+
+    sch_with_alias = [
+        schema_fixture_factory_and_normalize("s$suppkey_t", "number"),
+        schema_fixture_factory_and_normalize("s$name", "varchar"),
+        schema_fixture_factory_and_normalize("s$address_t", "varchar"),
+        schema_fixture_factory_and_normalize("s$nationkey_t", "number"),
+        schema_fixture_factory_and_normalize("s$phone_t", "varchar"),
+        schema_fixture_factory_and_normalize("s$acctbal_t", "number"),
+        schema_fixture_factory_and_normalize("s$comment_t", "varchar"),
     ]
 
     return sch, sch_with_alias
@@ -218,6 +281,16 @@ def schema_fixture_factory(
         data_type,
         normalized_ansi if normalized_ansi else column_name,
         normalized_source if normalized_source else column_name,
+    )
+
+def schema_fixture_factory_and_normalize(
+    column_name: str, data_type: str
+) -> Schema:
+    return schema_fixture_factory(
+        DialectUtils.ansi_normalize_identifier(column_name),
+        data_type,
+        DialectUtils.ansi_normalize_identifier(column_name),
+        DialectUtils.ansi_normalize_identifier(column_name),
     )
 
 
