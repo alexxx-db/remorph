@@ -22,10 +22,8 @@ from databricks.labs.blueprint.tui import Prompts
 from databricks.labs.bladespector.analyzer import Analyzer
 
 
-from databricks.labs.lakebridge.assessments.configure_assessment import (
-    create_assessment_configurator,
-    PROFILER_SOURCE_SYSTEM,
-)
+from databricks.labs.lakebridge.assessments.configure_assessment import create_assessment_configurator
+from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM
 from databricks.labs.lakebridge.assessments.profiler import Profiler
 
 from databricks.labs.lakebridge.__about__ import __version__

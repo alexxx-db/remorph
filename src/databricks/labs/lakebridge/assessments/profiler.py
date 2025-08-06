@@ -8,17 +8,12 @@ from databricks.labs.lakebridge.connections.credential_manager import (
     create_credential_manager,
 )
 from databricks.labs.lakebridge.connections.env_getter import EnvGetter
-
-_PLATFORM_TO_SOURCE_TECHNOLOGY = {
-    "synapse": "src/databricks/labs/lakebridge/resources/assessments/synapse/pipeline_config.yml",
-}
-
-_CONNECTOR_REQUIRED = {
-    "synapse": False,
-}
-
-PRODUCT_NAME = "lakebridge"
-PRODUCT_PATH_PREFIX = Path(__file__).home() / ".databricks" / "labs" / PRODUCT_NAME / "lib"
+from databricks.labs.lakebridge.assessments import (
+    PRODUCT_NAME,
+    PRODUCT_PATH_PREFIX,
+    PLATFORM_TO_SOURCE_TECHNOLOGY,
+    CONNECTOR_REQUIRED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +22,7 @@ class Profiler:
 
     @classmethod
     def supported_source_technologies(cls) -> list[str]:
-        return list(_PLATFORM_TO_SOURCE_TECHNOLOGY.keys())
+        return list(PLATFORM_TO_SOURCE_TECHNOLOGY.keys())
 
     @staticmethod
     def path_modifier(config_file: str | Path) -> PipelineConfig:
@@ -42,7 +37,7 @@ class Profiler:
         if config_file:
             pipeline_config = PipelineClass.load_config_from_yaml(config_file)
         else:
-            config_path = _PLATFORM_TO_SOURCE_TECHNOLOGY.get(platform, None)
+            config_path = PLATFORM_TO_SOURCE_TECHNOLOGY.get(platform, None)
             if not config_path:
                 raise ValueError(f"Unsupported platform: {platform}")
             config_full_path = self._locate_config(config_path)
@@ -50,7 +45,7 @@ class Profiler:
         self._execute(platform, pipeline_config, extractor)
 
     def _setup_extractor(self, platform: str) -> DatabaseManager | None:
-        if not _CONNECTOR_REQUIRED[platform]:
+        if not CONNECTOR_REQUIRED[platform]:
             return None
         cred_manager = create_credential_manager(PRODUCT_NAME, EnvGetter())
         connect_config = cred_manager.get_credentials(platform)
