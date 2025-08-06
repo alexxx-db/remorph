@@ -59,10 +59,10 @@ class Profiler:
             result = PipelineClass(pipeline_config, extractor).execute()
             logger.info(f"Profile execution has completed successfully for {platform} for more info check: {result}.")
         except FileNotFoundError as e:
-            logging.error(f"Configuration file not found for source {platform}: {e}")
+            logger.error(f"Configuration file not found for source {platform}: {e}")
             raise FileNotFoundError(f"Configuration file not found for source {platform}: {e}") from e
         except Exception as e:
-            logging.error(f"Error executing pipeline for source {platform}: {e}")
+            logger.error(f"Error executing pipeline for source {platform}: {e}")
             raise RuntimeError(f"Pipeline execution failed for source {platform} : {e}") from e
 
     def _locate_config(self, config_path: str) -> Path:
