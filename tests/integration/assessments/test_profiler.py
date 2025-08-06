@@ -25,7 +25,7 @@ def test_profile_unsupported_platform() -> None:
 
 
 @patch(
-    'databricks.labs.lakebridge.assessments.profiler._PLATFORM_TO_SOURCE_TECHNOLOGY',
+    'databricks.labs.lakebridge.assessments.profiler.PLATFORM_TO_SOURCE_TECHNOLOGY',
     {"synapse": "tests/resources/assessments/pipeline_config_main.yml"},
 )
 @patch('databricks.labs.lakebridge.assessments.profiler.PRODUCT_PATH_PREFIX', Path(__file__).parent / "../../../")
@@ -37,7 +37,7 @@ def test_profile_execution() -> None:
 
 
 @patch(
-    'databricks.labs.lakebridge.assessments.profiler._PLATFORM_TO_SOURCE_TECHNOLOGY',
+    'databricks.labs.lakebridge.assessments.profiler.PLATFORM_TO_SOURCE_TECHNOLOGY',
     {"synapse": "tests/resources/assessments/synapse/pipeline_config_main.yml"},
 )
 def test_profile_execution_with_invalid_config() -> None:
