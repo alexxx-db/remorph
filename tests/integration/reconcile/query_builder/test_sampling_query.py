@@ -9,7 +9,6 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
     Filters,
     Transformation,
 )
-from tests.conftest import schema_fixture_factory
 
 from tests.conftest import schema_fixture_factory
 
