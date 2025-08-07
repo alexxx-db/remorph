@@ -25,7 +25,6 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
 )
 from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
-from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
 from databricks.labs.lakebridge.transpiler.execute import verify_workspace_client
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
@@ -138,7 +137,7 @@ class TriggerReconService:
         data_reconcile_output = DataReconcileOutput()
 
         try:
-            src_schema, tgt_schema = SchemaService.get_schemas(
+            src_schema, tgt_schema = TriggerReconService.get_schemas(
                 source=reconciler.source,
                 target=reconciler.target,
                 table_conf=table_conf,

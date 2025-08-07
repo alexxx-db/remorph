@@ -18,7 +18,6 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
 )
 from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.trigger_recon_service import TriggerReconService
-from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
 
 
@@ -42,7 +41,7 @@ class TriggerReconAggregateService:
             ).normalize_recon_table_config(table_conf)
             recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
             try:
-                src_schema, tgt_schema = SchemaService.get_schemas(
+                src_schema, tgt_schema = TriggerReconService.get_schemas(
                     source=reconciler.source,
                     target=reconciler.target,
                     table_conf=normalized_table_conf,
