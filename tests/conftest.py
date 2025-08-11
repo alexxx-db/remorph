@@ -47,6 +47,7 @@ def column_mapping():
         ColumnMapping(source_name="s_comment", target_name="s_comment_t"),
     ]
 
+
 @pytest.fixture
 def column_mapping_normalized():
     return [
@@ -84,6 +85,7 @@ def table_conf_with_opts(column_mapping):
             TableThresholds(lower_bound="0", upper_bound="100", model="mismatch"),
         ],
     )
+
 
 @pytest.fixture
 def table_conf_with_opts_normalized(column_mapping_normalized):
@@ -155,26 +157,27 @@ def table_schema():
 
     return sch, sch_with_alias
 
+
 @pytest.fixture
 def table_schema_with_special_chars():
     sch = [
-        schema_fixture_factory_and_normalize("s$suppkey", "number"),
-        schema_fixture_factory_and_normalize("s$name", "varchar"),
-        schema_fixture_factory_and_normalize("s$address", "varchar"),
-        schema_fixture_factory_and_normalize("s$nationkey", "number"),
-        schema_fixture_factory_and_normalize("s$phone", "varchar"),
-        schema_fixture_factory_and_normalize("s$acctbal", "number"),
-        schema_fixture_factory_and_normalize("s$comment", "varchar"),
+        ansi_schema_fixture_factory("s$suppkey", "number"),
+        ansi_schema_fixture_factory("s$name", "varchar"),
+        ansi_schema_fixture_factory("s$address", "varchar"),
+        ansi_schema_fixture_factory("s$nationkey", "number"),
+        ansi_schema_fixture_factory("s$phone", "varchar"),
+        ansi_schema_fixture_factory("s$acctbal", "number"),
+        ansi_schema_fixture_factory("s$comment", "varchar"),
     ]
 
     sch_with_alias = [
-        schema_fixture_factory_and_normalize("s$suppkey_t", "number"),
-        schema_fixture_factory_and_normalize("s$name", "varchar"),
-        schema_fixture_factory_and_normalize("s$address_t", "varchar"),
-        schema_fixture_factory_and_normalize("s$nationkey_t", "number"),
-        schema_fixture_factory_and_normalize("s$phone_t", "varchar"),
-        schema_fixture_factory_and_normalize("s$acctbal_t", "number"),
-        schema_fixture_factory_and_normalize("s$comment_t", "varchar"),
+        ansi_schema_fixture_factory("s$suppkey_t", "number"),
+        ansi_schema_fixture_factory("s$name", "varchar"),
+        ansi_schema_fixture_factory("s$address_t", "varchar"),
+        ansi_schema_fixture_factory("s$nationkey_t", "number"),
+        ansi_schema_fixture_factory("s$phone_t", "varchar"),
+        ansi_schema_fixture_factory("s$acctbal_t", "number"),
+        ansi_schema_fixture_factory("s$comment_t", "varchar"),
     ]
 
     return sch, sch_with_alias
@@ -283,14 +286,22 @@ def schema_fixture_factory(
         normalized_source if normalized_source else column_name,
     )
 
-def schema_fixture_factory_and_normalize(
-    column_name: str, data_type: str
-) -> Schema:
+def oracle_schema_fixture_factory(column_name: str, data_type: str) -> Schema:
+    norm = DialectUtils.normalize_identifier(column_name, "\"", "\"")
     return schema_fixture_factory(
-        DialectUtils.ansi_normalize_identifier(column_name),
+        norm.ansi_normalized,
         data_type,
-        DialectUtils.ansi_normalize_identifier(column_name),
-        DialectUtils.ansi_normalize_identifier(column_name),
+        norm.ansi_normalized,
+        norm.source_normalized,
+    )
+
+def ansi_schema_fixture_factory(column_name: str, data_type: str) -> Schema:
+    ansi = DialectUtils.ansi_normalize_identifier(column_name)
+    return schema_fixture_factory(
+        ansi,
+        data_type,
+        ansi,
+        ansi,
     )
 
 
