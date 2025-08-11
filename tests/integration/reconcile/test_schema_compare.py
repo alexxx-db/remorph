@@ -217,7 +217,7 @@ def test_databricks_schema_compare(schemas, mock_spark):
             "col_num10",
             "col_dec",
             "col_numeric_2",
-            "col_escaped",
+            "`col_escaped`",
         ],
         column_mapping=[
             ColumnMapping(source_name="col_char", target_name="char"),
