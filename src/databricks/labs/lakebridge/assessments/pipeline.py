@@ -3,6 +3,8 @@ from subprocess import run, CalledProcessError, Popen, PIPE, STDOUT, DEVNULL
 from dataclasses import dataclass
 from enum import Enum
 
+from sys import platform
+
 import venv
 import tempfile
 import json
@@ -122,8 +124,14 @@ class PipelineClass:
         with tempfile.TemporaryDirectory() as temp_dir:
             venv_dir = Path(temp_dir) / "venv"
             venv.create(venv_dir, with_pip=True)
-            venv_python = venv_dir / "bin" / "python"
-            venv_pip = venv_dir / "bin" / "pip"
+
+            # Define the paths to the virtual environment's Python and pip executables
+            if platform == "win32":
+                venv_python = venv_dir.resolve() / "Scripts" / "python.exe"
+                venv_pip = venv_dir.resolve() / "Scripts" / "pip.exe"
+            else:
+                venv_python = venv_dir / "bin" / "python"
+                venv_pip = venv_dir / "bin" / "pip"
 
             logger.info(f"Creating a virtual environment for Python script execution: {venv_dir} for step: {step.name}")
             if step.dependencies:
