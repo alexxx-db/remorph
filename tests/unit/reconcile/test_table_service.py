@@ -1,7 +1,7 @@
 import pytest
 
 from databricks.labs.lakebridge.reconcile.connectors.data_source import MockDataSource
-from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
+from databricks.labs.lakebridge.reconcile.normalize_recon_config_service import NormalizeReconConfigService
 
 
 @pytest.fixture
