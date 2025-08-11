@@ -98,8 +98,14 @@ class NormalizeReconConfigService:
         )
         return table
 
-    # TODO handle source and target
+
     def _normalize_transformation(self, transform: Transformation):
+        """normalize user-configured transformations
+
+        The user configures the table column and passes SQL code to transform the source table and target table.
+        This is useful in scenarios when the data changes e.g. migrating `datetime`s. The SQL code is not normalized
+        and it is the user responsibility to pass valid SQL respecting source database and target database.
+        """
         normalized = dataclasses.replace(transform)
         normalized.column_name = self.source.normalize_identifier(transform.column_name).ansi_normalized
         return normalized
@@ -114,10 +120,6 @@ class NormalizeReconConfigService:
         normalized = dataclasses.replace(threshold)
         normalized.column_name = self.source.normalize_identifier(threshold.column_name).ansi_normalized
         return normalized
-
-    # TODO implement
-    def _normalize_filters(self, table: Table):
-        return table
 
     def _normalize_jdbc_options(self, table: Table):
         if table.jdbc_reader_options:
