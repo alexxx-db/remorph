@@ -128,10 +128,12 @@ class PipelineClass:
             venv_dir = Path(temp_dir) / "venv"
             venv.create(venv_dir, with_pip=True)
 
+            logger.debug(os.listdir(venv_dir, recursive=True))  # Debugging: List contents of the virtual environment directory
+
             # Define the paths to the virtual environment's Python and pip executables
             if platform == "win32":
-                venv_python = (venv_dir / "Scripts" / "python.exe").resolve()
-                venv_pip = (venv_dir / "Scripts" / "pip.exe").resolve()
+                venv_python = (venv_dir / "Scripts" / "python").resolve()
+                venv_pip = (venv_dir / "Scripts" / "pip").resolve()
             else:
                 venv_python = (venv_dir / "bin" / "python").resolve()
                 venv_pip = (venv_dir / "bin" / "pip").resolve()
