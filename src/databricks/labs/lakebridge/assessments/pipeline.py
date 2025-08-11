@@ -5,7 +5,7 @@ from enum import Enum
 
 from sys import platform
 
-import uuid
+import os
 import venv
 import tempfile
 import json
@@ -120,7 +120,9 @@ class PipelineClass:
         logging.debug(f"Executing Python script: {step.extract_source}")
         db_path = str(self.db_path_prefix / DB_NAME)
         credential_config = str(cred_file("lakebridge"))
-        venv_path_prefix = Path.home() / ".databricks" / "lakebridge_profilers" / str(uuid.uuid4())
+        venv_path_prefix = Path.home() / ".databricks" / "lakebridge_profilers"
+        os.makedirs(venv_path_prefix, exist_ok=True)
+
         # Create a temporary directory for the virtual environment
         with tempfile.TemporaryDirectory(dir=venv_path_prefix) as temp_dir:
             venv_dir = Path(temp_dir) / "venv"
