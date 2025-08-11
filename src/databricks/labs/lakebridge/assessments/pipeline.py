@@ -133,8 +133,8 @@ class PipelineClass:
 
             # Define the paths to the virtual environment's Python and pip executables
             if platform == "win32":
-                venv_python = (venv_dir / "Scripts" / "python").resolve()
-                venv_pip = (venv_dir / "Scripts" / "pip").resolve()
+                venv_python = (venv_dir / "Scripts" / "python.exe").resolve()
+                venv_pip = (venv_dir / "Scripts" / "pip.exe").resolve()
             else:
                 venv_python = (venv_dir / "bin" / "python").resolve()
                 venv_pip = (venv_dir / "bin" / "pip").resolve()
