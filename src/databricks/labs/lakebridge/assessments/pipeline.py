@@ -19,7 +19,6 @@ from databricks.labs.lakebridge.assessments.profiler_config import PipelineConfi
 from databricks.labs.lakebridge.connections.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
-logger.setLevel("INFO")
 
 DB_NAME = "profiler_extract.db"
 
@@ -128,7 +127,9 @@ class PipelineClass:
             venv_dir = Path(temp_dir) / "venv"
             venv.create(venv_dir, with_pip=True)
 
-            logger.debug(os.listdir(venv_dir, recursive=True))  # Debugging: List contents of the virtual environment directory
+            logger.info(
+                [os.path.join(dp, f) for dp, dn, filenames in os.walk(venv_dir) for f in filenames]
+            )  # Debugging: List contents of the virtual environment directory
 
             # Define the paths to the virtual environment's Python and pip executables
             if platform == "win32":
