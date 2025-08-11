@@ -119,7 +119,7 @@ class PipelineClass:
         logging.debug(f"Executing Python script: {step.extract_source}")
         db_path = str(self.db_path_prefix / DB_NAME)
         credential_config = str(cred_file("lakebridge"))
-        venv_path_prefix = Path.home() / ".databricks" / "lakebridge_profilers"
+        venv_path_prefix = Path.home() / ".databricks" / "labs" / "lakebridge_profilers"
         os.makedirs(venv_path_prefix, exist_ok=True)
 
         # Create a temporary directory for the virtual environment

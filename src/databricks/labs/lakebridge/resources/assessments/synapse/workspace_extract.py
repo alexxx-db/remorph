@@ -25,14 +25,13 @@ def execute():
         tz_info = synapse_workspace_settings["workspace"]["tz_info"]
         workspace_tz = zoneinfo.ZoneInfo(tz_info)
         workspace_name = synapse_workspace_settings["workspace"]["name"]
-        print(f"workspace_name → {workspace_name}")
-        logger.info(f"workspace_name → {workspace_name}")
+        logger.info(f"workspace_name: {workspace_name}")
 
         artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
 
         # Extract workspace info
-        print("Starting Workspace Info")
+        logger.info("Starting Workspace Info....")
         workspace_info = workspace.get_workspace_info()
         workspace_info_df = pd.json_normalize(workspace_info)
         insert_df_to_duckdb(workspace_info_df, db_path, "workspace_workspace_info")

@@ -30,7 +30,7 @@ def execute():
         tz_info = synapse_workspace_settings["workspace"]["tz_info"]
         workspace_tz = zoneinfo.ZoneInfo(tz_info)
         workspace_name = synapse_workspace_settings["workspace"]["name"]
-        logger.info(f"workspace_name → {workspace_name}")
+        logger.info(f"workspace_name: {workspace_name}")
 
         artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
@@ -39,7 +39,7 @@ def execute():
         synapse_metrics = SynapseMetrics(metrics_client)
 
         workspace_info = workspace.get_workspace_info()
-        print(workspace_info)
+        logger.info(f"workspace info: {workspace_info}")
 
         if "id" not in workspace_info:
             raise ValueError("ERROR: Missing Workspace ID for extracting Workspace Level Metrics")
