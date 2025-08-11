@@ -5,6 +5,7 @@ from enum import Enum
 
 from sys import platform
 
+import uuid
 import venv
 import tempfile
 import json
@@ -119,19 +120,19 @@ class PipelineClass:
         logging.debug(f"Executing Python script: {step.extract_source}")
         db_path = str(self.db_path_prefix / DB_NAME)
         credential_config = str(cred_file("lakebridge"))
-
+        venv_path_prefix = Path.home() / ".databricks" / "lakebridge_profilers" / str(uuid.uuid4())
         # Create a temporary directory for the virtual environment
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.TemporaryDirectory(dir=venv_path_prefix) as temp_dir:
             venv_dir = Path(temp_dir) / "venv"
             venv.create(venv_dir, with_pip=True)
 
             # Define the paths to the virtual environment's Python and pip executables
             if platform == "win32":
-                venv_python = venv_dir.resolve() / "Scripts" / "python.exe"
-                venv_pip = venv_dir.resolve() / "Scripts" / "pip.exe"
+                venv_python = (venv_dir / "Scripts" / "python.exe").resolve()
+                venv_pip = (venv_dir / "Scripts" / "pip.exe").resolve()
             else:
-                venv_python = venv_dir / "bin" / "python"
-                venv_pip = venv_dir / "bin" / "pip"
+                venv_python = (venv_dir / "bin" / "python").resolve()
+                venv_pip = (venv_dir / "bin" / "pip").resolve()
 
             logger.info(f"Creating a virtual environment for Python script execution: {venv_dir} for step: {step.name}")
             if step.dependencies:
