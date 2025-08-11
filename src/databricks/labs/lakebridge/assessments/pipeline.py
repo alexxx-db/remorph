@@ -123,7 +123,8 @@ class PipelineClass:
         os.makedirs(venv_path_prefix, exist_ok=True)
 
         # Create a temporary directory for the virtual environment
-        with tempfile.TemporaryDirectory(dir=venv_path_prefix) as temp_dir:
+        # TODO Windows has strict checks on for temp venv cleanup, so will ignore cleanup errors and have it cleaned up later
+        with tempfile.TemporaryDirectory(dir=venv_path_prefix, ignore_cleanup_errors=True) as temp_dir:
             venv_dir = Path(temp_dir) / "venv"
             venv_exec_cmd = self._create_venv(venv_dir)
 
