@@ -43,10 +43,15 @@ class DataSource(ABC):
         raise DataSourceRuntimeException(error_msg) from exception
 
     def _map_meta_column(self, meta_column) -> Schema:
+        """Create a normalized Schema DTO from the database metadata
+
+        Used in the implementations of get_schema to build a Schema DTO from the `INFORMATION_SCHEMA` query result.
+        The returned Schema is normalized in case the database is having columns with special characters and standardize
+        """
         name = meta_column.col_name
         dtype = meta_column.data_type.strip().lower()
         normalized = self.normalize_identifier(name)
-        return Schema(name, dtype, normalized.ansi_normalized, normalized.source_normalized)
+        return Schema(normalized.ansi_normalized, dtype, normalized.ansi_normalized, normalized.source_normalized)
 
 
 class MockDataSource(DataSource):

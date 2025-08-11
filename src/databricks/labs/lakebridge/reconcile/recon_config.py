@@ -288,11 +288,11 @@ class Table:
 
 @dataclass
 class Schema:
+    # This will have the value of ansi_normalized_column_name. Kept for backwards compatibility. TODO remove
     column_name: str
     data_type: str
     ansi_normalized_column_name: str
     source_normalized_column_name: str
-    is_escaped: bool = False
 
 
 @dataclass
