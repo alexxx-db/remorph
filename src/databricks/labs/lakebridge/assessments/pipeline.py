@@ -3,8 +3,7 @@ from subprocess import run, CalledProcessError, Popen, PIPE, STDOUT, DEVNULL
 from dataclasses import dataclass
 from enum import Enum
 
-from sys import platform
-
+import sys
 import os
 import venv
 import tempfile
@@ -19,6 +18,7 @@ from databricks.labs.lakebridge.assessments.profiler_config import PipelineConfi
 from databricks.labs.lakebridge.connections.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 DB_NAME = "profiler_extract.db"
 
@@ -125,34 +125,36 @@ class PipelineClass:
         # Create a temporary directory for the virtual environment
         with tempfile.TemporaryDirectory(dir=venv_path_prefix) as temp_dir:
             venv_dir = Path(temp_dir) / "venv"
-            venv.create(venv_dir, with_pip=True)
-
-            logger.info(
-                [os.path.join(dp, f) for dp, dn, filenames in os.walk(venv_dir) for f in filenames]
-            )  # Debugging: List contents of the virtual environment directory
+            venv_exec_cmd = self._create_venv(venv_dir)
 
             # Define the paths to the virtual environment's Python and pip executables
-            if platform == "win32":
+            if sys.platform == "win32":
                 venv_python = (venv_dir / "Scripts" / "python.exe").resolve()
                 venv_pip = (venv_dir / "Scripts" / "pip.exe").resolve()
             else:
                 venv_python = (venv_dir / "bin" / "python").resolve()
                 venv_pip = (venv_dir / "bin" / "pip").resolve()
 
+            # Log resolved paths
+            logger.info(f"Resolved venv_python: {venv_python}")
+            logger.info(f"Resolved venv_pip: {venv_pip}")
+
             logger.info(f"Creating a virtual environment for Python script execution: {venv_dir} for step: {step.name}")
             if step.dependencies:
-                self._install_dependencies(venv_pip, step.dependencies)
+                self._install_dependencies(venv_exec_cmd, step.dependencies)
 
-            self._run_python_script(venv_python, step.extract_source, db_path, credential_config)
+            self._run_python_script(venv_exec_cmd, step.extract_source, db_path, credential_config)
 
     @staticmethod
-    def _install_dependencies(venv_pip, dependencies):
+    def _install_dependencies(venv_exec_cmd, dependencies):
         logging.info(f"Installing dependencies: {', '.join(dependencies)}")
         try:
             logging.debug("Upgrading local pip")
             run(
                 [
-                    str(venv_pip),
+                    venv_exec_cmd,
+                    "-m",
+                    "pip",
                     "install",
                     "--upgrade",
                     "pip",
@@ -167,7 +169,9 @@ class PipelineClass:
             )
             run(
                 [
-                    str(venv_pip),
+                    venv_exec_cmd,
+                    "-m",
+                    "pip",
                     "install",
                     *dependencies,
                     "--require-virtualenv",
@@ -184,12 +188,12 @@ class PipelineClass:
             raise RuntimeError(f"Failed to install dependencies: {e.stderr}") from e
 
     @staticmethod
-    def _run_python_script(venv_python, script_path, db_path, credential_config):
+    def _run_python_script(venv_exec_cmd, script_path, db_path, credential_config):
         output_lines = []
         try:
             with Popen(
                 [
-                    str(venv_python),
+                    venv_exec_cmd,
                     str(script_path),
                     "--db-path",
                     db_path,
@@ -266,3 +270,17 @@ class PipelineClass:
         return PipelineConfig(
             name=data['name'], version=data['version'], extract_folder=data['extract_folder'], steps=steps
         )
+
+    @staticmethod
+    def _create_venv(install_path: Path) -> str:
+        venv_path = install_path
+        # Sadly, some platform-specific variations need to be dealt with:
+        #   - Windows venvs do not use symlinks, but rather copies, when populating the venv.
+        #   - The library path is different.
+        use_symlinks = sys.platform != "win32"
+
+        builder = venv.EnvBuilder(with_pip=True, symlinks=use_symlinks)
+        builder.create(venv_path)
+        context = builder.ensure_directories(venv_path)
+        logger.debug(f"Created virtual environment with context: {context}")
+        return context.env_exec_cmd
