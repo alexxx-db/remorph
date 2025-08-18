@@ -112,7 +112,6 @@ def test_configure_synapse_credentials(tmp_path):
 
     with open(file, 'r', encoding='utf-8') as file:
         credentials = yaml.safe_load(file)
-    print(credentials)
     assert credentials == expected_credentials
 
 
