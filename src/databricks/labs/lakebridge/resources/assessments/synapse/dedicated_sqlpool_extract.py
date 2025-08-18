@@ -103,14 +103,14 @@ def execute():
 
         # Activity: Extract
         sqlpool_names_to_profile = ",".join([entry['name'] for entry in live_dedicated_pools_to_profile])
-        msg = f"Running 04_dedicated_sqlpools_activity_extract with sqlpool_names  → [{sqlpool_names_to_profile}] ..."
+        msg = f"Running 04_dedicated_sqlpools_activity_extract with sqlpool_names :[{sqlpool_names_to_profile}] ..."
         logger.info(msg)
 
         sqlpool_names_to_profile_list = [
             entry for entry in sqlpool_names_to_profile.strip().split(",") if len(entry.strip())
         ]
         for idx, sqlpool_name in enumerate(sqlpool_names_to_profile_list):
-            # print(f"INFO: sqlpool_name → {sqlpool_name}")
+            # print(f"INFO: sqlpool_name:{sqlpool_name}")
             connection = get_sqlpool_reader(config, sqlpool_name)
 
             table_name = "dedicated_sessions"
