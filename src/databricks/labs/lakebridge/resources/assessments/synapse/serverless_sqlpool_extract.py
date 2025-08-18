@@ -122,6 +122,7 @@ def execute():
         print(json.dumps({"status": "success", "message": "Data loaded successfully"}))
 
     except Exception as e:
+        logger.error(f"Failed to extract info for Synapse Serverless SQL Pool: {str(e)}")
         print(json.dumps({"status": "error", "message": str(e)}), file=sys.stderr)
         sys.exit(1)
 

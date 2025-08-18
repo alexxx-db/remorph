@@ -137,12 +137,12 @@ def execute():
 
             # Insert the combined metrics into DuckDB
             insert_df_to_duckdb(spark_pools_df, db_path, step_name)
-            logger.info(">End")
 
         # This is the output format expected by the pipeline.py which orchestrates the execution of this script
         print(json.dumps({"status": "success", "message": "Data loaded successfully"}))
 
     except Exception as e:
+        logger.error(f"Failed to extract info for Synapse Monitoring Metrics: {str(e)}")
         print(json.dumps({"status": "error", "message": str(e)}), file=sys.stderr)
         sys.exit(1)
 
