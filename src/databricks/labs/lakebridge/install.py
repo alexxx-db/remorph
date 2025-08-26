@@ -803,6 +803,7 @@ class WorkspaceInstaller:
 
     def _save_config(self, config: TranspileConfig | ReconcileConfig):
         logger.info(f"Saving configuration file {config.__file__}")
+        logger.debug(f"Configuration: {config.skip_validation}")
         self._installation.save(config)
         ws_file_url = self._installation.workspace_link(config.__file__)
         if self._prompts.confirm(f"Open config file {ws_file_url} in the browser?"):
