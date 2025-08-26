@@ -683,7 +683,7 @@ class WorkspaceInstaller:
             transpiler_config_path=str(transpiler_config_path) if transpiler_config_path is not None else None,
             transpiler_options=transpiler_options,
             source_dialect=source_dialect,
-            skip_validation=str(not run_validation),
+            skip_validation=(not run_validation),
             input_source=input_source,
             output_folder=output_folder,
             error_file_path=error_file_path,
