@@ -4,7 +4,6 @@ import sqlglot.expressions as exp
 from pyspark.sql import DataFrame
 from sqlglot import select
 
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_key_from_dialect
 from databricks.labs.lakebridge.reconcile.query_builder.base import QueryBuilder
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
@@ -38,9 +37,12 @@ class SamplingQueryBuilder(QueryBuilder):
 
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
-        cols_with_alias = [self._build_column_with_alias(col) for col in cols]
+        cols_with_alias = [
+            build_column(this=col, alias=self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer))
+            for col in cols
+        ]
 
-        query = select(*cols_with_alias).from_(":tbl").where(self.filter, dialect=self.engine).sql(dialect=self.engine)
+        query = select(*cols_with_alias).from_(":tbl").where(self.filter).sql(dialect=self.engine)
 
         logger.info(f"Sampling Query with Alias for {self.layer}: {query}")
         return query
@@ -57,22 +59,22 @@ class SamplingQueryBuilder(QueryBuilder):
 
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
-        cols_with_alias = [self._build_column_with_alias(col) for col in cols]
+        cols_with_alias = [
+            build_column(this=col, alias=self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer))
+            for col in cols
+        ]
 
         sql_with_transforms = self.add_transformations(cols_with_alias, self.engine)
-        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter, dialect=self.engine)
+        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter)
         if self.layer == "source":
-            with_select = [
-                build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)
-                for col in sorted(cols)
-            ]
+            with_select = [build_column(this=col, table_name="src") for col in sorted(cols)]
         else:
             with_select = [
-                build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)
+                build_column(this=col, table_name="src")
                 for col in sorted(self.table_conf.get_tgt_to_src_col_mapping_list(cols))
             ]
 
-        join_clause = self._get_join_clause(key_cols)
+        join_clause = SamplingQueryBuilder._get_join_clause(key_cols)
 
         query = (
             with_clause.with_(alias="src", as_=query_sql)
@@ -84,10 +86,10 @@ class SamplingQueryBuilder(QueryBuilder):
         logger.info(f"Sampling Query for {self.layer}: {query}")
         return query
 
-    def _get_join_clause(self, key_cols: list):
-        normalized = [self._build_column_name_source_normalized(col) for col in key_cols]
+    @classmethod
+    def _get_join_clause(cls, key_cols: list):
         return build_join_clause(
-            "recon", normalized, source_table_alias="src", target_table_alias="recon", kind="inner", func=exp.EQ
+            "recon", key_cols, source_table_alias="src", target_table_alias="recon", kind="inner", func=exp.EQ
         )
 
     def _get_with_clause(self, df: DataFrame) -> exp.Select:
@@ -104,13 +106,12 @@ class SamplingQueryBuilder(QueryBuilder):
                 (
                     build_literal(
                         this=str(value),
-                        alias=DialectUtils.unnormalize_identifier(col),
+                        alias=col,
                         is_string=_get_is_string(column_types_dict, col),
-                        cast=orig_types_dict.get(DialectUtils.ansi_normalize_identifier(col)),
-                        quoted=True,
+                        cast=orig_types_dict.get(col),
                     )
                     if value is not None
-                    else exp.Alias(this=exp.Null(), alias=DialectUtils.unnormalize_identifier(col), quoted=True)
+                    else exp.Alias(this=exp.Null(), alias=col)
                 )
                 for col, value in zip(df.columns, row)
             ]
