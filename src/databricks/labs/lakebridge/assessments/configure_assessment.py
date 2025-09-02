@@ -123,10 +123,11 @@ class ConfigureSynapseAssessment(AssessmentConfigurator):
 
         # Synapse Workspace Settings
         logger.info("Please provide Synapse Workspace settings:")
+        workspace_name = self.prompts.question("Enter Synapse workspace name")
         synapse_workspace = {
-            "name": self.prompts.question("Enter Synapse workspace name"),
-            "dedicated_sql_endpoint": self.prompts.question("Enter dedicated SQL endpoint"),
-            "serverless_sql_endpoint": self.prompts.question("Enter serverless SQL endpoint"),
+            "name": workspace_name,
+            "dedicated_sql_endpoint": f"{workspace_name}.sql.azuresynapse.net",
+            "serverless_sql_endpoint": f"{workspace_name}-ondemand.sql.azuresynapse.net",
             "sql_user": self.prompts.question("Enter SQL user"),
             "sql_password": self.prompts.question("Enter SQL password"),
             "tz_info": self.prompts.question("Enter timezone (e.g. America/New_York)", default="UTC"),
@@ -136,13 +137,9 @@ class ConfigureSynapseAssessment(AssessmentConfigurator):
         }
 
         # Azure API Access Settings
-        logger.info("Please provide Azure API access settings:")
-        azure_api_access = {
-            "development_endpoint": self.prompts.question("Enter development endpoint"),
-            "azure_client_id": self.prompts.question("Enter Azure client ID"),
-            "azure_tenant_id": self.prompts.question("Enter Azure tenant ID"),
-            "azure_client_secret": self.prompts.question("Enter Azure client secret"),
-        }
+        logger.info("Please provide Azure access settings:")
+        # Users use az cli to login to their Azure account and we just need the endpoint
+        azure_api_access = {"development_endpoint": self.prompts.question("Enter development endpoint")}
 
         # JDBC Settings
         logger.info("Please select JDBC authentication type:")
