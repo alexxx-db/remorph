@@ -21,7 +21,9 @@ def execute():
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Serverless SQL Pool Extract Script")
 
     cred_manager = create_credential_manager(creds_file)
-    config = cred_manager.get_credentials("synapse")["workspace"]
+    data = cred_manager.get_credentials("synapse")
+    config = data["workspace"]
+    auth_type = data["jdbc"].get("auth_type", "sql_authentication")
 
     try:
         synapse_workspace_settings = get_config(creds_file)["synapse"]
@@ -31,7 +33,12 @@ def execute():
 
             # Databases
             database_query = SynapseQueries.list_databases()
-            connection = get_sqlpool_reader(config, 'master', 'serverless_sql_endpoint')
+            connection = get_sqlpool_reader(
+                config,
+                'master',
+                endpoint_key='serverless_sql_endpoint',
+                auth_type=auth_type,
+            )
             result = connection.execute(text(database_query))
             save_resultset_to_db(result, "serverless_databases", db_path, mode="overwrite")
 
@@ -43,7 +50,12 @@ def execute():
                 databases = serverless_database_groups_in_scope[collation_name]
 
                 for db_name in databases:
-                    connection = get_sqlpool_reader(config, db_name, 'serverless_sql_endpoint')
+                    connection = get_sqlpool_reader(
+                        config,
+                        db_name,
+                        endpoint_key='serverless_sql_endpoint',
+                        auth_type=auth_type,
+                    )
                     # tables
                     table_name = 'serverless_tables'
                     table_query = SynapseQueries.list_tables(db_name)

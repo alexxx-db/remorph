@@ -24,7 +24,9 @@ def execute():
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Dedicated SQL Pool Extract Script")
 
     cred_manager = create_credential_manager(creds_file)
-    config = cred_manager.get_credentials("synapse")["workspace"]
+    data = cred_manager.get_credentials("synapse")
+    config = data["workspace"]
+    auth_type = data["jdbc"].get("auth_type", "sql_authentication")
 
     try:
         synapse_workspace_settings = get_config(creds_file)["synapse"]
@@ -68,7 +70,7 @@ def execute():
             # tables
             table_name = "dedicated_tables"
             table_query = SynapseQueries.list_tables(pool_name)
-            connection = get_sqlpool_reader(config, pool_name)
+            connection = get_sqlpool_reader(config, pool_name, auth_type=auth_type)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
             result = connection.execute(text(table_query))
             save_resultset_to_db(result, table_name, db_path, mode=mode)
@@ -111,7 +113,7 @@ def execute():
         ]
         for idx, sqlpool_name in enumerate(sqlpool_names_to_profile_list):
             # print(f"INFO: sqlpool_name:{sqlpool_name}")
-            connection = get_sqlpool_reader(config, sqlpool_name)
+            connection = get_sqlpool_reader(config, sqlpool_name, auth_type=auth_type)
 
             table_name = "dedicated_sessions"
             prev_max_login_time = get_max_column_value_duckdb("login_time", table_name, db_path)

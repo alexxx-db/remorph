@@ -34,8 +34,16 @@ def create_credential_manager(file_path: Path):
     return CredentialManager(loader, secret_providers)
 
 
-def get_sqlpool_reader(config: dict, db_name: str, endpoint_key='dedicated_sql_endpoint'):
+def get_sqlpool_reader(
+    config: dict,
+    db_name: str,
+    *,
+    endpoint_key: str = 'dedicated_sql_endpoint',
+    auth_type: str = 'sql_authentication',
+):
     """
+    :param auth_type:
+    :param endpoint_key:
     :param config:
     :param db_name:
     :return: returns a sqlachemy reader for the given dedicated SQL Pool database
@@ -45,6 +53,14 @@ def get_sqlpool_reader(config: dict, db_name: str, endpoint_key='dedicated_sql_e
         "driver": config['driver'],
         "loginTimeout": "30",
     }
+
+    if auth_type == 'azure_ad_password':
+        query_params = {
+            **query_params,
+            "authentication": "ActiveDirectoryPassword",
+        }
+    elif auth_type == 'spn_authentication':
+        raise NotImplementedError("SPN Authentication not implemented yet")
 
     connection_string = URL.create(
         "mssql+pyodbc",
