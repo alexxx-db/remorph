@@ -328,3 +328,126 @@ def test_schema_compare(mock_spark):
     assert df.count() == 2
     assert df.filter("is_valid = 'true'").count() == 2
     assert df.filter("is_valid = 'false'").count() == 0
+
+
+def test_schema_compare_large_column_count_bug_validation(mock_spark):
+    """
+    Test to validate the bug in issue #1973 where schema comparison
+    dashboard contains only 50 rows even when table has more than 50 columns.
+    This test creates a schema with more than 50 columns to reproduce the bug.
+    
+    The bug is likely in the data persistence layer where collect_list might 
+    have a default limit or the explode operation in the dashboard query
+    might be limited.
+    """
+    # Create 60 columns to test the 50-row limit bug
+    src_schema = []
+    tgt_schema = []
+    
+    for i in range(1, 61):  # 60 columns
+        col_name = f"col_{i:03d}"
+        src_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+        tgt_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+    
+    spark = mock_spark
+    table_conf = Table(
+        source_name="large_table",
+        target_name="large_table",
+        drop_columns=[],
+        column_mapping=[],
+    )
+
+    schema_compare_output = SchemaCompare(spark).compare(
+        src_schema,
+        tgt_schema,
+        get_dialect("databricks"),
+        table_conf,
+    )
+    df = schema_compare_output.compare_df
+
+    # The bug is that we expect 60 rows but only get 50
+    # If the bug exists, this assertion will fail
+    assert df.count() == 60, f"Expected 60 rows in schema comparison result, but got {df.count()}. This indicates the 50-row limit bug exists."
+    assert df.filter("is_valid = 'true'").count() == 60
+    assert df.filter("is_valid = 'false'").count() == 0
+    assert schema_compare_output.is_valid
+
+
+def test_schema_compare_exactly_50_columns(mock_spark):
+    """
+    Test with exactly 50 columns to see if this works fine.
+    This helps isolate whether the issue is specifically with >50 columns.
+    """
+    # Create exactly 50 columns
+    src_schema = []
+    tgt_schema = []
+    
+    for i in range(1, 51):  # 50 columns
+        col_name = f"col_{i:03d}"
+        src_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+        tgt_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+    
+    spark = mock_spark
+    table_conf = Table(
+        source_name="fifty_col_table",
+        target_name="fifty_col_table",
+        drop_columns=[],
+        column_mapping=[],
+    )
+
+    schema_compare_output = SchemaCompare(spark).compare(
+        src_schema,
+        tgt_schema,
+        get_dialect("databricks"),
+        table_conf,
+    )
+    df = schema_compare_output.compare_df
+
+    # This should work fine with exactly 50 columns
+    assert df.count() == 50, f"Expected 50 rows in schema comparison result, but got {df.count()}"
+    assert df.filter("is_valid = 'true'").count() == 50
+    assert df.filter("is_valid = 'false'").count() == 0
+    assert schema_compare_output.is_valid
+
+
+def test_schema_compare_51_columns_edge_case(mock_spark):
+    """
+    Test with exactly 51 columns to see if the issue starts at >50.
+    This helps pinpoint the exact threshold where the bug occurs.
+    """
+    # Create 51 columns to test the edge case
+    src_schema = []
+    tgt_schema = []
+    
+    for i in range(1, 52):  # 51 columns
+        col_name = f"col_{i:03d}"
+        src_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+        tgt_schema.append(schema_fixture_factory(col_name, "string", f"`{col_name}`", f"`{col_name}`"))
+    
+    spark = mock_spark
+    table_conf = Table(
+        source_name="fifty_one_col_table",
+        target_name="fifty_one_col_table",
+        drop_columns=[],
+        column_mapping=[],
+    )
+
+    schema_compare_output = SchemaCompare(spark).compare(
+        src_schema,
+        tgt_schema,
+        get_dialect("databricks"),
+        table_conf,
+    )
+    df = schema_compare_output.compare_df
+
+    # If the bug exists, this might return only 50 rows instead of 51
+    actual_count = df.count()
+    if actual_count == 50:
+        # Bug confirmed: 51 columns but only 50 rows returned
+        assert False, f"BUG DETECTED: Expected 51 rows but got {actual_count}. The 50-row limit bug is confirmed."
+    else:
+        # No bug: all 51 rows returned as expected
+        assert actual_count == 51, f"Expected 51 rows in schema comparison result, but got {actual_count}"
+        assert df.filter("is_valid = 'true'").count() == 51
+        assert df.filter("is_valid = 'false'").count() == 0
+        assert schema_compare_output.is_valid
