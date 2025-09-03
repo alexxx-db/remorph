@@ -367,9 +367,22 @@ def test_schema_compare_large_column_count_bug_validation(mock_spark):
 
     # The bug is that we expect 60 rows but only get 50
     # If the bug exists, this assertion will fail
-    assert df.count() == 60, f"Expected 60 rows in schema comparison result, but got {df.count()}. This indicates the 50-row limit bug exists."
-    assert df.filter("is_valid = 'true'").count() == 60
-    assert df.filter("is_valid = 'false'").count() == 0
+    actual_count = df.count()
+    valid_count = df.filter("is_valid = 'true'").count()
+    invalid_count = df.filter("is_valid = 'false'").count()
+    
+    # Debug information for troubleshooting
+    print(f"DEBUG: Created {len(src_schema)} source columns and {len(tgt_schema)} target columns")
+    print(f"DEBUG: Schema comparison returned {actual_count} rows")
+    print(f"DEBUG: Valid rows: {valid_count}, Invalid rows: {invalid_count}")
+    
+    assert actual_count == 60, (
+        f"BUG CONFIRMED (Issue #1973): Expected 60 rows in schema comparison result, "
+        f"but got {actual_count}. This confirms the 50-row limit bug exists. "
+        f"Schema comparison processed {len(src_schema)} columns but only returned {actual_count} rows."
+    )
+    assert valid_count == 60
+    assert invalid_count == 0
     assert schema_compare_output.is_valid
 
 
@@ -442,12 +455,21 @@ def test_schema_compare_51_columns_edge_case(mock_spark):
 
     # If the bug exists, this might return only 50 rows instead of 51
     actual_count = df.count()
+    valid_count = df.filter("is_valid = 'true'").count()
+    invalid_count = df.filter("is_valid = 'false'").count()
+    
+    print(f"DEBUG: Edge case test - Created {len(src_schema)} columns, got {actual_count} rows")
+    
     if actual_count == 50:
         # Bug confirmed: 51 columns but only 50 rows returned
-        assert False, f"BUG DETECTED: Expected 51 rows but got {actual_count}. The 50-row limit bug is confirmed."
+        assert False, (
+            f"BUG DETECTED (Issue #1973): Expected 51 rows but got {actual_count}. "
+            f"The 50-row limit bug is confirmed. Schema had {len(src_schema)} columns "
+            f"but comparison returned only {actual_count} rows."
+        )
     else:
         # No bug: all 51 rows returned as expected
         assert actual_count == 51, f"Expected 51 rows in schema comparison result, but got {actual_count}"
-        assert df.filter("is_valid = 'true'").count() == 51
-        assert df.filter("is_valid = 'false'").count() == 0
+        assert valid_count == 51
+        assert invalid_count == 0
         assert schema_compare_output.is_valid
