@@ -72,6 +72,7 @@ def _remove_warehouse(ws: WorkspaceClient, warehouse_id: str):
 
 @lakebridge.command
 def transpile(
+    *,
     w: WorkspaceClient,
     transpiler_config_path: str | None = None,
     source_dialect: str | None = None,
@@ -516,7 +517,7 @@ def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[s
 
 
 @lakebridge.command
-def reconcile(w: WorkspaceClient) -> None:
+def reconcile(*, w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-reconcile")
     ctx = ApplicationContext(w)
@@ -532,7 +533,7 @@ def reconcile(w: WorkspaceClient) -> None:
 
 
 @lakebridge.command
-def aggregates_reconcile(w: WorkspaceClient) -> None:
+def aggregates_reconcile(*, w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles Aggregated source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-aggregates-reconcile")
     ctx = ApplicationContext(w)
@@ -550,8 +551,8 @@ def aggregates_reconcile(w: WorkspaceClient) -> None:
 
 @lakebridge.command
 def generate_lineage(
-    w: WorkspaceClient,
     *,
+    w: WorkspaceClient,
     source_dialect: str | None = None,
     input_source: str,
     output_folder: str,
@@ -576,7 +577,7 @@ def generate_lineage(
 
 
 @lakebridge.command
-def configure_secrets(w: WorkspaceClient) -> None:
+def configure_secrets(*, w: WorkspaceClient) -> None:
     """Setup reconciliation connection profile details as Secrets on Databricks Workspace"""
     recon_conf = ReconConfigPrompts(w)
 
@@ -602,8 +603,9 @@ def configure_database_profiler() -> None:
     assessment.run()
 
 
-@lakebridge.command()
+@lakebridge.command
 def install_transpile(
+    *,
     w: WorkspaceClient,
     artifact: str | None = None,
     transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
@@ -620,6 +622,7 @@ def install_transpile(
 
 @lakebridge.command(is_unauthenticated=False)
 def configure_reconcile(
+    *,
     w: WorkspaceClient,
     transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
 ) -> None:
@@ -635,8 +638,9 @@ def configure_reconcile(
     reconcile_installer.run(module="reconcile")
 
 
-@lakebridge.command()
+@lakebridge.command
 def analyze(
+    *,
     w: WorkspaceClient,
     source_directory: str | None = None,
     report_file: str | None = None,
