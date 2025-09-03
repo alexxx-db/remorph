@@ -54,16 +54,16 @@ def get_sqlpool_reader(
         "loginTimeout": "30",
     }
 
-    if auth_type == 'azure_ad_password':
+    if auth_type == "ad_passwd_authentication":
         query_params = {
             **query_params,
             "authentication": "ActiveDirectoryPassword",
         }
-    elif auth_type == 'spn_authentication':
+    elif auth_type == "spn_authentication":
         raise NotImplementedError("SPN Authentication not implemented yet")
 
     connection_string = URL.create(
-        "mssql+pyodbc",
+        drivername="mssql+pyodbc",
         username=config['sql_user'],
         password=config['sql_password'],
         host=config[endpoint_key],
