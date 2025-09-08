@@ -98,7 +98,7 @@ class ConfigureSqlServerAssessment(AssessmentConfigurator):
                 "server": self.prompts.question("Enter the server or host details"),
                 "port": int(self.prompts.question("Enter the port details", valid_number=True)),
                 "user": self.prompts.question("Enter the user details"),
-                "password": self.prompts.question("Enter the password details"),
+                "password": self.prompts.password("Enter the password details"),
             },
         }
 
@@ -129,7 +129,7 @@ class ConfigureSynapseAssessment(AssessmentConfigurator):
             "dedicated_sql_endpoint": f"{workspace_name}.sql.azuresynapse.net",
             "serverless_sql_endpoint": f"{workspace_name}-ondemand.sql.azuresynapse.net",
             "sql_user": self.prompts.question("Enter SQL user"),
-            "sql_password": self.prompts.question("Enter SQL password"),
+            "sql_password": self.prompts.password("Enter SQL password"),
             "tz_info": self.prompts.question("Enter timezone (e.g. America/New_York)", default="UTC"),
             "driver": self.prompts.question(
                 "Enter the ODBC driver installed locally", default="ODBC Driver 18 for SQL Server"
