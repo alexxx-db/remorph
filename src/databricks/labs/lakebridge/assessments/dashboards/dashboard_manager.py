@@ -14,6 +14,7 @@ class DashboardTemplateLoader:
     Class for loading the JSON representation of a Databricks dashboard
     according to the source system.
     """
+
     def __init__(self, templates_dir: str = "templates"):
         self.templates_dir = templates_dir
 
@@ -34,6 +35,7 @@ class DashboardManager:
     """
     Class for managing the lifecycle of a profiler dashboard summary, a.k.a. "local dashboards"
     """
+
     def __init__(self, workspace_url: str, token: str, warehouse_id: str, databricks_username: str):
         self.warehouse_id = warehouse_id
         self.token = token
@@ -41,13 +43,10 @@ class DashboardManager:
             workspace_url = f"https://{workspace_url}"
         self.workspace_url = workspace_url.rstrip("/")
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        })
+        self.session.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
         self.databricks_username = databricks_username
         self.dashboard_location = f"/Workspace/Users/{databricks_username}/Lakebridge/Dashboards"
-        self.dashboard_name = f"Lakebridge Profiler Assessment"
+        self.dashboard_name = "Lakebridge Profiler Assessment"
 
     def _handle_response(self, resp: requests.Response) -> Dict[str, Any]:
         """Handle API responses with logging and error handling."""
@@ -59,16 +58,12 @@ class DashboardManager:
         except requests.exceptions.HTTPError as e:
             logger.error("API call failed: %s - %s", resp.status_code, resp.text)
             raise RuntimeError(f"Databricks API Error {resp.status_code}: {resp.text}") from e
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected error during API call")
             raise
 
     def draft_dashboard(
-        self,
-        display_name: str,
-        serialized_dashboard: str,
-        parent_path: str,
-        warehouse_id: str
+        self, display_name: str, serialized_dashboard: str, parent_path: str, warehouse_id: str
     ) -> Dict[str, Any]:
         """Create a new dashboard in Databricks Lakeview."""
         url = f"{self.workspace_url}/api/2.0/lakeview/dashboards"
@@ -124,11 +119,13 @@ class DashboardManager:
         # if it does, unpublish it and delete
         # create new dashboard
         json_dashboard = DashboardTemplateLoader("templates").load(source_system)
-        dashboard_manager = DashboardManager(self.workspace_url, self.token, self.warehouse_id, self.databricks_username)
+        dashboard_manager = DashboardManager(
+            self.workspace_url, self.token, self.warehouse_id, self.databricks_username
+        )
         response = dashboard_manager.draft_dashboard(
             dashboard_manager.dashboard_name,
             json.dumps(json_dashboard),
             parent_path=dashboard_manager.dashboard_location,
-            warehouse_id=dashboard_manager.warehouse_id
+            warehouse_id=dashboard_manager.warehouse_id,
         )
         return response.get("dashboard_id")
