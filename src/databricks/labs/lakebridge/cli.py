@@ -651,13 +651,14 @@ def analyze(
     source_directory: str | None = None,
     report_file: str | None = None,
     source_tech: str | None = None,
+    generate_json: bool = False,
 ):
     """Run the Analyzer"""
     ctx = ApplicationContext(w)
     ctx.add_user_agent_extra("cmd", "analyze")
 
     logger.debug(f"User: {ctx.current_user}")
-    ctx.analyzer.run_analyzer(source_directory, report_file, source_tech)
+    ctx.analyzer.run_analyzer(source_directory, report_file, source_tech, generate_json)
 
 
 if __name__ == "__main__":

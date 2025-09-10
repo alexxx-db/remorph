@@ -67,7 +67,9 @@ class LakebridgeAnalyzer(Analyzer):
 
         logger.info(f"Successfully Analyzed files in ${source_dir} for ${technology} and saved report to {results_dir}")
 
-    def _run_arg_analyzer(self, source_dir: str | None, results_dir: str | None, technology: str | None):
+    def _run_arg_analyzer(
+        self, source_dir: str | None, results_dir: str | None, technology: str | None, generate_json: bool | False
+    ):
         """Run the analyzer: arg guided"""
         if source_dir is None or results_dir is None or technology is None:
             logger.error("All arguments (--source-directory, --report-file, --source-tech) must be provided")
@@ -76,7 +78,7 @@ class LakebridgeAnalyzer(Analyzer):
         if check_path(source_dir) and check_path(results_dir):
             tmp_dir = self._temp_xlsx_path(results_dir)
             technology = self._get_source_tech(technology)
-            self._run_binary(Path(source_dir), tmp_dir, technology, self._is_debug)
+            self._run_binary(Path(source_dir), tmp_dir, technology, self._is_debug, generate_json)
 
             move_tmp_file(tmp_dir, Path(results_dir))
 
@@ -85,11 +87,15 @@ class LakebridgeAnalyzer(Analyzer):
             )
 
     def run_analyzer(
-        self, source_dir: str | None = None, results_dir: str | None = None, technology: str | None = None
+        self,
+        source_dir: str | None = None,
+        results_dir: str | None = None,
+        technology: str | None = None,
+        generate_json: bool = False,
     ):
         """Run the analyzer."""
         if not any([source_dir, results_dir, technology]):
             self._run_prompt_analyzer()
             return
 
-        self._run_arg_analyzer(source_dir, results_dir, technology)
+        self._run_arg_analyzer(source_dir, results_dir, technology, generate_json)

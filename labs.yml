@@ -17,6 +17,8 @@ commands:
         description: (Optional) Name of report file to write
       - name: source-tech
         description: (Optional) Name of the Source System Technology you want to analyze
+      - name: generate-json
+        description: (Optional) Flag to indicate if a json file should be produced alongside the Excel file
   - name: transpile
     description: Transpile SQL script to Databricks SQL
     flags:
