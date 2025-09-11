@@ -68,7 +68,7 @@ class LakebridgeAnalyzer(Analyzer):
         logger.info(f"Successfully Analyzed files in ${source_dir} for ${technology} and saved report to {results_dir}")
 
     def _run_arg_analyzer(
-        self, source_dir: str | None, results_dir: str | None, technology: str | None, generate_json: bool | False
+        self, source_dir: str | None, results_dir: str | None, technology: str | None, generate_json: bool = False
     ):
         """Run the analyzer: arg guided"""
         if source_dir is None or results_dir is None or technology is None:
