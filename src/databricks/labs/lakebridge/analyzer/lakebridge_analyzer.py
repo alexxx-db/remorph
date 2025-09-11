@@ -78,7 +78,7 @@ class LakebridgeAnalyzer(Analyzer):
         if check_path(source_dir) and check_path(results_dir):
             tmp_dir = self._temp_xlsx_path(results_dir)
             technology = self._get_source_tech(technology)
-            self._run_binary(Path(source_dir), tmp_dir, technology, self._is_debug, generate_json)
+            self._run_binary(Path(source_dir), tmp_dir, technology, self._is_debug, generate_json=generate_json)
 
             move_tmp_file(tmp_dir, Path(results_dir))
 
