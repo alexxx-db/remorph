@@ -14,6 +14,9 @@ def assert_sql_outputs(output_folder: Path, expected_sql: str, expected_failure_
         actual_failure_sql = f.read()
     assert actual_failure_sql.strip() == expected_failure_sql.strip()
 
+    # Added to check only for the file name handling with special characters
+    assert (output_folder / "test_(filename)_comment@.sql").exists()
+
 
 async def run_transpile_and_assert(
     ws,
