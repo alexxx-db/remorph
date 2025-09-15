@@ -662,11 +662,11 @@ def analyze(
 @lakebridge.command()
 def execute_database_profiler(w: WorkspaceClient):
     """Run the Profiler"""
-    with_user_agent_extra("cmd", "profiler")
     ctx = ApplicationContext(w)
+    ctx.add_user_agent_extra("cmd", "analyze")
     prompts = ctx.prompts
     source_tech = prompts.choice("Select the source technology", Profiler.supported_source_technologies())
-    with_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
+    ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
     user = ctx.current_user
     logger.debug(f"User: {user}")
     profiler = Profiler()
