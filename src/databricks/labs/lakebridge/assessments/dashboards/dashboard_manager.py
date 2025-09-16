@@ -169,3 +169,4 @@ class DashboardManager:
         except Exception as e:
             logger.error(f"Failed to upload file: {str(e)}")
             return False
+
