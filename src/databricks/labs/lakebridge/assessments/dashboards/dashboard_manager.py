@@ -129,3 +129,50 @@ class DashboardManager:
             warehouse_id=dashboard_manager.warehouse_id,
         )
         return response.get("dashboard_id")
+
+    def upload_duckdb_to_uc_volume(self, workspace_url, access_token, local_file_path, volume_path):
+        """
+        Upload a DuckDB file to Unity Catalog Volume using PUT method
+        
+        Args:
+            workspace_url (str): Databricks workspace URL (e.g., 'https://your-workspace.cloud.databricks.com')
+            access_token (str): Personal access token for authentication
+            local_file_path (str): Local path to the DuckDB file
+            volume_path (str): Target path in UC Volume (e.g., '/Volumes/catalog/schema/volume/myfile.duckdb')
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        
+        # Validate inputs
+        if not os.path.exists(local_file_path):
+            print(f"Error: Local file not found: {local_file_path}")
+            return False
+        
+        if not volume_path.startswith('/Volumes/'):
+            print("Error: Volume path must start with '/Volumes/'")
+            return False
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}'
+        }
+        
+        workspace_url = workspace_url.rstrip('/')
+        
+        try:
+            # Use PUT method to upload directly to the volume path
+            url = f"{workspace_url}/api/2.0/fs/files{volume_path}"
+            
+            with open(local_file_path, 'rb') as f:
+                response = requests.put(url, headers=headers, data=f)
+            
+            if response.status_code in [200, 201, 204]:
+                print(f"Successfully uploaded {local_file_path} to {volume_path}")
+                return True
+            else:
+                print(f"Upload failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"Upload failed: {str(e)}")
+            return False
