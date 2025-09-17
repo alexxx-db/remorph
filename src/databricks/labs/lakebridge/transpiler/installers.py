@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import shutil
+import site
 import subprocess
 import sys
 import venv
@@ -16,6 +17,12 @@ from urllib import request
 from urllib.error import HTTPError, URLError
 from zipfile import ZipFile
 
+import yaml
+
+from switch import __version__ as SWITCH_VERSION
+from switch.api.installer import SwitchInstaller as SwitchAPIInstaller
+
+from databricks.sdk import WorkspaceClient
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 logger = logging.getLogger(__name__)
@@ -379,8 +386,9 @@ class MavenInstaller(ArtifactInstaller):
 
 
 class TranspilerInstaller(abc.ABC):
-    def __init__(self, transpiler_repository: TranspilerRepository) -> None:
+    def __init__(self, transpiler_repository: TranspilerRepository, workspace_client: WorkspaceClient) -> None:
         self._transpiler_repository = transpiler_repository
+        self._workspace_client = workspace_client
 
     @property
     @abc.abstractmethod
@@ -521,3 +529,171 @@ class MorpheusInstaller(TranspilerInstaller):
         update = int(match["update"] or 0)
         patch = int(match["patch"] or 0)
         return feature, interim, update, patch
+
+
+class SwitchInstaller(TranspilerInstaller):
+
+    @property
+    def name(self) -> str:
+        return "Switch"
+
+    def can_install(self, artifact: Path) -> bool:
+        return "databricks_switch_plugin" in artifact.name and artifact.suffix == ".whl"
+
+    def install(self, artifact: Path | None = None) -> bool:
+        """Install Switch transpiler with workspace deployment.
+
+        This method handles workspace deployment and job creation.
+
+        Note: Switch Python package must be pre-installed as a Lakebridge dependency.
+        We cannot use WheelInstaller here because this method needs direct access to
+        Switch modules for uploading notebooks and creating jobs in the workspace.
+        WheelInstaller creates an isolated virtual environment that would be inaccessible
+        from this method's execution context.
+        """
+        # Step 1: Setup Switch LSP config.yml by copying lsp resources
+        self._setup_switch_lsp_config()
+
+        # Step 2: Setup state/version.json
+        self._setup_switch_version_state()
+
+        # Step 3: Extract previous installation info for cleanup
+        previous_job_id, previous_switch_home = self._get_previous_switch_installation()
+
+        # Step 4: Deploy to workspace and create job (with automatic cleanup)
+        logger.info("Deploying Switch to workspace...")
+        if previous_job_id or previous_switch_home:
+            logger.info(
+                f"Previous installation detected - will clean up job_id={previous_job_id}, switch_home={previous_switch_home}"
+            )
+
+        try:
+            switch_installer = SwitchAPIInstaller(self._workspace_client)
+            install_result = switch_installer.install(
+                previous_job_id=previous_job_id, previous_switch_home=previous_switch_home
+            )
+        except Exception as e:
+            logger.error(f"Failed to deploy Switch to workspace: {e}")
+            raise RuntimeError(f"Switch workspace deployment failed: {e}") from e
+
+        # Step 5: Update config.yml with job information
+        self.update_switch_config(install_result)
+
+        # Step 6: Display installation details to user
+        self._display_switch_installation_details(install_result)
+
+        return True
+
+    def _setup_switch_lsp_config(self):
+        """Setup Switch LSP config by copying lsp resources from installed package."""
+        # Find lsp folder in current environment's site-packages
+        lsp_source = None
+        for site_pkg in site.getsitepackages():
+            potential_lsp = Path(site_pkg) / "lsp"
+            if potential_lsp.exists():
+                lsp_source = potential_lsp
+                break
+
+        if not lsp_source:
+            raise ValueError("Installed Switch package is missing a 'lsp' folder")
+
+        # Prepare target directory
+        target_path = self._transpiler_repository.transpilers_path() / "switch" / "lib"
+        target_path.mkdir(parents=True, exist_ok=True)
+
+        # Copy using same logic as WheelInstaller
+        shutil.copytree(lsp_source, target_path, dirs_exist_ok=True)
+
+        logger.info(f"Setup Switch config: {target_path / 'config.yml'}")
+
+    def _setup_switch_version_state(self):
+        """Setup state/version.json for Switch transpiler"""
+        # Create state directory and version.json
+        switch_path = self._transpiler_repository.transpilers_path() / "switch"
+        self._store_version_state(switch_path, SWITCH_VERSION)
+
+        logger.info(f"Setup Switch version state: v{SWITCH_VERSION}")
+
+    def _store_version_state(self, product_path: Path, version: str) -> None:
+        """Store version state for Switch transpiler"""
+        state_path = product_path / "state"
+        state_path.mkdir(exist_ok=True)
+        version_data = {"version": f"v{version}", "date": dt.datetime.now(dt.timezone.utc).isoformat()}
+        version_path = state_path / "version.json"
+        with version_path.open("w", encoding="utf-8") as f:
+            dump(version_data, f)
+            f.write("\n")
+
+    def _get_previous_switch_installation(self) -> tuple[int | None, str | None]:
+        """Extract previous Switch installation info from config for cleanup.
+
+        Returns:
+            tuple: (previous_job_id, previous_switch_home) or (None, None) if not found
+        """
+        config = self._transpiler_repository.all_transpiler_configs().get("switch")
+        if not config:
+            logger.debug("No previous Switch installation found or config read failed")
+            return None, None
+
+        custom = config.custom
+        previous_job_id = custom.get("job_id")
+        previous_switch_home = custom.get("switch_home")
+
+        if previous_job_id is not None or previous_switch_home is not None:
+            logger.debug(
+                f"Found previous Switch installation: job_id={previous_job_id}, switch_home={previous_switch_home}"
+            )
+
+        return previous_job_id, previous_switch_home
+
+    def update_switch_config(self, install_result):
+        """Update Switch config.yml with job deployment information."""
+        # Read existing config
+        config_path = self._transpiler_repository.transpiler_config_path("switch")
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except (ValueError, FileNotFoundError) as e:
+            logger.warning(f"Failed to read Switch config: {e}")
+            return
+
+        if "custom" not in data:
+            data["custom"] = {}
+
+        # Update custom section
+        data["custom"].update(
+            {
+                "job_id": install_result.job_id,
+                "job_name": install_result.job_name,
+                "job_url": install_result.job_url,
+                "switch_home": install_result.switch_home,
+                "created_by": install_result.created_by,
+            }
+        )
+
+        # Write back
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(data, f, default_flow_style=False)
+
+            logger.debug(f"Updated Switch config with job info: {config_path}")
+
+        except (ValueError, FileNotFoundError) as e:
+            logger.warning(f"Failed to update Switch config: {e}")
+        except (OSError, yaml.YAMLError) as e:
+            logger.warning(f"Failed to update Switch config with job info: {e}")
+
+    def _display_switch_installation_details(self, install_result):
+        """Display Switch installation details to user"""
+        config_path = self._transpiler_repository.transpiler_config_path("switch")
+        lines = [
+            "Switch deployed successfully!",
+            f"Job Name: {install_result.job_name}",
+            f"Job ID: {install_result.job_id}",
+            f"Job URL: {install_result.job_url}",
+            f"Created by: {install_result.created_by}",
+            f"Switch home: {install_result.switch_home}",
+            f"Transpiler config: {config_path}",
+        ]
+        for line in lines:
+            logger.info(line)

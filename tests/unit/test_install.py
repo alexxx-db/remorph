@@ -1393,8 +1393,8 @@ def test_installer_upgrade_installed_transpilers(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(self, repository: TranspilerRepository, name: str) -> None:
-            super().__init__(repository)
+        def __init__(self, repository: TranspilerRepository, workspace_client: WorkspaceClient, name: str) -> None:
+            super().__init__(repository, workspace_client)
             self._name = name
             self.installed = False
 
@@ -1409,12 +1409,14 @@ def test_installer_upgrade_installed_transpilers(
             self.installed = True
             return True
 
-        def mock_factory(self, repository: TranspilerRepository) -> TranspilerInstaller:
+        def mock_factory(
+            self, repository: TranspilerRepository, _workspace_client: WorkspaceClient
+        ) -> TranspilerInstaller:
             assert repository is self._transpiler_repository
             return self
 
-    bar_installer = MockTranspilerInstaller(mock_repository, "bar")
-    baz_installer = MockTranspilerInstaller(mock_repository, "baz")
+    bar_installer = MockTranspilerInstaller(mock_repository, ctx.workspace_client, "bar")
+    baz_installer = MockTranspilerInstaller(mock_repository, ctx.workspace_client, "baz")
 
     installer = ws_installer(
         ctx.workspace_client,
@@ -1478,8 +1480,8 @@ def test_installer_upgrade_configure_if_changed(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(self, repository: TranspilerRepository) -> None:
-            super().__init__(repository)
+        def __init__(self, repository: TranspilerRepository, workspace_client: WorkspaceClient) -> None:
+            super().__init__(repository, workspace_client)
             self.installed = False
 
         def can_install(self, artifact: Path) -> bool:
