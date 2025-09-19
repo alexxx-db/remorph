@@ -119,7 +119,7 @@ async def test_server_loads_document(lsp_engine: LSPEngine, transpile_config: Tr
     await lsp_engine.initialize(transpile_config)
     lsp_engine.open_document(sample_path, read_text(sample_path))
     log = await read_log("open-document-uri")
-    assert f"open-document-uri={sample_path.as_uri()}" in log
+    assert f"open-document-uri={str(sample_path)}" in log
 
 
 async def test_server_closes_document(lsp_engine: LSPEngine, transpile_config: TranspileConfig) -> None:
@@ -128,7 +128,7 @@ async def test_server_closes_document(lsp_engine: LSPEngine, transpile_config: T
     lsp_engine.open_document(sample_path, read_text(sample_path))
     lsp_engine.close_document(sample_path)
     log = await read_log("close-document-uri")
-    assert f"close-document-uri={sample_path.as_uri()}" in log
+    assert f"close-document-uri={str(sample_path)}" in log
 
 
 async def test_server_transpiles_document(lsp_engine: LSPEngine, transpile_config: TranspileConfig) -> None:
@@ -143,7 +143,7 @@ async def test_server_transpiles_document(lsp_engine: LSPEngine, transpile_confi
     sample_whole_file_range = Range(Position(0, 0), Position(sample_line_count, 0))
     expected_source = Path(path_to_resource("lsp_transpiler", "transpiled_stuff.sql")).read_text(encoding="utf-8")
     expected_result = TranspileDocumentResult(
-        uri=sample_path.as_uri(),
+        uri=str(sample_path),
         language_id="sql",
         diagnostics=(),
         changes=(TextEdit(sample_whole_file_range, new_text=expected_source),),
