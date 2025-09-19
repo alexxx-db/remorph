@@ -516,18 +516,21 @@ class LSPEngine(TranspileEngine):
 
     def open_document(self, file_path: Path, source_code: str) -> None:
         text_document = TextDocumentItem(
-            uri=file_path.absolute().as_uri(), language_id=LanguageKind.Sql, version=1, text=source_code
+            uri=str(file_path.absolute()), language_id=LanguageKind.Sql, version=1, text=source_code
         )
         params = DidOpenTextDocumentParams(text_document)
         self._client.text_document_did_open(params)
 
     def close_document(self, file_path: Path) -> None:
-        text_document = TextDocumentIdentifier(uri=file_path.absolute().as_uri())
+        text_document = TextDocumentIdentifier(uri=str(file_path.absolute()))
         params = DidCloseTextDocumentParams(text_document)
         self._client.text_document_did_close(params)
 
     async def transpile_document(self, file_path: Path) -> TranspileDocumentResult:
-        params = TranspileDocumentParams(uri=file_path.absolute().as_uri(), language_id=LanguageKind.Sql)
+        # Modified the uri path to str since we mostly interact with file paths
+        # and using URI adds unnecessary compatability issues wrt to special characters in input filenames
+        # a_(comment).sql becomes a_%28comment%29.sql
+        params = TranspileDocumentParams(uri=str(file_path.absolute()), language_id=LanguageKind.Sql)
         result = await self._client.transpile_document_async(params)
         return result
 

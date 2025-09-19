@@ -4,8 +4,6 @@ import logging
 from email import policy
 from email.message import Message
 from email.parser import Parser as EmailParser
-from email.header import decode_header
-from urllib.parse import unquote
 from pathlib import Path
 from typing import cast
 import itertools
@@ -133,22 +131,10 @@ def _process_mime_result(context: TranspilingContext, error_list: list[Transpile
         _process_combined_part(context, part, error_list)
 
 
-def _decode_filename(filename: str | None) -> str | None:
-    if not filename:
-        return None
-    # in case of encoded filenames as headers like =?latin-1?b?qWNoYW50aWxsb24uc3Fs?=
-    # We don't expect them but added it just in case
-    decoded, charset = decode_header(filename)[0]
-    if isinstance(decoded, bytes):
-        filename = decoded.decode(charset or "utf-8")
-    # for decoding the percent encoding
-    return unquote(filename)
-
-
 def _process_combined_part(context: TranspilingContext, part: Message, error_list: list[TranspileError]) -> None:
     if part.get_content_type() != "text/plain":
         return  # TODO Need to handle other content types, e.g., text/binary, application/json, etc.
-    filename = _decode_filename(part.get_filename())
+    filename = part.get_filename()
     payload = part.get_payload(decode=True)
     charset = part.get_content_charset() or "utf-8"
     if isinstance(payload, bytes):
