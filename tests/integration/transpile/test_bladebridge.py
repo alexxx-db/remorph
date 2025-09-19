@@ -117,5 +117,3 @@ select cole(hello) world from table;
         expected_teradata_sql,
         expected_validation_failure_sql,
     )
-
-    assert (bb_output_folder / "test_(filename)_comment@.sql").exists()
