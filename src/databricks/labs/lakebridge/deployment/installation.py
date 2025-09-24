@@ -1,18 +1,21 @@
 import logging
+import shutil
 from ast import literal_eval
 from pathlib import Path
+
+from switch.api.installer import SwitchInstaller
 
 from databricks.labs.blueprint.installation import Installation
 from databricks.labs.blueprint.tui import Prompts
 from databricks.labs.blueprint.upgrades import Upgrades
 from databricks.labs.blueprint.wheels import ProductInfo, Version
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.errors import NotFound
-from databricks.sdk.mixins.compute import SemVer
-from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNotExist
-
 from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import NotFound
+from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNotExist
+from databricks.sdk.mixins.compute import SemVer
 
 logger = logging.getLogger("databricks.labs.lakebridge.install")
 
@@ -121,5 +124,52 @@ class WorkspaceInstallation:
         if config.reconcile:
             self._recon_deployment.uninstall(config.reconcile)
 
+        self.uninstall_switch()
+
         self._installation.remove()
         logger.info("Uninstallation completed successfully.")
+
+    def uninstall_switch(self) -> None:
+        """Uninstall Switch transpiler if installed."""
+        # Check config for uninstall info
+        config = TranspilerRepository.user_home().all_transpiler_configs().get("switch")
+        if config:
+            job_id = config.custom.get("job_id")
+            switch_home = config.custom.get("switch_home")
+            if job_id or switch_home:
+                logger.info(f"Found Switch installation: job_id={job_id}, switch_home={switch_home}")
+                try:
+                    self._uninstall_switch_from_workspace(job_id, switch_home)
+                except (ValueError, RuntimeError, OSError) as e:
+                    logger.error(f"Unexpected error during Switch uninstall: {e}")
+        else:
+            logger.debug("Switch config not found, skipping workspace cleanup")
+
+        # Always try to remove local directory
+        self._remove_switch_local_directory()
+
+    def _uninstall_switch_from_workspace(self, job_id: int | None, switch_home: str | None) -> None:
+        """Uninstall Switch from workspace using SwitchInstaller."""
+        try:
+            switch_installer = SwitchInstaller(self._ws)
+            result = switch_installer.uninstall(job_id=job_id, switch_home=switch_home)
+
+            if result.success:
+                logger.info(f"Switch workspace cleanup completed: {result.message}")
+            else:
+                logger.warning(f"Switch workspace cleanup partially failed: {result.message}")
+
+        except (ValueError, RuntimeError, OSError) as e:
+            logger.error(f"Failed to uninstall Switch from workspace: {e}")
+
+    def _remove_switch_local_directory(self) -> None:
+        """Remove local Switch transpiler directory."""
+        switch_transpiler_path = TranspilerRepository.user_home().transpilers_path() / "switch"
+        if not switch_transpiler_path.exists():
+            return
+
+        try:
+            shutil.rmtree(switch_transpiler_path)
+            logger.info(f"Removed Switch transpiler from {switch_transpiler_path}")
+        except OSError as e:
+            logger.error(f"Failed to remove Switch transpiler directory: {e}")

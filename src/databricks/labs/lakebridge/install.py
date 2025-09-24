@@ -28,6 +28,7 @@ from databricks.labs.lakebridge.reconcile.constants import ReconReportType, Reco
 from databricks.labs.lakebridge.transpiler.installers import (
     BladebridgeInstaller,
     MorpheusInstaller,
+    SwitchInstaller,
     TranspilerInstaller,
 )
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
@@ -51,9 +52,10 @@ class WorkspaceInstaller:
         *,
         is_interactive: bool = True,
         transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
-        transpiler_installers: Sequence[Callable[[TranspilerRepository], TranspilerInstaller]] = (
+        transpiler_installers: Sequence[Callable[[TranspilerRepository, WorkspaceClient], TranspilerInstaller]] = (
             BladebridgeInstaller,
             MorpheusInstaller,
+            SwitchInstaller,
         ),
     ):
         self._ws = ws
@@ -77,7 +79,9 @@ class WorkspaceInstaller:
 
     @property
     def _transpiler_installers(self) -> Set[TranspilerInstaller]:
-        return frozenset(factory(self._transpiler_repository) for factory in self._transpiler_installer_factories)
+        return frozenset(
+            factory(self._transpiler_repository, self._ws) for factory in self._transpiler_installer_factories
+        )
 
     def run(
         self,
