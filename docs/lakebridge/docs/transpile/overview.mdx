@@ -88,7 +88,7 @@ It is important to note that the transpiler isn't always able to know whether it
 
 ## Plugins overview
 
-Out of the box, Lakebridge comes with two transpilation plugins: Morpheus and BladeBridge. Each one has its own set of capabilities and levels of guarantee that we describe below.
+Out of the box, Lakebridge comes with three transpilation plugins: Morpheus, BladeBridge, and Switch. Each one has its own set of capabilities and levels of guarantee that we describe below.
 
 ### Morpheus
 
@@ -133,6 +133,20 @@ Whether you're migrating a single job or thousands, BladeBridge delivers predict
 
 More details about the BladeBridge converter [here](/docs/transpile/pluggable_transpilers/bladebridge_overview)
 
+### Switch
+
+Switch is an LLM-powered Lakebridge transpiler that extends beyond SQL to convert various source formats into Databricks-compatible outputs. Using [Mosaic AI Model Serving](https://docs.databricks.com/aws/en/machine-learning/model-serving/), it understands code intent and semantics to handle complex transformations.
+
+Key characteristics:
+- **LLM-powered extensibility** - Built-in prompts for multiple SQL dialects (T-SQL, Snowflake, Teradata, Oracle, etc.) and generic formats (Python, Scala, Airflow)
+- **Custom prompt support** - Add YAML prompts to handle any source format not covered by built-in options  
+- **Flexible outputs** - Python notebooks with Spark SQL (default), SQL notebooks (experimental), or any text-based format
+- **Databricks-native processing** - Executes as scalable Lakeflow Jobs with serverless compute
+- **Model flexibility** - Choose any Model Serving endpoint to match your organization's requirements
+- **Complex logic handling** - Excels at stored procedures and business logic beyond ANSI SQL/PSM standards
+
+Switch's LLM-based approach enables support for any source format through custom prompts. For built-in prompt details and custom prompt creation, see the [Switch documentation](/docs/transpile/pluggable_transpilers/switch).
+
 ### Supported dialects
 
 | Source Platform              | Converter: BladeBridge | Converter: Morpheus | Output: SQL | Output: SparkSql | Output: PySpark | Other features available |
@@ -144,4 +158,3 @@ More details about the BladeBridge converter [here](/docs/transpile/pluggable_tr
 | Snowflake                    |             | &#x2705; | &#x2705; |         |         | dbt Repointing (Experimental) |
 | MS SQL Server (incl. Synapse)|  &#x2705;   | &#x2705; | &#x2705; |         |         |                             |
 | Teradata                     |  &#x2705;   |          | &#x2705; |         |         |                             |
-
