@@ -53,8 +53,14 @@ commands:
     description: Reconcile source and target data residing on Databricks using aggregated metrics
 
   - name: configure-database-profiler
-    description: Configure database profiler
-
+    description: "Configure Database Profiler"
+  - name: create-profiler-dashboard
+    description: "Upload the Profiler Results as a Databricks Dashboard."
+    flags:
+      - name: extract-file
+        description: (Optional) Path Location of the Profiler Extract File
+      - name: source-tech
+        description: (Optional) Name of the Source System Technology that was Profiled
   - name: install-transpile
     description: Install & optionally configure 'transpile' dependencies
     flags:
