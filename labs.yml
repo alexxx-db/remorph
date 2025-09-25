@@ -55,6 +55,13 @@ commands:
     description: Aggregates Reconcile is an utility to streamline the reconciliation process, specific aggregate metric is compared between source and target data residing on Databricks.
   - name: configure-database-profiler
     description: "Configure Database Profiler"
+  - name: create-profiler-dashboard
+    description: "Upload the Profiler Results as a Databricks Dashboard."
+    flags:
+      - name: extract-file
+        description: (Optional) Path Location of the Profiler Extract File
+      - name: source-tech
+        description: (Optional) Name of the Source System Technology that was Profiled
   - name: install-transpile
     description: "Install & Configure Necessary Transpiler Dependencies"
     flags:
