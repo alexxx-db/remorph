@@ -11,6 +11,7 @@ def mock_synapse_profiler_extract():
     synapse_extract_path = build_mock_synapse_extract("mock_profiler_extract")
     return synapse_extract_path
 
+
 # Step One:
 # Fetch environment variables for Databricks workspace URL, token, catalog, schema, volume name
 # This will be moved into CLI prompts

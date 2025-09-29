@@ -608,6 +608,19 @@ def configure_database_profiler() -> None:
     assessment.run()
 
 
+@lakebridge.command(is_unauthenticated=False)
+def create_profiler_dashboard(
+    *,
+    w: WorkspaceClient,
+    extract_file: str | None = None,
+    source_tech: str | None = None,
+) -> None:
+    """Uploads profiler output summary as a Databricks dashboard."""
+    with_user_agent_extra("cmd", "create-profiler-dashboard")
+    ctx = ApplicationContext(w)
+    ctx.dashboard_manager.create_profiler_summary_dashboard(extract_file, source_tech)
+
+
 @lakebridge.command
 def install_transpile(
     *,
