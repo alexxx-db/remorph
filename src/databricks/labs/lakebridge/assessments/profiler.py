@@ -11,7 +11,7 @@ from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 from databricks.labs.lakebridge.assessments import (
     PRODUCT_NAME,
     PRODUCT_PATH_PREFIX,
-    PLATFORM_TO_SOURCE_TECHNOLOGY,
+    PLATFORM_TO_SOURCE_TECHNOLOGY_CFG,
     CONNECTOR_REQUIRED,
 )
 
@@ -22,7 +22,7 @@ class Profiler:
 
     @classmethod
     def supported_source_technologies(cls) -> list[str]:
-        return list(PLATFORM_TO_SOURCE_TECHNOLOGY.keys())
+        return list(PLATFORM_TO_SOURCE_TECHNOLOGY_CFG.keys())
 
     @staticmethod
     def path_modifier(config_file: str | Path) -> PipelineConfig:
@@ -37,7 +37,7 @@ class Profiler:
         if config_file:
             pipeline_config = PipelineClass.load_config_from_yaml(config_file)
         else:
-            config_path = PLATFORM_TO_SOURCE_TECHNOLOGY.get(platform, None)
+            config_path = PLATFORM_TO_SOURCE_TECHNOLOGY_CFG.get(platform, None)
             if not config_path:
                 raise ValueError(f"Unsupported platform: {platform}")
             config_full_path = self._locate_config(config_path)

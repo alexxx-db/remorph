@@ -3,7 +3,7 @@ from pathlib import Path
 PRODUCT_NAME = "lakebridge"
 PRODUCT_PATH_PREFIX = Path.home() / ".databricks" / "labs" / PRODUCT_NAME / "lib"
 
-PLATFORM_TO_SOURCE_TECHNOLOGY = {
+PLATFORM_TO_SOURCE_TECHNOLOGY_CFG = {
     "synapse": "src/databricks/labs/lakebridge/resources/assessments/synapse/pipeline_config.yml",
 }
 
