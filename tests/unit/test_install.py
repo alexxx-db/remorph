@@ -1136,7 +1136,7 @@ def test_runs_and_stores_force_config_option(
     )
 
     transpiler_repository = _StubTranspilerRepository(
-        tmp_path / "labs", config_options=(LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.FORCE, default=1254),)
+        tmp_path / "labs", config_options=(LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.FORCE, default="1254"),)
     )
 
     workspace_installer = ws_installer(
@@ -1155,7 +1155,7 @@ def test_runs_and_stores_force_config_option(
     expected_config = LakebridgeConfiguration(
         transpile=TranspileConfig(
             transpiler_config_path=PATH_TO_TRANSPILER_CONFIG,
-            transpiler_options={"-XX": 1254},
+            transpiler_options={"-XX": "1254"},
             source_dialect="snowflake",
             input_source="/tmp/queries/snow",
             output_folder="/tmp/queries/databricks",
@@ -1170,7 +1170,7 @@ def test_runs_and_stores_force_config_option(
         "config.yml",
         {
             "transpiler_config_path": PATH_TO_TRANSPILER_CONFIG,
-            "transpiler_options": {'-XX': 1254},
+            "transpiler_options": {'-XX': "1254"},
             "catalog_name": "remorph_test",
             "input_source": "/tmp/queries/snow",
             "output_folder": "/tmp/queries/databricks",
