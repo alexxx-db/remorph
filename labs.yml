@@ -64,5 +64,8 @@ commands:
       - name: interactive
         description: "Whether installing in interactive mode, which may prompt for configuration settings."
         default: auto
+      - name: include-llm-transpiler
+        description: "Include LLM-based transpiler in installation"
+        default: false
   - name: configure-reconcile
     description: "Configure Necessary Reconcile Dependencies"

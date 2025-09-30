@@ -16,7 +16,16 @@ from urllib import request
 from urllib.error import HTTPError, URLError
 from zipfile import ZipFile
 
+from databricks.labs.blueprint.installation import Installation
+from databricks.labs.blueprint.installer import InstallState
+from databricks.labs.blueprint.tui import Prompts
+from databricks.labs.blueprint.wheels import ProductInfo
+from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
+from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import InvalidParameterValue, NotFound
+from databricks.sdk.service.jobs import JobSettings, NotebookTask, Source, Task
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +185,9 @@ class WheelInstaller(ArtifactInstaller):
 
     def install(self) -> Path | None:
         return self._install_checking_versions()
+
+    def get_site_packages(self) -> Path:
+        return self._site_packages
 
     def _install_checking_versions(self) -> Path | None:
         latest_version = (
@@ -379,8 +391,12 @@ class MavenInstaller(ArtifactInstaller):
 
 
 class TranspilerInstaller(abc.ABC):
-    def __init__(self, transpiler_repository: TranspilerRepository) -> None:
+    def __init__(
+        self, transpiler_repository: TranspilerRepository, workspace_client: WorkspaceClient, installation: Installation
+    ) -> None:
         self._transpiler_repository = transpiler_repository
+        self._workspace_client = workspace_client
+        self._installation = installation
 
     @property
     @abc.abstractmethod
@@ -521,3 +537,259 @@ class MorpheusInstaller(TranspilerInstaller):
         update = int(match["update"] or 0)
         patch = int(match["patch"] or 0)
         return feature, interim, update, patch
+
+
+class SwitchInstaller(TranspilerInstaller):
+    _INSTALL_STATE_KEY = "Switch"
+    _TRANSPILER_ID = "switch"
+    _PYPI_PACKAGE_NAME = "databricks-switch-plugin"
+
+    @property
+    def name(self) -> str:
+        return self._INSTALL_STATE_KEY
+
+    def can_install(self, artifact: Path) -> bool:
+        wheel_name = self._PYPI_PACKAGE_NAME.replace("-", "_")
+        return wheel_name in artifact.name and artifact.suffix == ".whl"
+
+    def install(self, artifact: Path | None = None) -> bool:
+        """Install Switch transpiler with idempotent behavior."""
+        # Local installation
+        wheel_installer = WheelInstaller(
+            self._transpiler_repository, self._TRANSPILER_ID, self._PYPI_PACKAGE_NAME, artifact
+        )
+        install_path = wheel_installer.install()
+
+        # Determine local switch directory
+        if install_path:
+            # Newly installed
+            switch_local_dir = install_path
+        else:
+            # Check if already installed
+            switch_local_dir = self._transpiler_repository.transpilers_path() / self._TRANSPILER_ID
+            if not switch_local_dir.exists():
+                logger.warning("Switch not installed locally, cannot proceed with workspace installation.")
+                return False
+
+        # Workspace installation
+        self._deploy_workspace(switch_local_dir)
+        self._setup_job()
+        self._configure_resources()
+
+        return True
+
+    def uninstall(self) -> None:
+        """Uninstall Switch transpiler job from Databricks workspace."""
+        install_state = InstallState.from_installation(self._installation)
+
+        if self._INSTALL_STATE_KEY not in install_state.jobs:
+            logger.info("No Switch job found in InstallState")
+            return
+
+        try:
+            job_id = int(install_state.jobs[self._INSTALL_STATE_KEY])
+            logger.info(f"Removing Switch job with job_id={job_id}")
+            del install_state.jobs[self._INSTALL_STATE_KEY]
+            self._workspace_client.jobs.delete(job_id)
+            install_state.save()
+        except (InvalidParameterValue, NotFound):
+            logger.warning(f"Switch job {job_id} doesn't exist anymore for some reason.")
+            install_state.save()
+
+    def get_configured_resources(self) -> dict[str, str] | None:
+        """Get configured Switch resources (catalog, schema, volume)."""
+        install_state = InstallState.from_installation(self._installation)
+        if install_state.switch_resources:
+            return {
+                "catalog": install_state.switch_resources.get("catalog"),
+                "schema": install_state.switch_resources.get("schema"),
+                "volume": install_state.switch_resources.get("volume"),
+            }
+        return None
+
+    def _deploy_workspace(self, switch_local_dir: Path) -> None:
+        """Deploy Switch package to workspace (always executed)."""
+        try:
+            logger.info("Deploying Switch package to workspace...")
+            self._deploy_to_workspace(switch_local_dir)
+            logger.info("Switch workspace deployment completed")
+        except (OSError, ValueError, AttributeError) as e:
+            logger.error(f"Failed to deploy to workspace: {e}")
+
+    def _deploy_to_workspace(self, switch_local_dir: Path) -> None:
+        """Deploy Switch package from local directory to workspace"""
+        if switch_local_dir.exists():
+            self._upload_directory(switch_local_dir, self._TRANSPILER_ID)
+        else:
+            logger.warning(f"Switch package not found in local directory: {switch_local_dir}")
+
+    def _upload_directory(self, local_path: Path, remote_prefix: str) -> None:
+        """Recursively upload directory to workspace, excluding cache and temporary files"""
+        for root, dirs, files in os.walk(local_path):
+            # Skip cache directories and hidden directories
+            dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
+
+            for file in files:
+                # Skip compiled Python files and hidden files
+                if file.endswith((".pyc", ".pyo")) or file.startswith("."):
+                    continue
+
+                local_file = Path(root) / file
+                rel_path = local_file.relative_to(local_path)
+                remote_path = f"{remote_prefix}/{rel_path}"
+
+                with open(local_file, "rb") as f:
+                    content = f.read()
+
+                self._installation.upload(remote_path, content)
+
+    def _setup_job(self) -> None:
+        """Create Switch job if not exists."""
+        install_state = InstallState.from_installation(self._installation)
+
+        if self._has_valid_job(install_state):
+            logger.info("Switch job already exists")
+            return
+
+        logger.info("Creating Switch transpiler job...")
+        try:
+            job_id = self._create_or_update_switch_job(install_state)
+            install_state.save()
+            job_url = f"{self._workspace_client.config.host}#job/{job_id}"
+            logger.info(f"Switch job created/updated: {job_url}")
+        except (RuntimeError, ValueError, InvalidParameterValue, URLError) as e:
+            logger.error(f"Failed to create Switch job: {e}")
+
+    def _has_valid_job(self, install_state: InstallState) -> bool:
+        """Check if Switch job exists and is valid in workspace."""
+        if self._INSTALL_STATE_KEY not in install_state.jobs:
+            return False
+        try:
+            job_id = int(install_state.jobs[self._INSTALL_STATE_KEY])
+            self._workspace_client.jobs.get(job_id)
+            return True
+        except (InvalidParameterValue, NotFound, ValueError):
+            return False
+
+    def _create_or_update_switch_job(self, install_state: InstallState) -> str:
+        """Create or update Switch job"""
+        # Check for existing job and update
+        if self._INSTALL_STATE_KEY in install_state.jobs:
+            try:
+                job_id = int(install_state.jobs[self._INSTALL_STATE_KEY])
+                logger.info(f"Updating Switch job: {job_id}")
+                job_settings = self._get_switch_job_settings()
+                self._workspace_client.jobs.reset(job_id, JobSettings(**job_settings))
+                return str(job_id)
+            except InvalidParameterValue:
+                del install_state.jobs[self._INSTALL_STATE_KEY]
+                logger.warning("Previous Switch job not found, creating new one")
+
+        # Create new job
+        logger.info("Creating new Switch job configuration")
+        job_settings = self._get_switch_job_settings()
+        new_job = self._workspace_client.jobs.create(**job_settings)
+        assert new_job.job_id is not None
+
+        # Save to InstallState
+        install_state.jobs[self._INSTALL_STATE_KEY] = str(new_job.job_id)
+        return str(new_job.job_id)
+
+    def _get_switch_job_settings(self) -> dict:
+        """Build job settings for Switch transpiler using serverless compute"""
+        product = self._installation.product()
+        job_name = f"{product.upper()}_Switch"
+        version = ProductInfo.from_class(self.__class__).version()
+        user_name = self._installation.username()
+
+        task = Task(
+            task_key="run_transpilation",
+            notebook_task=NotebookTask(
+                notebook_path=f"/Workspace/Users/{user_name}/.{product}/{self._TRANSPILER_ID}/notebooks/00_main",
+                base_parameters=self._get_switch_parameters_from_config(),
+                source=Source.WORKSPACE,
+            ),
+            disable_auto_optimization=True,  # To disable retries on failure
+        )
+
+        return {
+            "name": job_name,
+            "tags": {"created_by": user_name, "version": f"v{version}"},
+            "tasks": [task],
+            "max_concurrent_runs": 100,  # Allow simultaneous transpilations
+        }
+
+    def _get_switch_parameters_from_config(self) -> dict:
+        """Extract Switch parameters from installed config.yml.
+
+        Raises:
+            ValueError: If Switch config.yml is not found (indicates incomplete installation)
+        """
+        configs = self._transpiler_repository.all_transpiler_configs()
+        config = configs.get(self._TRANSPILER_ID)
+
+        if not config:
+            raise ValueError(
+                "Switch config.yml not found. This indicates an incomplete installation. "
+                "Please reinstall Switch transpiler."
+            )
+
+        # Add required runtime parameters not in config at the beginning
+        parameters = {
+            "input_dir": "",
+            "output_dir": "",
+            "result_catalog": "",
+            "result_schema": "",
+            "builtin_prompt": "",
+        }
+
+        # Then add parameters from config.yml
+        for option in config.options.get("all", []):
+            flag = option.flag
+            default = option.default or ""
+
+            # Convert special values
+            if default == "<none>":
+                default = ""
+            elif isinstance(default, (int, float)):
+                default = str(default)
+
+            parameters[flag] = default
+
+        return parameters
+
+    def _configure_resources(self) -> None:
+        """Configure Switch resources (catalog, schema, volume) if not configured."""
+        logger.info("Configuring Switch resources (catalog, schema, volume)...")
+        install_state = InstallState.from_installation(self._installation)
+
+        if install_state.switch_resources:
+            catalog = install_state.switch_resources.get("catalog")
+            schema = install_state.switch_resources.get("schema")
+            volume = install_state.switch_resources.get("volume")
+            logger.info(
+                f"Switch resources already configured: catalog=`{catalog}`, schema=`{schema}`, volume=`{volume}`"
+            )
+            return
+
+        try:
+            catalog, schema, volume = self._prompt_for_switch_resources()
+            install_state.switch_resources["catalog"] = catalog
+            install_state.switch_resources["schema"] = schema
+            install_state.switch_resources["volume"] = volume
+            install_state.save()
+            logger.info(f"Switch resources configured: catalog=`{catalog}`, schema=`{schema}`, volume=`{volume}`")
+        except SystemExit:
+            logger.warning("Switch resource configuration aborted by user")
+
+    def _prompt_for_switch_resources(self) -> tuple[str, str, str]:
+        """Prompt user for catalog, schema, and volume for Switch."""
+        prompts = Prompts()
+        catalog_ops = CatalogOperations(self._workspace_client)
+        configurator = ResourceConfigurator(self._workspace_client, prompts, catalog_ops)
+
+        catalog = configurator.prompt_for_catalog_setup()
+        schema = configurator.prompt_for_schema_setup(catalog, "switch")
+        volume = configurator.prompt_for_volume_setup(catalog, schema, "switch_volume")
+
+        return catalog, schema, volume

@@ -1,10 +1,10 @@
 import logging
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Generator, Sequence, Set
 from pathlib import Path
 from unittest.mock import create_autospec, patch
 
 import pytest
-from databricks.labs.blueprint.installation import JsonObject, MockInstallation
+from databricks.labs.blueprint.installation import Installation, JsonObject, MockInstallation
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
 from databricks.labs.blueprint.tui import MockPrompts
@@ -23,7 +23,12 @@ from databricks.labs.lakebridge.deployment.configurator import ResourceConfigura
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.install import WorkspaceInstaller
 from databricks.labs.lakebridge.reconcile.constants import ReconSourceType, ReconReportType
-from databricks.labs.lakebridge.transpiler.installers import TranspilerInstaller
+from databricks.labs.lakebridge.transpiler.installers import (
+    BladebridgeInstaller,
+    MorpheusInstaller,
+    SwitchInstaller,
+    TranspilerInstaller,
+)
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 from tests.unit.conftest import path_to_resource
@@ -1393,8 +1398,14 @@ def test_installer_upgrade_installed_transpilers(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(self, repository: TranspilerRepository, name: str) -> None:
-            super().__init__(repository)
+        def __init__(
+            self,
+            repository: TranspilerRepository,
+            workspace_client: WorkspaceClient,
+            installation: Installation,
+            name: str,
+        ) -> None:
+            super().__init__(repository, workspace_client, installation)
             self._name = name
             self.installed = False
 
@@ -1409,12 +1420,16 @@ def test_installer_upgrade_installed_transpilers(
             self.installed = True
             return True
 
-        def mock_factory(self, repository: TranspilerRepository) -> TranspilerInstaller:
+        def mock_factory(
+            self, repository: TranspilerRepository, workspace_client: WorkspaceClient, installation: Installation
+        ) -> TranspilerInstaller:
             assert repository is self._transpiler_repository
+            assert workspace_client is ws
+            assert installation is ctx.installation
             return self
 
-    bar_installer = MockTranspilerInstaller(mock_repository, "bar")
-    baz_installer = MockTranspilerInstaller(mock_repository, "baz")
+    bar_installer = MockTranspilerInstaller(mock_repository, ws, ctx.installation, "bar")
+    baz_installer = MockTranspilerInstaller(mock_repository, ws, ctx.installation, "baz")
 
     installer = ws_installer(
         ctx.workspace_client,
@@ -1478,8 +1493,10 @@ def test_installer_upgrade_configure_if_changed(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(self, repository: TranspilerRepository) -> None:
-            super().__init__(repository)
+        def __init__(
+            self, repository: TranspilerRepository, workspace_client: WorkspaceClient, installation: Installation
+        ) -> None:
+            super().__init__(repository, workspace_client, installation)
             self.installed = False
 
         def can_install(self, artifact: Path) -> bool:
@@ -1598,3 +1615,59 @@ def test_no_configure_if_noninteractive(
     assert config.transpile is None
     expected_log_message = "Installation is not interactive, skipping configuration of transpilers."
     assert any(expected_log_message in log.message for log in caplog.records if log.levelno == logging.WARNING)
+
+
+class FriendOfWorkspaceInstaller(WorkspaceInstaller):
+    """A friend class to access protected members for testing purposes."""
+
+    def get_transpiler_installers(self) -> Set[TranspilerInstaller]:
+        return self._transpiler_installers
+
+
+@pytest.mark.parametrize(
+    "include_llm_transpiler,should_include_switch",
+    [
+        (False, False),  # Default: exclude Switch
+        (True, True),  # Flag enabled: include Switch
+        (None, False),  # Not specified: default behavior (exclude Switch)
+    ],
+)
+def test_transpiler_installers_llm_flag(
+    ws: WorkspaceClient, include_llm_transpiler: bool | None, should_include_switch: bool
+) -> None:
+    """Test Switch installer filtering based on include_llm_transpiler flag."""
+    ctx = ApplicationContext(ws)
+
+    if include_llm_transpiler is not None:
+        installer = FriendOfWorkspaceInstaller(
+            ctx.workspace_client,
+            ctx.prompts,
+            ctx.installation,
+            ctx.install_state,
+            ctx.product_info,
+            ctx.resource_configurator,
+            ctx.workspace_installation,
+            include_llm_transpiler=include_llm_transpiler,
+        )
+    else:
+        installer = FriendOfWorkspaceInstaller(
+            ctx.workspace_client,
+            ctx.prompts,
+            ctx.installation,
+            ctx.install_state,
+            ctx.product_info,
+            ctx.resource_configurator,
+            ctx.workspace_installation,
+        )
+    installers = installer.get_transpiler_installers()
+    installer_types = {type(i) for i in installers}
+
+    # Verify Switch inclusion/exclusion
+    if should_include_switch:
+        assert SwitchInstaller in installer_types
+    else:
+        assert SwitchInstaller not in installer_types
+
+    # Other transpilers should always be included
+    assert BladebridgeInstaller in installer_types
+    assert MorpheusInstaller in installer_types

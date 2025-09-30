@@ -614,6 +614,7 @@ def install_transpile(
     w: WorkspaceClient,
     artifact: str | None = None,
     interactive: str | None = None,
+    include_llm_transpiler: bool = False,
     transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
 ) -> None:
     """Install or upgrade the Lakebridge transpilers."""
@@ -622,9 +623,13 @@ def install_transpile(
     ctx.add_user_agent_extra("cmd", "install-transpile")
     if artifact:
         ctx.add_user_agent_extra("artifact-overload", Path(artifact).name)
+    if include_llm_transpiler:
+        ctx.add_user_agent_extra("include-llm-transpiler", "true")
     user = w.current_user
     logger.debug(f"User: {user}")
-    transpile_installer = installer(w, transpiler_repository, is_interactive=is_interactive)
+    transpile_installer = installer(
+        w, transpiler_repository, is_interactive=is_interactive, include_llm_transpiler=include_llm_transpiler
+    )
     transpile_installer.run(module="transpile", artifact=artifact)
 
 

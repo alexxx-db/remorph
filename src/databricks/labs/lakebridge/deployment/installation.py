@@ -13,6 +13,8 @@ from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNo
 
 from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
+from databricks.labs.lakebridge.transpiler.installers import SwitchInstaller
 
 logger = logging.getLogger("databricks.labs.lakebridge.install")
 
@@ -117,9 +119,25 @@ class WorkspaceInstallation:
                 f"Won't remove transpile validation schema `{config.transpile.schema_name}` "
                 f"from catalog `{config.transpile.catalog_name}`. Please remove it manually."
             )
+            self._uninstall_switch_job()
 
         if config.reconcile:
             self._recon_deployment.uninstall(config.reconcile)
 
         self._installation.remove()
         logger.info("Uninstallation completed successfully.")
+
+    def _uninstall_switch_job(self) -> None:
+        """Remove Switch transpiler job if exists."""
+        repository = TranspilerRepository.user_home()
+        switch_installer = SwitchInstaller(repository, self._ws, self._installation)
+        # Get configured resources before uninstalling for logging purpose
+        resources = switch_installer.get_configured_resources()
+        switch_installer.uninstall()
+
+        if resources:
+            logger.info(
+                f"Won't remove Switch resources: catalog=`{resources['catalog']}`, "
+                f"schema=`{resources['schema']}`, volume=`{resources['volume']}`. "
+                "Please remove them manually if needed."
+            )

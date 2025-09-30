@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import os
 import webbrowser
-from collections.abc import Set, Callable, Sequence
+from collections.abc import Set, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -28,6 +28,7 @@ from databricks.labs.lakebridge.reconcile.constants import ReconReportType, Reco
 from databricks.labs.lakebridge.transpiler.installers import (
     BladebridgeInstaller,
     MorpheusInstaller,
+    SwitchInstaller,
     TranspilerInstaller,
 )
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
@@ -50,10 +51,12 @@ class WorkspaceInstaller:
         environ: dict[str, str] | None = None,
         *,
         is_interactive: bool = True,
+        include_llm_transpiler: bool = False,
         transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
-        transpiler_installers: Sequence[Callable[[TranspilerRepository], TranspilerInstaller]] = (
+        transpiler_installers: Sequence[type[TranspilerInstaller]] = (
             BladebridgeInstaller,
             MorpheusInstaller,
+            SwitchInstaller,
         ),
     ):
         self._ws = ws
@@ -65,6 +68,7 @@ class WorkspaceInstaller:
         self._ws_installation = workspace_installation
         # TODO: Refactor the 'prompts' property in preference to using this flag, which should be redundant.
         self._is_interactive = is_interactive
+        self._include_llm_transpiler = include_llm_transpiler
         self._transpiler_repository = transpiler_repository
         self._transpiler_installer_factories = transpiler_installers
 
@@ -77,7 +81,12 @@ class WorkspaceInstaller:
 
     @property
     def _transpiler_installers(self) -> Set[TranspilerInstaller]:
-        return frozenset(factory(self._transpiler_repository) for factory in self._transpiler_installer_factories)
+        factories = self._transpiler_installer_factories
+        if not self._include_llm_transpiler:
+            if SwitchInstaller in factories:
+                logger.info("Skipping Switch installation (LLM transpiler not requested)")
+            factories = tuple(f for f in factories if f != SwitchInstaller)
+        return frozenset(factory(self._transpiler_repository, self._ws, self._installation) for factory in factories)
 
     def run(
         self,
@@ -386,6 +395,7 @@ def installer(
     transpiler_repository: TranspilerRepository,
     *,
     is_interactive: bool,
+    include_llm_transpiler: bool = False,
 ) -> WorkspaceInstaller:
     app_context = ApplicationContext(_verify_workspace_client(ws))
     return WorkspaceInstaller(
@@ -398,6 +408,7 @@ def installer(
         app_context.workspace_installation,
         transpiler_repository=transpiler_repository,
         is_interactive=is_interactive,
+        include_llm_transpiler=include_llm_transpiler,
     )
 
 
