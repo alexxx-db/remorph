@@ -680,7 +680,7 @@ class SwitchInstaller(TranspilerInstaller):
             install_state.save()
             job_url = f"{self._workspace_client.config.host}#job/{job_id}"
             logger.info(f"Switch job created/updated: {job_url}")
-        except (RuntimeError, ValueError, InvalidParameterValue, URLError) as e:
+        except (RuntimeError, ValueError, InvalidParameterValue) as e:
             logger.error(f"Failed to create Switch job: {e}")
 
     def _has_valid_job(self, install_state: InstallState) -> bool:
