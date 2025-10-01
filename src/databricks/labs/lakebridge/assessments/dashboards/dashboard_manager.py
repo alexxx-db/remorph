@@ -3,13 +3,14 @@ import os
 import json
 
 import logging
-from typing import Dict
+from pathlib import Path
 
+from databricks.sdk.errors import PermissionDenied, NotFound, InternalError
+from databricks.sdk.errors.platform import ResourceAlreadyExists, DatabricksError
+from databricks.sdk.service.dashboards import Dashboard
 from databricks.sdk.service.iam import User
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.errors import PermissionDenied, NotFound, InternalError
 
-from databricks.labs.lakebridge.deployment.dashboard import DashboardDeployment
 from databricks.labs.blueprint.wheels import find_project_root
 
 logging.basicConfig(level=logging.INFO)
@@ -22,15 +23,18 @@ class DashboardTemplateLoader:
     according to the source system.
     """
 
-    def __init__(self, templates_dir: str = "templates"):
+    def __init__(self, templates_dir: Path | None):
         self.templates_dir = templates_dir
 
-    def load(self, source_system: str) -> Dict:
+    def load(self, source_system: str) -> dict:
         """
         Loads a profiler summary dashboard.
         :param source_system: - the name of the source data warehouse
         """
-        filename = f"{source_system.lower()}_dashboard.json"
+        if self.templates_dir is None:
+            raise ValueError("Dashboard template path cannot be empty.")
+
+        filename = f"{source_system.lower()}_dashboard.lvdash.json"
         filepath = os.path.join(self.templates_dir, filename)
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Could not find dashboard template matching '{source_system}'.")
@@ -43,41 +47,93 @@ class DashboardManager:
     Class for managing the lifecycle of a profiler dashboard summary, a.k.a. "local dashboards"
     """
 
-    DASHBOARD_NAME = "Lakebridge Profiler Assessment"
+    _DASHBOARD_NAME = "Lakebridge Profiler Assessment"
 
-    def __init__(self, ws: WorkspaceClient, current_user: User, dashboard_deployer: DashboardDeployment, is_debug: bool = False):
+    def __init__(self, ws: WorkspaceClient, is_debug: bool = False):
         self._ws = ws
-        self._current_user = current_user
-        self._dashboard_deployer = dashboard_deployer
-        self._dashboard_location = f"/Workspace/Users/{self._current_user}/Lakebridge/Dashboards"
         self._is_debug = is_debug
 
-    def create_profiler_summary_dashboard(self, extract_file: str | None, source_tech: str | None) -> None:
-        # TODO: check if the dashboard exists and unpublish it if it does
-        # TODO: set the serialized dashboard JSON and warehouse ID
-        logger.info("Deploying profiler summary dashboard.")
-        dashboard_base_dir = (
-            find_project_root(__file__) / f"src/databricks/labs/lakebridge/resources/assessments/dashboards/{source_tech}"
-        )
-        self._dashboard_deployer.deploy(dashboard_base_dir, recon_config)
+    @staticmethod
+    def _replace_catalog_schema(
+        serialized_dashboard: str,
+        new_catalog: str,
+        new_schema: str,
+        old_catalog: str = "`PROFILER_CATALOG`",
+        old_schema: str = "`PROFILER_SCHEMA`",
+    ):
+        """Given a serialized JSON dashboard, replaces all catalog and schema references with the
+        provided catalog and schema names."""
+        updated_dashboard = serialized_dashboard.replace(old_catalog, f"`{new_catalog}`")
+        return updated_dashboard.replace(old_schema, f"`{new_schema}`")
 
-        self._ws.dashboards.create(
-            name=self.DASHBOARD_NAME,
-            dashboard_filters_enabled=None,
-            is_favorite=False,
-            parent=self._dashboard_location,
-            run_as_role=None,
-            tags=None,
+    def _create_or_replace_dashboard(
+        self, folder: Path, ws_parent_path: str, dest_catalog: str, dest_schema: str
+    ) -> Dashboard:
+        """
+        Creates or updates a profiler summary dashboard in the current user’s Databricks workspace home.
+        Existing dashboards are automatically replaced with the latest dashboard template.
+        """
+
+        # Load the dashboard template
+        logging.info(f"Loading dashboard template {folder}")
+        dashboard_loader = DashboardTemplateLoader(folder)
+        dashboard_json = dashboard_loader.load(source_system="synapse")
+        dashboard_str = json.dumps(dashboard_json)
+
+        # Replace catalog and schema placeholders
+        updated_dashboard_str = self._replace_catalog_schema(
+            dashboard_str, new_catalog=dest_catalog, new_schema=dest_schema
+        )
+        dashboard = Dashboard(
+            display_name=self._DASHBOARD_NAME,
+            parent_path=ws_parent_path,
+            warehouse_id=self._ws.config.warehouse_id,
+            serialized_dashboard=updated_dashboard_str,
+        )
+
+        # Create dashboard or replace if previously deployed
+        try:
+            dashboard = self._ws.lakeview.create(dashboard=dashboard)
+        except ResourceAlreadyExists:
+            logging.info("Dashboard already exists! Removing dashboard from workspace location.")
+            dashboard_ws_path = str(Path(ws_parent_path) / f"{self._DASHBOARD_NAME}.lvdash.json")
+            self._ws.workspace.delete(dashboard_ws_path)
+            dashboard = self._ws.lakeview.create(dashboard=dashboard)
+        except DatabricksError as e:
+            logging.error(f"Could not create profiler summary dashboard: {e}")
+
+        if dashboard.dashboard_id:
+            logging.info(f"Created dashboard '{dashboard.dashboard_id}' in workspace location '{ws_parent_path}'.")
+
+        return dashboard
+
+    def create_profiler_summary_dashboard(
+        self,
+        extract_file: str,
+        source_tech: str,
+        catalog_name: str = "lakebridge_profiler",
+        schema_name: str = "profiler_runs",
+    ) -> None:
+        """Deploys a profiler summary dashboard to the current Databricks user’s workspace home."""
+
+        logger.info("Deploying profiler summary dashboard.")
+
+        # Load the AI/BI Dashboard template for the source system
+        template_folder = (
+            find_project_root(__file__)
+            / f"src/databricks/labs/lakebridge/resources/assessments/dashboards/{source_tech}"
+        )
+        ws_path = f"/Workspace/Users/{self._current_user}/Lakebridge/Dashboards/"
+        self._create_or_replace_dashboard(
+            folder=template_folder, ws_parent_path=ws_path, dest_catalog=catalog_name, dest_schema=schema_name
         )
 
     def upload_duckdb_to_uc_volume(self, local_file_path, volume_path):
         """
         Upload a DuckDB file to Unity Catalog Volume
-
         Args:
             local_file_path (str): Local path to the DuckDB file
             volume_path (str): Target path in UC Volume (e.g., '/Volumes/catalog/schema/volume/myfile.duckdb')
-
         Returns:
             bool: True if successful, False otherwise
         """
