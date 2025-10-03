@@ -122,9 +122,6 @@ def test_java_version_parse_missing() -> None:
 class FriendOfSwitchInstaller(SwitchInstaller):
     """A friend class to access protected methods for testing purposes."""
 
-    def deploy_to_workspace(self, switch_local_dir: Path) -> None:
-        return self._deploy_to_workspace(switch_local_dir)
-
     def has_valid_job(self, install_state: Any) -> bool:
         return self._has_valid_job(install_state)
 
@@ -172,7 +169,8 @@ class TestSwitchInstaller:
 
     @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
     @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
-    @patch.object(SwitchInstaller, "_deploy_to_workspace")
+    @patch.object(SwitchInstaller, "_get_switch_package_path")
+    @patch.object(SwitchInstaller, "_deploy_workspace")
     @patch.object(SwitchInstaller, "_create_or_update_switch_job")
     @patch.object(SwitchInstaller, "_prompt_for_switch_resources")
     def test_install(
@@ -180,6 +178,7 @@ class TestSwitchInstaller:
         mock_prompt_resources: Mock,
         mock_job_creation: Mock,
         mock_deploy: Mock,
+        mock_get_package_path: Mock,
         mock_install_state_class: Mock,
         mock_wheel_installer_class: Mock,
         installer: SwitchInstaller,
@@ -190,6 +189,11 @@ class TestSwitchInstaller:
         mock_wheel_installer = Mock(spec=WheelInstaller)
         mock_wheel_installer_class.return_value = mock_wheel_installer
         mock_wheel_installer.install.return_value = tmp_path / "install"
+
+        # Create site-packages path
+        switch_package_path = tmp_path / "databricks"
+        switch_package_path.mkdir(parents=True)
+        mock_get_package_path.return_value = switch_package_path
 
         mock_install_state = Mock()
         mock_install_state.jobs = {}
@@ -205,7 +209,7 @@ class TestSwitchInstaller:
 
         # Assert
         assert result is True
-        mock_deploy.assert_called_once_with(tmp_path / "install")
+        mock_deploy.assert_called_once_with(switch_package_path)
         mock_job_creation.assert_called_once_with(mock_install_state)
         mock_prompt_resources.assert_called_once()
         assert mock_install_state.switch_resources == {
@@ -217,7 +221,8 @@ class TestSwitchInstaller:
 
     @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
     @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
-    @patch.object(SwitchInstaller, "_deploy_to_workspace")
+    @patch.object(SwitchInstaller, "_get_switch_package_path")
+    @patch.object(SwitchInstaller, "_deploy_workspace")
     @patch.object(SwitchInstaller, "_create_or_update_switch_job")
     @patch.object(SwitchInstaller, "_prompt_for_switch_resources")
     def test_install_continues_when_job_creation_fails(
@@ -225,6 +230,7 @@ class TestSwitchInstaller:
         mock_prompt_resources: Mock,
         mock_job_creation: Mock,
         mock_deploy: Mock,
+        mock_get_package_path: Mock,
         mock_install_state_class: Mock,
         mock_wheel_installer_class: Mock,
         installer: SwitchInstaller,
@@ -235,6 +241,11 @@ class TestSwitchInstaller:
         mock_wheel_installer = Mock(spec=WheelInstaller)
         mock_wheel_installer_class.return_value = mock_wheel_installer
         mock_wheel_installer.install.return_value = tmp_path / "install"
+
+        # Create site-packages path
+        switch_package_path = tmp_path / "databricks"
+        switch_package_path.mkdir(parents=True)
+        mock_get_package_path.return_value = switch_package_path
 
         mock_install_state = Mock()
         mock_install_state.jobs = {}
@@ -251,7 +262,7 @@ class TestSwitchInstaller:
 
         # Assert - installation succeeds despite job creation failure
         assert result is True
-        mock_deploy.assert_called_once_with(tmp_path / "install")
+        mock_deploy.assert_called_once_with(switch_package_path)
         mock_job_creation.assert_called_once_with(mock_install_state)
         mock_prompt_resources.assert_called_once()
         assert mock_install_state.switch_resources == {
@@ -262,6 +273,7 @@ class TestSwitchInstaller:
         mock_install_state.save.assert_called_once()  # State saved for resources even when job creation fails
 
     @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
+    @patch.object(SwitchInstaller, "_get_switch_package_path")
     @patch.object(SwitchInstaller, "_deploy_workspace")
     @patch.object(SwitchInstaller, "_setup_job")
     @patch.object(SwitchInstaller, "_configure_resources")
@@ -270,26 +282,28 @@ class TestSwitchInstaller:
         mock_configure: Mock,
         mock_setup_job: Mock,
         mock_deploy: Mock,
+        mock_get_package_path: Mock,
         mock_wheel_installer_class: Mock,
         installer: SwitchInstaller,
         tmp_path: Path,
     ) -> None:
         """Test install proceeds with deployment when local installation exists."""
-        # Setup: Wheel install returns None (already installed), but local dir exists
+        # Setup: Wheel install returns None (already installed), but package exists in site-packages
         mock_wheel_installer = Mock()
         mock_wheel_installer.install.return_value = None
         mock_wheel_installer_class.return_value = mock_wheel_installer
 
-        # Create the existing switch directory
-        switch_dir = tmp_path / "remorph-transpilers" / "switch"
-        switch_dir.mkdir(parents=True)
+        # Create site-packages path
+        switch_package_path = tmp_path / "databricks"
+        switch_package_path.mkdir(parents=True)
+        mock_get_package_path.return_value = switch_package_path
 
         # Act
         result = installer.install()
 
         # Assert: Should proceed with deployment phases
         assert result is True
-        mock_deploy.assert_called_once_with(switch_dir)
+        mock_deploy.assert_called_once_with(switch_package_path)
         mock_setup_job.assert_called_once()
         mock_configure.assert_called_once()
 
@@ -390,56 +404,6 @@ class TestSwitchInstaller:
         ):
             result = installer.get_configured_resources()
             assert result == expected_result
-
-    def test_deploy_to_workspace_uploads_switch_package_correctly(self, tmp_path: Path) -> None:
-        """Test that Switch package is correctly uploaded to workspace, excluding cache files."""
-        # Setup switch local directory structure
-        switch_local_dir = tmp_path / "switch"
-        switch_local_dir.mkdir(parents=True)
-
-        # Create test files
-        (switch_local_dir / "main.py").write_text("print('hello')")
-        (switch_local_dir / "utils.py").write_text("def helper(): pass")
-        (switch_local_dir / "__pycache__").mkdir()
-        (switch_local_dir / "__pycache__" / "main.cpython-39.pyc").write_text("compiled")
-        (switch_local_dir / ".hidden").write_text("hidden file")
-        subdir = switch_local_dir / "submodule"
-        subdir.mkdir()
-        (subdir / "module.py").write_text("module code")
-
-        # Setup mock
-        mock_installation = Mock()
-
-        # Use friend class to test protected method
-        test_repository = TranspilerRepository(tmp_path)
-        friend_installer = FriendOfSwitchInstaller(test_repository, Mock(), mock_installation)
-
-        # Act
-        friend_installer.deploy_to_workspace(switch_local_dir)
-
-        # Assert - verify correct files were uploaded and cache/hidden files were excluded
-        expected_calls = [
-            call("switch/main.py", b"print('hello')"),
-            call("switch/utils.py", b"def helper(): pass"),
-            call("switch/submodule/module.py", b"module code"),
-        ]
-        mock_installation.upload.assert_has_calls(expected_calls, any_order=True)
-        assert mock_installation.upload.call_count == 3, "Should only upload non-cache, non-hidden files"
-
-    def test_deploy_to_workspace_handles_missing_package(self, tmp_path: Path) -> None:
-        """Test that deploy handles missing Switch package gracefully."""
-        switch_local_dir = tmp_path / "switch"
-
-        mock_installation = Mock()
-
-        test_repository = TranspilerRepository(tmp_path)
-        friend_installer = FriendOfSwitchInstaller(test_repository, Mock(), mock_installation)
-
-        # Act - should not raise exception
-        friend_installer.deploy_to_workspace(switch_local_dir)
-
-        # Assert
-        mock_installation.upload.assert_not_called()
 
     @pytest.mark.parametrize(
         ("jobs_state", "get_side_effect", "expected"),

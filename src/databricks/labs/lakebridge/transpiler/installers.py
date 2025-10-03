@@ -581,21 +581,18 @@ class SwitchInstaller(TranspilerInstaller):
         wheel_installer = WheelInstaller(
             self._transpiler_repository, self._TRANSPILER_ID, self._PYPI_PACKAGE_NAME, artifact
         )
-        install_path = wheel_installer.install()
+        wheel_installer.install()
 
-        # Determine local switch directory
-        if install_path:
-            # Newly installed
-            switch_local_dir = install_path
-        else:
-            # Check if already installed
-            switch_local_dir = self._transpiler_repository.transpilers_path() / self._TRANSPILER_ID
-            if not switch_local_dir.exists():
-                logger.warning("Switch not installed locally, cannot proceed with workspace installation.")
-                return False
+        # Verify Switch package exists in site-packages
+        switch_package_path = self._get_switch_package_path()
+        if not switch_package_path.exists():
+            logger.warning(
+                f"Switch not installed locally, cannot proceed with workspace installation: {switch_package_path}"
+            )
+            return False
 
         # Workspace installation
-        self._deploy_workspace(switch_local_dir)
+        self._deploy_workspace(switch_package_path)
         self._setup_job()
         self._configure_resources()
 
@@ -630,21 +627,26 @@ class SwitchInstaller(TranspilerInstaller):
             }
         return None
 
-    def _deploy_workspace(self, switch_local_dir: Path) -> None:
-        """Deploy Switch package to workspace (always executed)."""
+    def _get_switch_package_path(self) -> Path:
+        """Get Switch package path (databricks directory) from site-packages."""
+        product_path = self._transpiler_repository.transpilers_path() / self._TRANSPILER_ID
+        venv_path = product_path / "lib" / ".venv"
+
+        if sys.platform != "win32":
+            major, minor = sys.version_info[:2]
+            return venv_path / "lib" / f"python{major}.{minor}" / "site-packages" / "databricks"
+        return venv_path / "Lib" / "site-packages" / "databricks"
+
+    def _deploy_workspace(self, switch_package_dir: Path) -> None:
+        """Deploy Switch package to workspace from site-packages."""
         try:
             logger.info("Deploying Switch package to workspace...")
-            self._deploy_to_workspace(switch_local_dir)
+
+            remote_path = f"{self._TRANSPILER_ID}/databricks"
+            self._upload_directory(switch_package_dir, remote_path)
             logger.info("Switch workspace deployment completed")
         except (OSError, ValueError, AttributeError) as e:
             logger.error(f"Failed to deploy to workspace: {e}")
-
-    def _deploy_to_workspace(self, switch_local_dir: Path) -> None:
-        """Deploy Switch package from local directory to workspace"""
-        if switch_local_dir.exists():
-            self._upload_directory(switch_local_dir, self._TRANSPILER_ID)
-        else:
-            logger.warning(f"Switch package not found in local directory: {switch_local_dir}")
 
     def _upload_directory(self, local_path: Path, remote_prefix: str) -> None:
         """Recursively upload directory to workspace, excluding cache and temporary files"""
@@ -724,11 +726,14 @@ class SwitchInstaller(TranspilerInstaller):
         job_name = f"{product.upper()}_Switch"
         version = ProductInfo.from_class(self.__class__).version()
         user_name = self._installation.username()
+        notebook_path = (
+            f"/Workspace/Users/{user_name}/.{product}/{self._TRANSPILER_ID}/databricks/labs/switch/notebooks/00_main"
+        )
 
         task = Task(
             task_key="run_transpilation",
             notebook_task=NotebookTask(
-                notebook_path=f"/Workspace/Users/{user_name}/.{product}/{self._TRANSPILER_ID}/notebooks/00_main",
+                notebook_path=notebook_path,
                 base_parameters=self._get_switch_parameters_from_config(),
                 source=Source.WORKSPACE,
             ),
