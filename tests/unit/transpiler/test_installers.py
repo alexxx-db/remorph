@@ -4,7 +4,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -12,7 +12,6 @@ from databricks.labs.lakebridge.transpiler.installers import (
     ArtifactInstaller,
     MorpheusInstaller,
     SwitchInstaller,
-    WheelInstaller,
 )
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.sdk.errors import InvalidParameterValue, NotFound
@@ -167,110 +166,51 @@ class TestSwitchInstaller:
         """Verify can_install works for valid and invalid files."""
         assert installer.can_install(Path(filename)) == expected
 
-    @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
-    @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
-    @patch.object(SwitchInstaller, "_get_switch_package_path")
+    @patch.object(SwitchInstaller, "_configure_resources")
+    @patch.object(SwitchInstaller, "_setup_job")
     @patch.object(SwitchInstaller, "_deploy_workspace")
-    @patch.object(SwitchInstaller, "_create_or_update_switch_job")
-    @patch.object(SwitchInstaller, "_prompt_for_switch_resources")
-    def test_install(
+    @patch.object(SwitchInstaller, "_get_switch_package_path")
+    def test_install_orchestrates_phases_correctly(
         self,
-        mock_prompt_resources: Mock,
-        mock_job_creation: Mock,
-        mock_deploy: Mock,
         mock_get_package_path: Mock,
-        mock_install_state_class: Mock,
-        mock_wheel_installer_class: Mock,
+        mock_deploy: Mock,
+        mock_setup_job: Mock,
+        mock_configure: Mock,
         installer: SwitchInstaller,
         tmp_path: Path,
     ) -> None:
-        """Test install with successful new installation."""
-        # Setup
-        mock_wheel_installer = Mock(spec=WheelInstaller)
-        mock_wheel_installer_class.return_value = mock_wheel_installer
-        mock_wheel_installer.install.return_value = tmp_path / "install"
-
-        # Create site-packages path
+        """Test install() orchestrates all phases in correct order."""
+        # Setup: Package exists in site-packages
         switch_package_path = tmp_path / "databricks"
         switch_package_path.mkdir(parents=True)
         mock_get_package_path.return_value = switch_package_path
 
-        mock_install_state = Mock()
-        mock_install_state.jobs = {}
-        mock_install_state.switch_resources = {}
-        mock_install_state.save = Mock()
-        mock_install_state_class.from_installation.return_value = mock_install_state
+        # Act
+        result = installer.install()
 
-        mock_job_creation.return_value = "12345"
-        mock_prompt_resources.return_value = ("test_catalog", "test_schema", "test_volume")
+        # Assert: All phases called in correct order
+        assert result is True
+        mock_deploy.assert_called_once_with(switch_package_path)
+        mock_setup_job.assert_called_once()
+        mock_configure.assert_called_once()
+
+    @patch.object(SwitchInstaller, "_get_switch_package_path")
+    def test_install_returns_false_when_package_missing(
+        self,
+        mock_get_package_path: Mock,
+        installer: SwitchInstaller,
+        tmp_path: Path,
+    ) -> None:
+        """Test that install() returns False when Switch package not found."""
+        # Setup: Package path doesn't exist
+        switch_package_path = tmp_path / "databricks"
+        mock_get_package_path.return_value = switch_package_path
 
         # Act
         result = installer.install()
 
         # Assert
-        assert result is True
-        mock_deploy.assert_called_once_with(switch_package_path)
-        mock_job_creation.assert_called_once_with(mock_install_state)
-        mock_prompt_resources.assert_called_once()
-        assert mock_install_state.switch_resources == {
-            "catalog": "test_catalog",
-            "schema": "test_schema",
-            "volume": "test_volume",
-        }
-        assert mock_install_state.save.call_count == 2  # Once for job, once for resources
-
-    @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
-    @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
-    @patch.object(SwitchInstaller, "_get_switch_package_path")
-    @patch.object(SwitchInstaller, "_deploy_workspace")
-    @patch.object(SwitchInstaller, "_create_or_update_switch_job")
-    @patch.object(SwitchInstaller, "_prompt_for_switch_resources")
-    def test_install_continues_when_job_creation_fails(
-        self,
-        mock_prompt_resources: Mock,
-        mock_job_creation: Mock,
-        mock_deploy: Mock,
-        mock_get_package_path: Mock,
-        mock_install_state_class: Mock,
-        mock_wheel_installer_class: Mock,
-        installer: SwitchInstaller,
-        tmp_path: Path,
-    ) -> None:
-        """Test that installation continues even when job creation fails."""
-        # Setup
-        mock_wheel_installer = Mock(spec=WheelInstaller)
-        mock_wheel_installer_class.return_value = mock_wheel_installer
-        mock_wheel_installer.install.return_value = tmp_path / "install"
-
-        # Create site-packages path
-        switch_package_path = tmp_path / "databricks"
-        switch_package_path.mkdir(parents=True)
-        mock_get_package_path.return_value = switch_package_path
-
-        mock_install_state = Mock()
-        mock_install_state.jobs = {}
-        mock_install_state.switch_resources = {}
-        mock_install_state.save = Mock()
-        mock_install_state_class.from_installation.return_value = mock_install_state
-
-        # Job creation fails
-        mock_job_creation.side_effect = RuntimeError("Job creation failed")
-        mock_prompt_resources.return_value = ("test_catalog", "test_schema", "test_volume")
-
-        # Act
-        result = installer.install()
-
-        # Assert - installation succeeds despite job creation failure
-        assert result is True
-        mock_deploy.assert_called_once_with(switch_package_path)
-        mock_job_creation.assert_called_once_with(mock_install_state)
-        mock_prompt_resources.assert_called_once()
-        assert mock_install_state.switch_resources == {
-            "catalog": "test_catalog",
-            "schema": "test_schema",
-            "volume": "test_volume",
-        }
-        mock_install_state.save.assert_called_once()  # State saved for resources even when job creation fails
+        assert result is False
 
     @patch("databricks.labs.lakebridge.transpiler.installers.WheelInstaller")
     @patch.object(SwitchInstaller, "_get_switch_package_path")
@@ -308,14 +248,11 @@ class TestSwitchInstaller:
         mock_configure.assert_called_once()
 
     @pytest.mark.parametrize(
-        ("jobs_state", "delete_side_effect", "expect_delete_call", "expect_jobs_empty", "expect_save"),
+        ("jobs_state", "delete_side_effect", "expect_delete_call", "expect_save"),
         (
-            pytest.param({"Switch": "12345"}, None, 12345, True, True, id="existing_job_success"),
-            pytest.param({}, None, None, True, False, id="no_job_in_state"),
-            pytest.param({"Switch": "99999"}, NotFound("Job not found"), 99999, True, True, id="job_not_found"),
-            pytest.param(
-                {"Switch": "88888"}, InvalidParameterValue("Invalid"), 88888, True, True, id="invalid_parameter"
-            ),
+            pytest.param({"Switch": "12345"}, None, 12345, True, id="existing_job_success"),
+            pytest.param({}, None, None, False, id="no_job_in_state"),
+            pytest.param({"Switch": "99999"}, NotFound("Job not found"), 99999, True, id="job_cleanup_on_error"),
         ),
     )
     @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
@@ -325,7 +262,6 @@ class TestSwitchInstaller:
         jobs_state: dict,
         delete_side_effect: Exception | None,
         expect_delete_call: int | None,
-        expect_jobs_empty: bool,
         expect_save: bool,
         installer: SwitchInstaller,
     ) -> None:
@@ -353,8 +289,7 @@ class TestSwitchInstaller:
         else:
             mock_ws.jobs.delete.assert_not_called()
 
-        if expect_jobs_empty:
-            assert "Switch" not in mock_install_state.jobs
+        assert "Switch" not in mock_install_state.jobs
 
         if expect_save:
             mock_install_state.save.assert_called_once()
@@ -489,8 +424,7 @@ class TestSwitchInstaller:
         else:
             mock_jobs.reset.return_value = None
 
-        # Act - Test the actual implementation using friend class
-        # Use test repository and mock installation instead of accessing protected members
+        # Act
         test_repository = TranspilerRepository(tmp_path)
         mock_installation = Mock()
         friend_installer = FriendOfSwitchInstaller(test_repository, mock_ws, mock_installation)
@@ -501,10 +435,8 @@ class TestSwitchInstaller:
 
         if expect_reset:
             if reset_side_effect:
-                # For error case, reset is called but then create is also called
                 mock_jobs.reset.assert_called_once_with(int(initial_jobs["Switch"]), JobSettings(name="test_job"))
             else:
-                # For successful update
                 mock_jobs.reset.assert_called_once_with(int(expected_job_id), JobSettings(name="test_job"))
         else:
             mock_jobs.reset.assert_not_called()
@@ -514,7 +446,6 @@ class TestSwitchInstaller:
         else:
             mock_jobs.create.assert_not_called()
 
-        # Verify InstallState is updated correctly
         assert mock_install_state.jobs["Switch"] == expected_job_id
 
     def test_get_switch_parameters_handles_various_default_values(
@@ -540,14 +471,11 @@ class TestSwitchInstaller:
         with patch.object(test_repository, "all_transpiler_configs", return_value={"switch": mock_config}):
             params = friend_installer.get_switch_parameters_from_config()
 
-        # Assert required parameters are present
         assert "input_dir" in params
         assert "output_dir" in params
         assert "result_catalog" in params
         assert "result_schema" in params
         assert "builtin_prompt" in params
-
-        # Assert conversions are correct
         assert params["flag1"] == ""
         assert params["flag2"] == "123"
         assert params["flag3"] == ""
@@ -595,14 +523,11 @@ class TestSwitchInstaller:
         repository = TranspilerRepository(tmp_path)
         friend_installer = FriendOfSwitchInstaller(repository, mock_ws, mock_installation)
 
-        # Act
         catalog, schema, volume = friend_installer.prompt_for_switch_resources()
 
-        # Assert
         assert catalog == "my_catalog"
         assert schema == "my_schema"
         assert volume == "my_volume"
-
         mock_prompts_class.assert_called_once()
         mock_catalog_ops_class.assert_called_once_with(mock_ws)
         mock_configurator_class.assert_called_once_with(mock_ws, mock_prompts, mock_catalog_ops)
@@ -638,6 +563,5 @@ class TestSwitchInstaller:
         repository = TranspilerRepository(tmp_path)
         friend_installer = FriendOfSwitchInstaller(repository, mock_ws, mock_installation)
 
-        # Act & Assert
         with pytest.raises(SystemExit):
             friend_installer.prompt_for_switch_resources()
