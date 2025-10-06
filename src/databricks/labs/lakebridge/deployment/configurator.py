@@ -98,6 +98,9 @@ class ResourceConfigurator:
                 max_num_clusters=1,
             )
             warehouse_id = new_warehouse.id
+        # latest sdk updates makes id as optional[str]
+        if not warehouse_id:
+            raise SystemExit("Cannot continue installation, without a valid SQL warehouse. Aborting the installation.")
         return warehouse_id
 
     def has_necessary_catalog_access(
