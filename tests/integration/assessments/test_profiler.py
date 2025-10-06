@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import shutil
 import tempfile
@@ -37,16 +36,15 @@ def test_profile_execution() -> None:
 
 def test_profile_execution_with_invalid_config() -> None:
     """Test profiling execution with invalid configuration"""
-    with patch('pathlib.Path.exists', return_value=False):
-        profiler = Profiler("synapse")
-        path_prefix = Path(__file__).parent / "../../../"
-        with pytest.raises(FileNotFoundError):
-            config_file = path_prefix / "tests/resources/assessments/invalid_pipeline_config.yml"
-            pipeline_config = profiler.path_modifier(
-                config_file=config_file,
-                path_prefix=path_prefix,
-            )
-            profiler.profile(pipeline_config=pipeline_config)
+    profiler = Profiler("synapse")
+    path_prefix = Path(__file__).parent / "../../../"
+    with pytest.raises(FileNotFoundError):
+        config_file = path_prefix / "tests/resources/assessments/invalid_pipeline_config.yml"
+        pipeline_config = profiler.path_modifier(
+            config_file=config_file,
+            path_prefix=path_prefix,
+        )
+        profiler.profile(pipeline_config=pipeline_config)
 
 
 def test_profile_execution_config_override() -> None:
