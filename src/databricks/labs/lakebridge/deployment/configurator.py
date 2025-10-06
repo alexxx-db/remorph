@@ -98,6 +98,10 @@ class ResourceConfigurator:
                 max_num_clusters=1,
             )
             warehouse_id = new_warehouse.id
+        # Since prompts choice type has changed in blueprint 0.11.4 to be more generic from earlier permissive type
+        # mypy correctly complains about the type mismatch, so added this below check to handle errors
+        if warehouse_id is None:
+            raise SystemExit("Cannot continue installation, without a valid warehouse. Aborting the installation.")
         return warehouse_id
 
     def has_necessary_catalog_access(
