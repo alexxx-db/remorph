@@ -126,6 +126,7 @@ def execute():
 
             session_request_result = connection.execute_query(query_history)
             save_resultset_to_db(session_request_result, table_name, db_path, mode="append")
+            connection.close()
 
         else:
             logger.info("'exclude_serverless_sql_pool' configuration is set to True.Skipping Serverless Pool extracts.")
