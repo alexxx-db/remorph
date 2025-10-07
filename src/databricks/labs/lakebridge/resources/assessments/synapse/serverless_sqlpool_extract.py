@@ -1,18 +1,18 @@
 import json
 import sys
+
+from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
+from databricks.labs.lakebridge.assessments import PRODUCT_NAME
+
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_config,
     save_resultset_to_db,
     get_serverless_database_groups,
     get_max_column_value_duckdb,
     set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
-from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import (
-    create_credential_manager,
-    get_sqlpool_reader,
-)
+from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import get_sqlpool_reader
 from sqlalchemy import text
 
 
@@ -20,17 +20,14 @@ def execute():
     logger = set_logger(__name__)
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Serverless SQL Pool Extract Script")
 
-    cred_manager = create_credential_manager(creds_file)
-    data = cred_manager.get_credentials("synapse")
-    config = data["workspace"]
-    auth_type = data["jdbc"].get("auth_type", "sql_authentication")
+    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    synapse_workspace_settings = cred_manager.get_credentials("synapse")
+    config = synapse_workspace_settings["workspace"]
+    auth_type = synapse_workspace_settings["jdbc"].get("auth_type", "sql_authentication")
+    synapse_profiler_settings = synapse_workspace_settings["profiler"]
 
     try:
-        synapse_workspace_settings = get_config(creds_file)["synapse"]
-        synapse_profiler_settings = synapse_workspace_settings["profiler"]
-
         if not synapse_profiler_settings.get("exclude_serverless_sql_pool", False):
-
             # Databases
             database_query = SynapseQueries.list_databases()
             connection = get_sqlpool_reader(

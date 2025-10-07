@@ -4,6 +4,8 @@ import urllib3
 import zoneinfo
 import pandas as pd
 
+from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
+from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import (
     SynapseWorkspace,
     SynapseMetrics,
@@ -11,7 +13,6 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_cl
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
     insert_df_to_duckdb,
-    get_config,
     get_azure_metrics_query_client,
     get_synapse_artifacts_client,
     set_logger,
@@ -22,17 +23,19 @@ def execute():
     logger = set_logger(__name__)
 
     db_path, creds_file = arguments_loader(desc="Monitoring Metrics Extract Script")
+    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    synapse_workspace_settings = cred_manager.get_credentials("synapse")
+    synapse_profiler_settings = synapse_workspace_settings["profiler"]
+
+    tz_info = synapse_workspace_settings["workspace"]["tz_info"]
+    workspace_tz = zoneinfo.ZoneInfo(tz_info)
+    workspace_name = synapse_workspace_settings["workspace"]["name"]
+    logger.info(f"workspace_name: {workspace_name}")
+
+    artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
 
     try:
-        synapse_workspace_settings = get_config(creds_file)["synapse"]
-        synapse_profiler_settings = synapse_workspace_settings["profiler"]
 
-        tz_info = synapse_workspace_settings["workspace"]["tz_info"]
-        workspace_tz = zoneinfo.ZoneInfo(tz_info)
-        workspace_name = synapse_workspace_settings["workspace"]["name"]
-        logger.info(f"workspace_name: {workspace_name}")
-
-        artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         metrics_client = get_azure_metrics_query_client()

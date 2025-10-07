@@ -1,37 +1,6 @@
-from pathlib import Path
-import yaml
-from databricks.labs.lakebridge.connections.credential_manager import (
-    CredentialManager,
-    LocalSecretProvider,
-    EnvSecretProvider,
-    DatabricksSecretProvider,
-)
-
-from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
-
-
-def _load_credentials(path: Path) -> dict:
-    try:
-        with open(path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f"Credentials file not found at {path}") from e
-
-
-def create_credential_manager(file_path: Path):
-    env_getter = EnvGetter()
-
-    secret_providers = {
-        'local': LocalSecretProvider(),
-        'env': EnvSecretProvider(env_getter),
-        'databricks': DatabricksSecretProvider(),
-    }
-
-    loader = _load_credentials(file_path)
-    return CredentialManager(loader, secret_providers)
 
 
 def get_sqlpool_reader(

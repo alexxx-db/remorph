@@ -4,7 +4,6 @@ import sys
 import pandas as pd
 import duckdb
 import logging
-import yaml
 from azure.identity import DefaultAzureCredential
 from azure.monitor.query import MetricsQueryClient
 from azure.synapse.artifacts import ArtifactsClient
@@ -77,25 +76,6 @@ def insert_df_to_duckdb(df: pd.DataFrame, db_path: str, table_name: str) -> None
         conn.close()
     except Exception as e:
         logging.error(f"Error inserting data into DuckDB: {str(e)}")
-        raise
-
-
-def get_config(creds_file: str) -> dict:
-    """
-    Load the configuration from a YAML file.
-
-    Args:
-        creds_file (str): Path to the YAML file
-
-    Returns:
-        dict: Configuration dictionary
-    """
-    try:
-        with open(creds_file, 'r') as file:
-            config = yaml.safe_load(file)
-        return config
-    except Exception as e:
-        logging.error(f"Error loading configuration file: {str(e)}")
         raise
 
 
