@@ -18,7 +18,6 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_cl
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 
 
-
 def execute():
     logger = set_logger(__file__)
 

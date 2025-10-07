@@ -12,8 +12,8 @@ def get_sqlpool_reader(
         "driver": input_cred['driver'],
         "server": input_cred[endpoint_key],
         "database": db_name,
-        "sql_user": input_cred['sql_user'],
-        "sql_password": input_cred['sql_password'],
+        "user": input_cred['sql_user'],
+        "password": input_cred['sql_password'],
         "port": input_cred.get('port', 1433),
         "auth_type": auth_type,
     }

@@ -78,8 +78,8 @@ class MSSQLConnector(_BaseConnector):
 
         connection_string = URL.create(
             drivername="mssql+pyodbc",
-            username=self.config['sql_user'],
-            password=self.config['sql_password'],
+            username=self.config['user'],
+            password=self.config['password'],
             host=self.config['server'],
             port=self.config.get('port', 1433),
             database=db_name,
