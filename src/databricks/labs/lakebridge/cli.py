@@ -17,6 +17,7 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.blueprint.cli import App
 from databricks.labs.blueprint.entrypoint import get_logger, is_in_debug
 from databricks.labs.blueprint.installation import RootJsonValue
+from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.tui import Prompts
 
 
@@ -33,9 +34,10 @@ from databricks.labs.lakebridge.lineage import lineage_generator
 from databricks.labs.lakebridge.reconcile.recon_config import RECONCILE_OPERATION_NAME, AGG_RECONCILE_OPERATION_NAME
 from databricks.labs.lakebridge.transpiler.describe import TranspilersDescription
 from databricks.labs.lakebridge.transpiler.execute import transpile as do_transpile
-from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
+from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPConfig, LSPEngine
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.labs.lakebridge.transpiler.sqlglot.sqlglot_engine import SqlglotEngine
+from databricks.labs.lakebridge.transpiler.switch_runner import SwitchConfig, SwitchRunner
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 from databricks.labs.lakebridge.transpiler.transpile_status import ErrorSeverity
@@ -528,6 +530,234 @@ def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[s
     cluster_id = overrides.get("cluster_id")
     if cluster_id:
         ctx.connect_config.cluster_id = cluster_id
+
+
+@lakebridge.command
+def llm_transpile(
+    *,
+    w: WorkspaceClient,
+    input_source: str | None = None,
+    output_ws_folder: str | None = None,
+    source_dialect: str | None = None,
+    transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
+) -> None:
+    """Transpile source code to Databricks using LLM Transpiler (Switch)"""
+    ctx = ApplicationContext(w)
+    ctx.add_user_agent_extra("cmd", "llm-transpile")
+    user = ctx.current_user
+    logger.debug(f"User: {user}")
+
+    checker = _LLMTranspileConfigChecker(ctx.transpile_config, ctx.prompts, ctx.install_state, transpiler_repository)
+    checker.use_input_source(input_source)
+    checker.use_output_ws_folder(output_ws_folder)
+    checker.use_source_dialect(source_dialect)
+    params = checker.check()
+
+    result = _llm_transpile(ctx, params)
+    print(json.dumps(result))
+
+
+class _LLMTranspileConfigChecker:
+    """Helper class for 'llm-transpile' command configuration validation"""
+
+    _transpile_config: TranspileConfig | None
+    _prompts: Prompts
+    _install_state: InstallState
+    _transpiler_repository: TranspilerRepository
+    _input_source: str | None = None
+    _output_ws_folder: str | None = None
+    _source_dialect: str | None = None
+
+    def __init__(
+        self,
+        transpile_config: TranspileConfig | None,
+        prompts: Prompts,
+        install_state: InstallState,
+        transpiler_repository: TranspilerRepository,
+    ):
+        self._transpile_config = transpile_config
+        self._prompts = prompts
+        self._install_state = install_state
+        self._transpiler_repository = transpiler_repository
+
+    @staticmethod
+    def _validate_input_source_path(input_source: str, msg: str) -> None:
+        """Validate the input source: it must be a path that exists."""
+        if not Path(input_source).exists():
+            raise_validation_exception(msg)
+
+    def use_input_source(self, input_source: str | None) -> None:
+        if input_source is not None:
+            logger.debug(f"Setting input_source to: {input_source!r}")
+            self._validate_input_source_path(input_source, f"Invalid path for '--input-source': {input_source}")
+            self._input_source = input_source
+
+    def _prompt_input_source(self) -> None:
+        default_input = None
+        if self._transpile_config and self._transpile_config.input_source:
+            default_input = self._transpile_config.input_source
+
+        if default_input:
+            prompt_text = f"Enter input source path (press <enter> for default: {default_input})"
+            prompted = self._prompts.question(prompt_text).strip()
+            self._input_source = prompted if prompted else default_input
+        else:
+            prompted = self._prompts.question("Enter input source path (directory or file)").strip()
+            self._input_source = prompted
+
+        logger.debug(f"Setting input_source to: {self._input_source!r}")
+        self._validate_input_source_path(self._input_source, f"Invalid input source: {self._input_source}")
+
+    def _check_input_source(self) -> None:
+        if self._input_source is None:
+            self._prompt_input_source()
+
+    def use_output_ws_folder(self, output_ws_folder: str | None) -> None:
+        if output_ws_folder is not None:
+            logger.debug(f"Setting output_ws_folder to: {output_ws_folder!r}")
+            self._validate_output_ws_folder_path(
+                output_ws_folder, f"Invalid path for '--output-ws-folder': {output_ws_folder}"
+            )
+            self._output_ws_folder = output_ws_folder
+
+    @staticmethod
+    def _validate_output_ws_folder_path(output_ws_folder: str, msg: str) -> None:
+        """Validate output folder is a Workspace path."""
+        if not output_ws_folder.startswith("/Workspace/"):
+            raise_validation_exception(f"{msg}. Must start with /Workspace/")
+
+    def _prompt_output_ws_folder(self) -> None:
+        prompted_output_ws_folder = self._prompts.question(
+            "Enter output folder path (Databricks Workspace path starting with /Workspace/)"
+        ).strip()
+        logger.debug(f"Setting output_ws_folder to: {prompted_output_ws_folder!r}")
+        self._validate_output_ws_folder_path(
+            prompted_output_ws_folder, f"Invalid output folder: {prompted_output_ws_folder}"
+        )
+        self._output_ws_folder = prompted_output_ws_folder
+
+    def _check_output_ws_folder(self) -> None:
+        if self._output_ws_folder is None:
+            self._prompt_output_ws_folder()
+
+    def use_source_dialect(self, source_dialect: str | None) -> None:
+        if source_dialect is not None:
+            logger.debug(f"Setting source_dialect to: {source_dialect!r}")
+            self._source_dialect = source_dialect
+
+    def _prompt_source_dialect(self) -> None:
+        """Prompt for source dialect from Switch dialects."""
+        available_dialects = self._get_switch_dialects()
+
+        if not available_dialects:
+            raise_validation_exception(
+                "No Switch dialects available. "
+                "Install with: databricks labs lakebridge install-transpile --include-llm-transpiler"
+            )
+
+        logger.debug(f"Available dialects: {available_dialects!r}")
+        source_dialect = self._prompts.choice("Select the source dialect:", list(sorted(available_dialects)))
+
+        self._source_dialect = source_dialect
+
+    def _check_source_dialect(self) -> None:
+        """Validate and prompt for source dialect if not provided."""
+        available_dialects = self._get_switch_dialects()
+
+        if self._source_dialect is None:
+            self._prompt_source_dialect()
+        elif self._source_dialect not in available_dialects:
+            supported = ", ".join(sorted(available_dialects))
+            raise_validation_exception(f"Invalid source-dialect: '{self._source_dialect}'. " f"Available: {supported}")
+
+    def _get_switch_dialects(self) -> set[str]:
+        """Get Switch dialects from config.yml using LSPConfig."""
+        config_path = self._transpiler_repository.transpiler_config_path("Switch")
+        if not config_path.exists():
+            return set()
+
+        try:
+            lsp_config = LSPConfig.load(config_path)
+            return set(lsp_config.remorph.dialects)
+        except (OSError, ValueError) as e:
+            logger.warning(f"Failed to load Switch dialects: {e}")
+            return set()
+
+    def _get_switch_options_with_defaults(self) -> dict[str, str]:
+        """Get default values for Switch options from config.yml."""
+        config_path = self._transpiler_repository.transpiler_config_path("Switch")
+        if not config_path.exists():
+            return {}
+
+        try:
+            lsp_config = LSPConfig.load(config_path)
+        except (OSError, ValueError) as e:
+            logger.warning(f"Failed to load Switch options: {e}")
+            return {}
+
+        options_all = lsp_config.options_for_dialect("all")
+        result = {}
+        for option in options_all:
+            if option.default and option.default != "<none>":
+                result[option.flag] = option.default
+
+        logger.debug(f"Loaded {len(result)} Switch options with defaults from config.yml")
+        return result
+
+    def _validate_switch_options(self, options: dict[str, str]) -> None:
+        """Validate options against config.yml choices."""
+        config_path = self._transpiler_repository.transpiler_config_path("Switch")
+        if not config_path.exists():
+            return
+
+        try:
+            lsp_config = LSPConfig.load(config_path)
+        except (OSError, ValueError) as e:
+            logger.warning(f"Failed to validate Switch options: {e}")
+            return
+
+        options_all = lsp_config.options_for_dialect("all")
+        for option in options_all:
+            if option.flag in options and option.choices:
+                value = options[option.flag]
+                if value not in option.choices:
+                    raise_validation_exception(
+                        f"Invalid value for '{option.flag}': {value!r}. " f"Must be one of: {', '.join(option.choices)}"
+                    )
+
+    def check(self) -> dict:
+        """Validate all parameters and return configuration dict."""
+        logger.debug("Checking llm-transpile configuration")
+
+        self._check_input_source()
+        self._check_output_ws_folder()
+        self._check_source_dialect()
+
+        switch_options = self._get_switch_options_with_defaults()
+        self._validate_switch_options(switch_options)
+
+        wait_for_completion = str(switch_options.pop("wait_for_completion", "false")).lower() == "true"
+
+        return {
+            "input_source": self._input_source,
+            "output_ws_folder": self._output_ws_folder,
+            "source_dialect": self._source_dialect,
+            "switch_options": switch_options,
+            "wait_for_completion": wait_for_completion,
+        }
+
+
+def _llm_transpile(ctx: ApplicationContext, params: dict) -> RootJsonValue:
+    """Execute LLM transpilation via Switch job."""
+    config = SwitchConfig(ctx.install_state)
+    resources = config.get_resources()
+    job_id = config.get_job_id()
+
+    runner = SwitchRunner(ctx.workspace_client, ctx.installation)
+
+    return runner.run(
+        catalog=resources["catalog"], schema=resources["schema"], volume=resources["volume"], job_id=job_id, **params
+    )
 
 
 @lakebridge.command
