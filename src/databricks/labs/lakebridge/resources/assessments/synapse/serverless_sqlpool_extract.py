@@ -16,7 +16,6 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_help
 
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import get_sqlpool_reader
-from sqlalchemy import text
 
 
 def execute():
@@ -39,7 +38,7 @@ def execute():
                 endpoint_key='serverless_sql_endpoint',
                 auth_type=auth_type,
             )
-            result = connection.execute_query(text(database_query))
+            result = connection.execute_query(database_query)
             save_resultset_to_db(result, "serverless_databases", db_path, mode="overwrite")
 
             serverless_database_groups_in_scope = get_serverless_database_groups(db_path)
