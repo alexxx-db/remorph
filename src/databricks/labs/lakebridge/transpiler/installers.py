@@ -26,7 +26,7 @@ from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import InvalidParameterValue, NotFound
-from databricks.sdk.service.jobs import JobSettings, NotebookTask, Source, Task
+from databricks.sdk.service.jobs import JobParameterDefinition, JobSettings, NotebookTask, Source, Task
 
 logger = logging.getLogger(__name__)
 
@@ -643,7 +643,6 @@ class SwitchInstaller(TranspilerInstaller):
         """Deploy Switch package to workspace from site-packages."""
         try:
             logger.info("Deploying Switch package to workspace...")
-
             remote_path = f"{self._TRANSPILER_ID}/databricks"
             self._upload_directory(switch_package_dir, remote_path)
             logger.info("Switch workspace deployment completed")
@@ -673,54 +672,47 @@ class SwitchInstaller(TranspilerInstaller):
     def _setup_job(self) -> None:
         """Create Switch job if not exists."""
         install_state = InstallState.from_installation(self._installation)
-
-        if self._has_valid_job(install_state):
-            logger.info("Switch job already exists")
-            return
-
-        logger.info("Creating Switch transpiler job...")
+        existing_job_id = self._get_existing_job_id(install_state)
+        logger.info("Setting up Switch job in workspace...")
         try:
-            job_id = self._create_or_update_switch_job(install_state)
+            job_id = self._create_or_update_switch_job(existing_job_id)
+            install_state.jobs[self._INSTALL_STATE_KEY] = job_id
             install_state.save()
-            job_url = f"{self._workspace_client.config.host}#job/{job_id}"
+            job_url = f"{self._workspace_client.config.host}/jobs/{job_id}"
             logger.info(f"Switch job created/updated: {job_url}")
         except (RuntimeError, ValueError, InvalidParameterValue) as e:
-            logger.error(f"Failed to create Switch job: {e}")
+            logger.error(f"Failed to create/update Switch job: {e}")
 
-    def _has_valid_job(self, install_state: InstallState) -> bool:
-        """Check if Switch job exists and is valid in workspace."""
+    def _get_existing_job_id(self, install_state: InstallState) -> str | None:
+        """Check if Switch job already exists in workspace and return its job_id."""
         if self._INSTALL_STATE_KEY not in install_state.jobs:
-            return False
+            return None
         try:
-            job_id = int(install_state.jobs[self._INSTALL_STATE_KEY])
-            self._workspace_client.jobs.get(job_id)
-            return True
+            job_id = install_state.jobs[self._INSTALL_STATE_KEY]
+            self._workspace_client.jobs.get(int(job_id))
+            return job_id
         except (InvalidParameterValue, NotFound, ValueError):
-            return False
+            return None
 
-    def _create_or_update_switch_job(self, install_state: InstallState) -> str:
+    def _create_or_update_switch_job(self, job_id: str | None) -> str:
         """Create or update Switch job"""
-        # Check for existing job and update
-        if self._INSTALL_STATE_KEY in install_state.jobs:
+        job_settings = self._get_switch_job_settings()
+
+        # Try to update existing job
+        if job_id:
             try:
-                job_id = int(install_state.jobs[self._INSTALL_STATE_KEY])
                 logger.info(f"Updating Switch job: {job_id}")
-                job_settings = self._get_switch_job_settings()
-                self._workspace_client.jobs.reset(job_id, JobSettings(**job_settings))
-                return str(job_id)
-            except InvalidParameterValue:
-                del install_state.jobs[self._INSTALL_STATE_KEY]
+                self._workspace_client.jobs.reset(int(job_id), JobSettings(**job_settings))
+                return job_id
+            except (ValueError, InvalidParameterValue):
                 logger.warning("Previous Switch job not found, creating new one")
 
         # Create new job
-        logger.info("Creating new Switch job configuration")
-        job_settings = self._get_switch_job_settings()
+        logger.info("Creating new Switch job")
         new_job = self._workspace_client.jobs.create(**job_settings)
-        assert new_job.job_id is not None
-
-        # Save to InstallState
-        install_state.jobs[self._INSTALL_STATE_KEY] = str(new_job.job_id)
-        return str(new_job.job_id)
+        new_job_id = str(new_job.job_id)
+        assert new_job_id is not None
+        return new_job_id
 
     def _get_switch_job_settings(self) -> dict:
         """Build job settings for Switch transpiler using serverless compute"""
@@ -736,7 +728,6 @@ class SwitchInstaller(TranspilerInstaller):
             task_key="run_transpilation",
             notebook_task=NotebookTask(
                 notebook_path=notebook_path,
-                base_parameters=self._get_switch_parameters_from_config(),
                 source=Source.WORKSPACE,
             ),
             disable_auto_optimization=True,  # To disable retries on failure
@@ -744,17 +735,14 @@ class SwitchInstaller(TranspilerInstaller):
 
         return {
             "name": job_name,
-            "tags": {"created_by": user_name, "version": f"v{version}"},
+            "tags": {"created_by": user_name, "switch_version": f"v{version}"},
             "tasks": [task],
+            "parameters": self._get_switch_job_parameters(),
             "max_concurrent_runs": 100,  # Allow simultaneous transpilations
         }
 
-    def _get_switch_parameters_from_config(self) -> dict:
-        """Extract Switch parameters from installed config.yml.
-
-        Raises:
-            ValueError: If Switch config.yml is not found (indicates incomplete installation)
-        """
+    def _get_switch_job_parameters(self) -> list[JobParameterDefinition]:
+        """Build job-level parameter definitions from installed config.yml."""
         configs = self._transpiler_repository.all_transpiler_configs()
         config = configs.get(self._TRANSPILER_ID)
 
@@ -786,7 +774,7 @@ class SwitchInstaller(TranspilerInstaller):
 
             parameters[flag] = default
 
-        return parameters
+        return [JobParameterDefinition(name=key, default=value) for key, value in parameters.items()]
 
     def _configure_resources(self) -> None:
         """Configure Switch resources (catalog, schema, volume) if not configured."""

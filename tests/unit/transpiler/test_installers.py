@@ -121,14 +121,14 @@ def test_java_version_parse_missing() -> None:
 class FriendOfSwitchInstaller(SwitchInstaller):
     """A friend class to access protected methods for testing purposes."""
 
-    def has_valid_job(self, install_state: Any) -> bool:
-        return self._has_valid_job(install_state)
+    def get_existing_job_id(self, install_state: Any) -> str | None:
+        return self._get_existing_job_id(install_state)
 
-    def create_or_update_switch_job(self, install_state: Any) -> str:
-        return self._create_or_update_switch_job(install_state)
+    def create_or_update_switch_job(self, job_id: str | None) -> str:
+        return self._create_or_update_switch_job(job_id)
 
-    def get_switch_parameters_from_config(self) -> dict:
-        return self._get_switch_parameters_from_config()
+    def get_switch_job_parameters(self) -> list:
+        return self._get_switch_job_parameters()
 
     def prompt_for_switch_resources(self) -> tuple[str, str, str]:
         return self._prompt_for_switch_resources()
@@ -343,20 +343,20 @@ class TestSwitchInstaller:
     @pytest.mark.parametrize(
         ("jobs_state", "get_side_effect", "expected"),
         (
-            pytest.param({}, None, False, id="no_job_in_state"),
-            pytest.param({"Switch": "12345"}, None, True, id="valid_job_exists"),
-            pytest.param({"Switch": "99999"}, NotFound("Job not found"), False, id="job_not_found"),
-            pytest.param({"Switch": "invalid"}, ValueError("Invalid job ID"), False, id="invalid_job_id"),
+            pytest.param({}, None, None, id="no_job_in_state"),
+            pytest.param({"Switch": "12345"}, None, "12345", id="valid_job_exists"),
+            pytest.param({"Switch": "99999"}, NotFound("Job not found"), None, id="job_not_found"),
+            pytest.param({"Switch": "invalid"}, ValueError("Invalid job ID"), None, id="invalid_job_id"),
         ),
     )
-    def test_has_valid_job(
+    def test_get_existing_job_id(
         self,
         jobs_state: dict,
         get_side_effect: Exception | None,
-        expected: bool,
+        expected: str | None,
         tmp_path: Path,
     ) -> None:
-        """Test _has_valid_job checks job validity in workspace."""
+        """Test _get_existing_job_id returns job_id if valid, None otherwise."""
         install_state = Mock()
         install_state.jobs = jobs_state
 
@@ -367,19 +367,19 @@ class TestSwitchInstaller:
         # Use friend class to access protected method
         repository = TranspilerRepository(tmp_path)
         friend_installer = FriendOfSwitchInstaller(repository, mock_ws, Mock())
-        result = friend_installer.has_valid_job(install_state)
+        result = friend_installer.get_existing_job_id(install_state)
 
         assert result == expected
         if jobs_state and "Switch" in jobs_state and not get_side_effect:
             mock_ws.jobs.get.assert_called_once_with(int(jobs_state["Switch"]))
 
     @pytest.mark.parametrize(
-        ("initial_jobs", "reset_side_effect", "expected_job_id", "expect_create", "expect_reset"),
+        ("initial_job_id", "reset_side_effect", "expected_job_id", "expect_create", "expect_reset"),
         (
-            pytest.param({}, None, "12345", True, False, id="new_job_creation"),
-            pytest.param({"Switch": "67890"}, None, "67890", False, True, id="existing_job_update"),
+            pytest.param(None, None, "12345", True, False, id="new_job_creation"),
+            pytest.param("67890", None, "67890", False, True, id="existing_job_update"),
             pytest.param(
-                {"Switch": "99999"},
+                "99999",
                 InvalidParameterValue("Job not found"),
                 "12345",
                 True,
@@ -389,26 +389,18 @@ class TestSwitchInstaller:
         ),
     )
     @patch.object(SwitchInstaller, "_get_switch_job_settings")
-    @patch("databricks.labs.lakebridge.transpiler.installers.InstallState")
     def test_job_creation(
         self,
-        mock_install_state_class: Mock,
         mock_get_settings: Mock,
-        initial_jobs: dict,
+        initial_job_id: str | None,
         reset_side_effect: Exception | None,
         expected_job_id: str,
         expect_create: bool,
         expect_reset: bool,
-        installer: SwitchInstaller,
         tmp_path: Path,
     ) -> None:
         """Test Switch job creation and update scenarios."""
         # Setup
-        mock_install_state = Mock()
-        mock_install_state.jobs = dict(initial_jobs)
-        mock_install_state.save = Mock()
-        mock_install_state_class.from_installation.return_value = mock_install_state
-
         mock_get_settings.return_value = {"name": "test_job"}
 
         mock_job = Mock()
@@ -428,14 +420,15 @@ class TestSwitchInstaller:
         test_repository = TranspilerRepository(tmp_path)
         mock_installation = Mock()
         friend_installer = FriendOfSwitchInstaller(test_repository, mock_ws, mock_installation)
-        result = friend_installer.create_or_update_switch_job(mock_install_state)
+        result = friend_installer.create_or_update_switch_job(initial_job_id)
 
         # Assert
         assert result == expected_job_id
 
         if expect_reset:
             if reset_side_effect:
-                mock_jobs.reset.assert_called_once_with(int(initial_jobs["Switch"]), JobSettings(name="test_job"))
+                assert initial_job_id is not None
+                mock_jobs.reset.assert_called_once_with(int(initial_job_id), JobSettings(name="test_job"))
             else:
                 mock_jobs.reset.assert_called_once_with(int(expected_job_id), JobSettings(name="test_job"))
         else:
@@ -446,9 +439,7 @@ class TestSwitchInstaller:
         else:
             mock_jobs.create.assert_not_called()
 
-        assert mock_install_state.jobs["Switch"] == expected_job_id
-
-    def test_get_switch_parameters_handles_various_default_values(
+    def test_get_switch_job_parameters_handles_various_default_values(
         self, installer: SwitchInstaller, tmp_path: Path
     ) -> None:
         """Test that different default values in config are correctly converted."""
@@ -469,20 +460,25 @@ class TestSwitchInstaller:
         friend_installer = FriendOfSwitchInstaller(test_repository, mock_ws, mock_installation)
 
         with patch.object(test_repository, "all_transpiler_configs", return_value={"switch": mock_config}):
-            params = friend_installer.get_switch_parameters_from_config()
+            params = friend_installer.get_switch_job_parameters()
 
-        assert "input_dir" in params
-        assert "output_dir" in params
-        assert "result_catalog" in params
-        assert "result_schema" in params
-        assert "builtin_prompt" in params
-        assert params["flag1"] == ""
-        assert params["flag2"] == "123"
-        assert params["flag3"] == ""
-        assert params["flag4"] == "value"
-        assert params["flag5"] == "3.14"
+        # Convert list to dict for easier testing
+        params_dict = {p.name: p.default for p in params}
 
-    def test_get_switch_parameters_raises_when_config_missing(self, installer: SwitchInstaller, tmp_path: Path) -> None:
+        assert "input_dir" in params_dict
+        assert "output_dir" in params_dict
+        assert "result_catalog" in params_dict
+        assert "result_schema" in params_dict
+        assert "builtin_prompt" in params_dict
+        assert params_dict["flag1"] == ""
+        assert params_dict["flag2"] == "123"
+        assert params_dict["flag3"] == ""
+        assert params_dict["flag4"] == "value"
+        assert params_dict["flag5"] == "3.14"
+
+    def test_get_switch_job_parameters_raises_when_config_missing(
+        self, installer: SwitchInstaller, tmp_path: Path
+    ) -> None:
         """Test that ValueError is raised when Switch config is not found."""
         test_repository = TranspilerRepository(tmp_path)
         mock_ws = Mock()
@@ -491,7 +487,7 @@ class TestSwitchInstaller:
 
         with patch.object(test_repository, "all_transpiler_configs", return_value={}):
             with pytest.raises(ValueError, match="Switch config.yml not found"):
-                friend_installer.get_switch_parameters_from_config()
+                friend_installer.get_switch_job_parameters()
 
     @patch("databricks.labs.lakebridge.transpiler.installers.ResourceConfigurator")
     @patch("databricks.labs.lakebridge.transpiler.installers.CatalogOperations")
