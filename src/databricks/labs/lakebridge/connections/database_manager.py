@@ -61,7 +61,6 @@ class SnowflakeConnector(_BaseConnector):
 class MSSQLConnector(_BaseConnector):
     def _connect(self) -> Engine:
         auth_type = self.config.get('auth_type', 'sql_authentication')
-        endpoint_key = self.config.get('endpoint_key', 'server')
         db_name = self.config.get('database')
 
         query_params = {
@@ -70,15 +69,18 @@ class MSSQLConnector(_BaseConnector):
         }
 
         if auth_type == "ad_passwd_authentication":
-            query_params["authentication"] = "ActiveDirectoryPassword"
+            query_params = {
+                **query_params,
+                "authentication": "ActiveDirectoryPassword",
+            }
         elif auth_type == "spn_authentication":
             raise NotImplementedError("SPN Authentication not implemented yet")
 
         connection_string = URL.create(
-            "mssql+pyodbc",
-            username=self.config.get('user', self.config.get('sql_user')),
-            password=self.config.get('password', self.config.get('sql_password')),
-            host=self.config.get(endpoint_key, self.config.get('server')),
+            drivername="mssql+pyodbc",
+            username=self.config['sql_user'],
+            password=self.config['sql_password'],
+            host=self.config['server'],
             port=self.config.get('port', 1433),
             database=db_name,
             query=query_params,
