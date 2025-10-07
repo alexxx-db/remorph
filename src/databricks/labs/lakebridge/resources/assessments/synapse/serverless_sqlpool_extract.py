@@ -6,11 +6,14 @@ from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
+    set_logger,
+)
+from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import (
     save_resultset_to_db,
     get_serverless_database_groups,
     get_max_column_value_duckdb,
-    set_logger,
 )
+
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import get_sqlpool_reader
 from sqlalchemy import text

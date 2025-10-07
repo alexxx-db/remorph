@@ -12,11 +12,11 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_cl
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    insert_df_to_duckdb,
     get_azure_metrics_query_client,
     get_synapse_artifacts_client,
     set_logger,
 )
+from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import insert_df_to_duckdb
 
 
 def execute():
