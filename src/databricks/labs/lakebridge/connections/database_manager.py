@@ -21,6 +21,10 @@ class DatabaseConnector(ABC):
     def execute_query(self, query: str) -> Result[Any]:
         pass
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
 
 class _BaseConnector(DatabaseConnector):
     def __init__(self, config: dict[str, Any]):
@@ -36,6 +40,10 @@ class _BaseConnector(DatabaseConnector):
         session = sessionmaker(bind=self.engine)
         connection = session()
         return connection.execute(text(query))
+
+    def close(self):
+        if self.engine:
+            self.engine.dispose()
 
 
 def _create_connector(db_type: str, config: dict[str, Any]) -> DatabaseConnector:
@@ -106,3 +114,6 @@ class DatabaseManager:
         if row is None:
             return False
         return row[0] == 101
+
+    def close(self):
+        self.connector.close()

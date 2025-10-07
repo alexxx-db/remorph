@@ -101,6 +101,7 @@ def execute():
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
             result = connection.execute_query(storage_info_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
+            connection.close()
 
         # Activity: Extract
         sqlpool_names_to_profile = ",".join([entry['name'] for entry in live_dedicated_pools_to_profile])
@@ -129,7 +130,7 @@ def execute():
 
             session_request_result = connection.execute_query(session_request_query)
             save_resultset_to_db(session_request_result, table_name, db_path, mode="append")
-
+            connection.close()
         print(json.dumps({"status": "success", "message": " All data loaded successfully loaded successfully"}))
 
     except Exception as e:
