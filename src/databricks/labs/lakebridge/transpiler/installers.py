@@ -744,7 +744,7 @@ class SwitchInstaller(TranspilerInstaller):
     def _get_switch_job_parameters(self) -> list[JobParameterDefinition]:
         """Build job-level parameter definitions from installed config.yml."""
         configs = self._transpiler_repository.all_transpiler_configs()
-        config = configs.get(self._TRANSPILER_ID)
+        config = configs.get(self.name) or configs.get(self._TRANSPILER_ID)
 
         if not config:
             raise ValueError(
