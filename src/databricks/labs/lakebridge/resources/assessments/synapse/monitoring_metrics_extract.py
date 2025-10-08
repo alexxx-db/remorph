@@ -12,8 +12,8 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_cl
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_azure_metrics_query_client,
-    get_synapse_artifacts_client,
+    create_azure_metrics_query_client,
+    create_synapse_artifacts_client,
     set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import insert_df_to_duckdb
@@ -32,13 +32,13 @@ def execute():
     workspace_name = synapse_workspace_settings["workspace"]["name"]
     logger.info(f"workspace_name: {workspace_name}")
 
-    artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
 
     try:
 
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        metrics_client = get_azure_metrics_query_client()
+        metrics_client = create_azure_metrics_query_client()
         synapse_metrics = SynapseMetrics(metrics_client)
 
         workspace_info = workspace.get_workspace_info()

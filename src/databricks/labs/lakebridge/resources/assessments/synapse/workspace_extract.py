@@ -9,7 +9,7 @@ from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_synapse_artifacts_client,
+    create_synapse_artifacts_client,
     set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import insert_df_to_duckdb
@@ -29,7 +29,7 @@ def execute():
 
     logger.info(f"workspace_name: {workspace_name}")
 
-    artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
 
     try:
         # Initialize workspace settings and client

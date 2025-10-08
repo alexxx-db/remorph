@@ -2,7 +2,7 @@ import json
 import sys
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_synapse_artifacts_client,
+    create_synapse_artifacts_client,
     set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import (
@@ -33,7 +33,7 @@ def execute():
     workspace_tz = zoneinfo.ZoneInfo(tz_info)
     exclude_dedicated_sql_pools = synapse_profiler_settings.get("exclude_dedicated_sql_pools", None)
     dedicated_sql_pools_profiling_list = synapse_profiler_settings.get("dedicated_sql_pools_profiling_list", None)
-    artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
 
     try:
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
