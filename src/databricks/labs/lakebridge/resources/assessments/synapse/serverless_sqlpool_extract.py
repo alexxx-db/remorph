@@ -1,5 +1,6 @@
 import json
 import sys
+import duckdb
 
 from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
 from databricks.labs.lakebridge.assessments import PRODUCT_NAME
@@ -10,12 +11,43 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.functions i
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import (
     save_resultset_to_db,
-    get_serverless_database_groups,
     get_max_column_value_duckdb,
 )
 
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import get_sqlpool_reader
+
+
+def get_serverless_database_groups(
+    db_path,
+    inclusion_list=None,
+    exclusion_list=None,
+    table_name="serverless_databases",
+):
+    """
+    Reads serverless databases from DuckDB, groups by collation_name,
+    and applies inclusion/exclusion filters.
+
+    Returns:
+        (serverless_database_groups, serverless_database_groups_in_scope)
+    """
+    with duckdb.connect(db_path) as conn:
+        rows = conn.execute(f"SELECT name, collation_name FROM {table_name}").fetchall()
+
+    serverless_database_groups = {}
+    for name, collation_name in rows:
+        serverless_database_groups.setdefault(collation_name, []).append(name)
+
+    inclusion_list = inclusion_list or []
+    exclusion_list = exclusion_list or []
+
+    serverless_database_groups_in_scope = {}
+    for collation_name, dbs in serverless_database_groups.items():
+        for db in dbs:
+            if (not inclusion_list or db in inclusion_list) and db not in exclusion_list:
+                serverless_database_groups_in_scope.setdefault(collation_name, []).append(db)
+
+    return serverless_database_groups_in_scope
 
 
 def execute():
