@@ -49,10 +49,11 @@ def test_record_resources_persists_install_state(switch_deployment, install_stat
 
     install_state.switch_resources = {}
     install_state.save.reset_mock()
+    monkeypatch.setattr(switch_deployment, "_get_switch_package_path", lambda: tmp_path)
     monkeypatch.setattr(switch_deployment, "_deploy_workspace", lambda _: None)
     monkeypatch.setattr(switch_deployment, "_setup_job", lambda: None)
 
-    switch_deployment.install(tmp_path, resources)
+    switch_deployment.install(resources)
 
     saved = install_state.switch_resources
     assert saved["catalog"] == "cat"
@@ -63,16 +64,16 @@ def test_record_resources_persists_install_state(switch_deployment, install_stat
 
 def test_install_records_resources(switch_deployment, monkeypatch, tmp_path):
     resources = SwitchResourcesConfig(catalog="cat", schema="sch", volume="vol")
-    package = tmp_path
     call_order = []
 
+    monkeypatch.setattr(switch_deployment, "_get_switch_package_path", lambda: tmp_path)
     monkeypatch.setattr(switch_deployment, "_deploy_workspace", lambda pkg: call_order.append(("deploy", pkg)))
     monkeypatch.setattr(switch_deployment, "_setup_job", lambda: call_order.append(("setup", None)))
     monkeypatch.setattr(switch_deployment, "_record_resources", lambda res: call_order.append(("record", res)))
 
-    switch_deployment.install(package, resources)
+    switch_deployment.install(resources)
 
-    assert ("deploy", package) in call_order
+    assert ("deploy", tmp_path) in call_order
     assert ("setup", None) in call_order
     assert ("record", resources) in call_order
 
