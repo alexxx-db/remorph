@@ -637,7 +637,7 @@ def install_transpile(
     user = w.current_user
     logger.debug(f"User: {user}")
     transpile_installer = installer(
-        w, transpiler_repository, is_interactive=is_interactive, include_llm_transpiler=include_llm_transpiler
+        w, transpiler_repository, is_interactive=is_interactive, include_llm=include_llm_transpiler
     )
     transpile_installer.run(module="transpile", artifact=artifact)
 

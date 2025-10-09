@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import os
 import webbrowser
-from collections.abc import Set, Sequence
+from collections.abc import Set, Callable, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -20,6 +20,7 @@ from databricks.labs.lakebridge.config import (
     LakebridgeConfiguration,
     ReconcileMetadataConfig,
     TranspileConfig,
+    SwitchResourcesConfig,
 )
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
@@ -51,9 +52,9 @@ class WorkspaceInstaller:
         environ: dict[str, str] | None = None,
         *,
         is_interactive: bool = True,
-        include_llm_transpiler: bool = False,
+        include_llm: bool = False,
         transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
-        transpiler_installers: Sequence[type[TranspilerInstaller]] = (
+        transpiler_installers: Sequence[Callable[[TranspilerRepository], TranspilerInstaller]] = (
             BladebridgeInstaller,
             MorpheusInstaller,
             SwitchInstaller,
@@ -68,7 +69,7 @@ class WorkspaceInstaller:
         self._ws_installation = workspace_installation
         # TODO: Refactor the 'prompts' property in preference to using this flag, which should be redundant.
         self._is_interactive = is_interactive
-        self._include_llm_transpiler = include_llm_transpiler
+        self._include_llm = include_llm
         self._transpiler_repository = transpiler_repository
         self._transpiler_installer_factories = transpiler_installers
 
@@ -82,11 +83,11 @@ class WorkspaceInstaller:
     @property
     def _transpiler_installers(self) -> Set[TranspilerInstaller]:
         factories = self._transpiler_installer_factories
-        if not self._include_llm_transpiler:
+        if not self._include_llm:
             if SwitchInstaller in factories:
                 logger.info("Skipping Switch installation (LLM transpiler not requested)")
             factories = tuple(f for f in factories if f != SwitchInstaller)
-        return frozenset(factory(self._transpiler_repository, self._ws, self._installation) for factory in factories)
+        return frozenset(factory(self._transpiler_repository) for factory in factories)
 
     def run(
         self,
@@ -101,7 +102,7 @@ class WorkspaceInstaller:
             for transpiler_installer in self._transpiler_installers:
                 transpiler_installer.install()
         if not config:
-            config = self.configure(module)
+            config = self.configure(module, self._include_llm)
         if self._is_testing():
             return config
         self._ws_installation.install(config)
@@ -138,18 +139,18 @@ class WorkspaceInstaller:
         else:
             logger.fatal(f"Cannot install unsupported artifact: {artifact}")
 
-    def configure(self, module: str) -> LakebridgeConfiguration:
+    def configure(self, module: str, include_llm: bool = False) -> LakebridgeConfiguration:
         match module:
             case "transpile":
                 logger.info("Configuring lakebridge `transpile`.")
-                return LakebridgeConfiguration(self._configure_transpile(), None)
+                return LakebridgeConfiguration(self._configure_transpile(include_llm), None)
             case "reconcile":
                 logger.info("Configuring lakebridge `reconcile`.")
                 return LakebridgeConfiguration(None, self._configure_reconcile())
             case "all":
                 logger.info("Configuring lakebridge `transpile` and `reconcile`.")
                 return LakebridgeConfiguration(
-                    self._configure_transpile(),
+                    self._configure_transpile(include_llm),
                     self._configure_reconcile(),
                 )
             case _:
@@ -158,7 +159,7 @@ class WorkspaceInstaller:
     def _is_testing(self):
         return self._product_info.product_name() != "lakebridge"
 
-    def _configure_transpile(self) -> TranspileConfig | None:
+    def _configure_transpile(self, include_llm: bool = False) -> TranspileConfig | None:
         try:
             config = self._installation.load(TranspileConfig)
             logger.info("Lakebridge `transpile` is already installed on this workspace.")
@@ -179,12 +180,12 @@ class WorkspaceInstaller:
             logger.warning("Installation is not interactive, skipping configuration of transpilers.")
             return None
 
-        config = self._configure_new_transpile_installation()
+        config = self._configure_new_transpile_installation(include_llm)
         logger.info("Finished configuring lakebridge `transpile`.")
         return config
 
-    def _configure_new_transpile_installation(self) -> TranspileConfig:
-        default_config = self._prompt_for_new_transpile_installation()
+    def _configure_new_transpile_installation(self, include_llm: bool = False) -> TranspileConfig:
+        default_config = self._prompt_for_new_transpile_installation(include_llm)
         runtime_config = None
         catalog_name = "remorph"
         schema_name = "transpiler"
@@ -213,7 +214,7 @@ class WorkspaceInstaller:
     def _transpiler_config_path(self, transpiler: str) -> Path:
         return self._transpiler_repository.transpiler_config_path(transpiler)
 
-    def _prompt_for_new_transpile_installation(self) -> TranspileConfig:
+    def _prompt_for_new_transpile_installation(self, include_llm: bool = False) -> TranspileConfig:
         install_later = "Set it later"
         # TODO tidy this up, logger might not display the below in console...
         logger.info("Please answer a few questions to configure lakebridge `transpile`")
@@ -221,20 +222,7 @@ class WorkspaceInstaller:
         source_dialect: str | None = self._prompts.choice("Select the source dialect:", all_dialects, sort=False)
         if source_dialect == install_later:
             source_dialect = None
-        transpiler_name: str | None = None
-        transpiler_config_path: Path | None = None
-        if source_dialect:
-            transpilers = self._transpilers_with_dialect(source_dialect)
-            if len(transpilers) > 1:
-                transpilers = [install_later] + transpilers
-                transpiler_name = self._prompts.choice("Select the transpiler:", transpilers, sort=False)
-                if transpiler_name == install_later:
-                    transpiler_name = None
-            else:
-                transpiler_name = next(t for t in transpilers)
-                logger.info(f"Lakebridge will use the {transpiler_name} transpiler")
-            if transpiler_name:
-                transpiler_config_path = self._transpiler_config_path(transpiler_name)
+        transpiler_name, transpiler_config_path = self._get_transpiler_config(install_later, source_dialect)
         transpiler_options: dict[str, JsonValue] | None = None
         if transpiler_config_path:
             transpiler_options = self._prompt_for_transpiler_options(
@@ -257,21 +245,52 @@ class WorkspaceInstaller:
             "Would you like to validate the syntax and semantics of the transpiled queries?"
         )
 
+        switch_resources = None
+        if include_llm:
+            switch_resources = self._prompt_for_switch_resources()
+
         return TranspileConfig(
             transpiler_config_path=str(transpiler_config_path) if transpiler_config_path is not None else None,
             transpiler_options=transpiler_options,
             source_dialect=source_dialect,
             skip_validation=(not run_validation),
+            include_llm=include_llm,
             input_source=input_source,
             output_folder=output_folder,
             error_file_path=error_file_path,
+            switch_resources=switch_resources,
         )
+
+    def _get_transpiler_config(self, install_later, source_dialect):
+        transpiler_name: str | None = None
+        transpiler_config_path: Path | None = None
+        if source_dialect:
+            transpilers = self._transpilers_with_dialect(source_dialect)
+            if len(transpilers) > 1:
+                transpilers = [install_later] + transpilers
+                transpiler_name = self._prompts.choice("Select the transpiler:", transpilers, sort=False)
+                if transpiler_name == install_later:
+                    transpiler_name = None
+            else:
+                transpiler_name = next(t for t in transpilers)
+                logger.info(f"Lakebridge will use the {transpiler_name} transpiler")
+            if transpiler_name:
+                transpiler_config_path = self._transpiler_config_path(transpiler_name)
+        return transpiler_name, transpiler_config_path
 
     def _prompt_for_transpiler_options(self, transpiler_name: str, source_dialect: str) -> dict[str, Any] | None:
         config_options = self._transpiler_repository.transpiler_config_options(transpiler_name, source_dialect)
         if len(config_options) == 0:
             return None
         return {option.flag: option.prompt_for_value(self._prompts) for option in config_options}
+
+    def _prompt_for_switch_resources(self) -> SwitchResourcesConfig:
+        logger.info("Configuring Switch resources (catalog, schema, volume)...")
+        catalog = self._resource_configurator.prompt_for_catalog_setup()
+        schema = self._resource_configurator.prompt_for_schema_setup(catalog, "switch")
+        volume = self._resource_configurator.prompt_for_volume_setup(catalog, schema, "switch_volume")
+        self._has_necessary_access(catalog, schema, volume)
+        return SwitchResourcesConfig(catalog=catalog, schema=schema, volume=volume)
 
     def _configure_catalog(self) -> str:
         return self._resource_configurator.prompt_for_catalog_setup()
@@ -395,7 +414,7 @@ def installer(
     transpiler_repository: TranspilerRepository,
     *,
     is_interactive: bool,
-    include_llm_transpiler: bool = False,
+    include_llm: bool = False,
 ) -> WorkspaceInstaller:
     app_context = ApplicationContext(_verify_workspace_client(ws))
     return WorkspaceInstaller(
@@ -408,7 +427,7 @@ def installer(
         app_context.workspace_installation,
         transpiler_repository=transpiler_repository,
         is_interactive=is_interactive,
-        include_llm_transpiler=include_llm_transpiler,
+        include_llm=include_llm,
     )
 
 

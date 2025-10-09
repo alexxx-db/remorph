@@ -1,4 +1,5 @@
 import logging
+import sys
 from ast import literal_eval
 from pathlib import Path
 
@@ -13,8 +14,8 @@ from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNo
 
 from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
+from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
-from databricks.labs.lakebridge.transpiler.installers import SwitchInstaller
 
 logger = logging.getLogger("databricks.labs.lakebridge.install")
 
@@ -26,6 +27,7 @@ class WorkspaceInstallation:
         prompts: Prompts,
         installation: Installation,
         recon_deployment: ReconDeployment,
+        switch_deployment: SwitchDeployment,
         product_info: ProductInfo,
         upgrades: Upgrades,
     ):
@@ -33,6 +35,7 @@ class WorkspaceInstallation:
         self._prompts = prompts
         self._installation = installation
         self._recon_deployment = recon_deployment
+        self._switch_deployment = switch_deployment
         self._product_info = product_info
         self._upgrades = upgrades
 
@@ -98,6 +101,17 @@ class WorkspaceInstallation:
         if config.reconcile:
             logger.info("Installing Lakebridge reconcile Metadata components.")
             self._recon_deployment.install(config.reconcile, wheel_path)
+        if config.transpile and config.transpile.include_llm:
+            resources = config.transpile.switch_resources
+            if resources is None:
+                logger.error(
+                    "Switch resources are missing. Run `lakebridge install-transpile --include-llm-transpiler true` "
+                    "with interactive prompts to capture the Switch catalog, schema, and volume before retrying."
+                )
+            else:
+                logger.info("Installing Switch transpiler to workspace.")
+                switch_package_path = self._get_switch_package_path()
+                self._switch_deployment.install(switch_package_path, resources)
 
     def uninstall(self, config: LakebridgeConfiguration):
         # This will remove all the Lakebridge modules
@@ -128,11 +142,8 @@ class WorkspaceInstallation:
 
     def _uninstall_switch_job(self) -> None:
         """Remove Switch transpiler job if exists."""
-        repository = TranspilerRepository.user_home()
-        switch_installer = SwitchInstaller(repository, self._ws, self._installation)
-        # Get configured resources before uninstalling for logging purpose
-        resources = switch_installer.get_configured_resources()
-        switch_installer.uninstall()
+        resources = self._switch_deployment.get_configured_resources()
+        self._switch_deployment.uninstall()
 
         if resources:
             logger.info(
@@ -140,3 +151,14 @@ class WorkspaceInstallation:
                 f"schema=`{resources['schema']}`, volume=`{resources['volume']}`. "
                 "Please remove them manually if needed."
             )
+
+    def _get_switch_package_path(self) -> Path:
+        """Get Switch package path (databricks directory) from site-packages."""
+        repository = TranspilerRepository.user_home()
+        product_path = repository.transpilers_path() / "switch"
+        venv_path = product_path / "lib" / ".venv"
+
+        if sys.platform != "win32":
+            major, minor = sys.version_info[:2]
+            return venv_path / "lib" / f"python{major}.{minor}" / "site-packages" / "databricks"
+        return venv_path / "Lib" / "site-packages" / "databricks"

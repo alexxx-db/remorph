@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import create_autospec, patch
 
 import pytest
-from databricks.labs.blueprint.installation import Installation, JsonObject, MockInstallation
+from databricks.labs.blueprint.installation import JsonObject, MockInstallation
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
 from databricks.labs.blueprint.tui import MockPrompts
@@ -1398,14 +1398,8 @@ def test_installer_upgrade_installed_transpilers(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(
-            self,
-            repository: TranspilerRepository,
-            workspace_client: WorkspaceClient,
-            installation: Installation,
-            name: str,
-        ) -> None:
-            super().__init__(repository, workspace_client, installation)
+        def __init__(self, repository: TranspilerRepository, name: str) -> None:
+            super().__init__(repository)
             self._name = name
             self.installed = False
 
@@ -1420,16 +1414,12 @@ def test_installer_upgrade_installed_transpilers(
             self.installed = True
             return True
 
-        def mock_factory(
-            self, repository: TranspilerRepository, workspace_client: WorkspaceClient, installation: Installation
-        ) -> TranspilerInstaller:
+        def mock_factory(self, repository: TranspilerRepository) -> TranspilerInstaller:
             assert repository is self._transpiler_repository
-            assert workspace_client is ws
-            assert installation is ctx.installation
             return self
 
-    bar_installer = MockTranspilerInstaller(mock_repository, ws, ctx.installation, "bar")
-    baz_installer = MockTranspilerInstaller(mock_repository, ws, ctx.installation, "baz")
+    bar_installer = MockTranspilerInstaller(mock_repository, "bar")
+    baz_installer = MockTranspilerInstaller(mock_repository, "baz")
 
     installer = ws_installer(
         ctx.workspace_client,
@@ -1493,10 +1483,8 @@ def test_installer_upgrade_configure_if_changed(
     )
 
     class MockTranspilerInstaller(TranspilerInstaller):
-        def __init__(
-            self, repository: TranspilerRepository, workspace_client: WorkspaceClient, installation: Installation
-        ) -> None:
-            super().__init__(repository, workspace_client, installation)
+        def __init__(self, repository: TranspilerRepository) -> None:
+            super().__init__(repository)
             self.installed = False
 
         def can_install(self, artifact: Path) -> bool:
@@ -1647,7 +1635,7 @@ def test_transpiler_installers_llm_flag(
             ctx.product_info,
             ctx.resource_configurator,
             ctx.workspace_installation,
-            include_llm_transpiler=include_llm_transpiler,
+            include_llm=include_llm_transpiler,
         )
     else:
         installer = FriendOfWorkspaceInstaller(
