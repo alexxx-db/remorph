@@ -26,7 +26,7 @@ class SwitchConfig:
         if not resources or not all(k in resources for k in ("catalog", "schema", "volume")):
             raise SystemExit(
                 "Switch resources not configured. "
-                "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler' first."
+                "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
             )
 
         return {
@@ -43,7 +43,7 @@ class SwitchConfig:
 
         raise SystemExit(
             "Switch Job ID not found. "
-            "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler' first."
+            "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
         )
 
 
