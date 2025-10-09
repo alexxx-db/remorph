@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from pathlib import Path
 
 from databricks.labs.blueprint.installation import Installation
@@ -35,10 +36,10 @@ class SwitchDeployment:
         self._job_deployer = job_deployer
         self._transpiler_repository = transpiler_repository
 
-    def install(self, switch_package_path: Path, resources: SwitchResourcesConfig) -> None:
+    def install(self, resources: SwitchResourcesConfig) -> None:
         """Deploy Switch to workspace and configure resources."""
         logger.info("Deploying Switch to workspace...")
-        self._deploy_workspace(switch_package_path)
+        self._deploy_workspace(self._get_switch_package_path())
         self._setup_job()
         self._record_resources(resources)
         logger.info("Switch deployment completed")
@@ -216,3 +217,13 @@ class SwitchDeployment:
             f"Switch resources stored: catalog=`{resources.catalog}`, "
             f"schema=`{resources.schema}`, volume=`{resources.volume}`"
         )
+
+    def _get_switch_package_path(self) -> Path:
+        """Get Switch package path (databricks directory) from site-packages."""
+        product_path = self._transpiler_repository.transpilers_path() / self._TRANSPILER_ID
+        venv_path = product_path / "lib" / ".venv"
+
+        if sys.platform != "win32":
+            major, minor = sys.version_info[:2]
+            return venv_path / "lib" / f"python{major}.{minor}" / "site-packages" / "databricks"
+        return venv_path / "Lib" / "site-packages" / "databricks"
