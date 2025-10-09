@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from unittest.mock import create_autospec
 
 import pytest
@@ -23,7 +22,6 @@ from databricks.labs.lakebridge.config import (
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
 from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
-from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 
 @pytest.fixture
@@ -249,28 +247,7 @@ def test_uninstall_configs_missing(ws):
 class TestSwitchInstallation:
     """Tests for Switch transpiler installation."""
 
-    class _StubTranspilerRepository:
-        def __init__(self, names: set[str], base_path: Path):
-            self._names = names
-            self._base_path = base_path
-
-        def all_transpiler_names(self) -> set[str]:
-            return self._names
-
-        def transpilers_path(self) -> Path:
-            return self._base_path
-
-    @pytest.fixture
-    def switch_repository(self, monkeypatch, tmp_path) -> "_StubTranspilerRepository":
-        repository = self._StubTranspilerRepository({"switch"}, tmp_path / "repository")
-
-        def _user_home(_: type[TranspilerRepository]) -> "TestSwitchInstallation._StubTranspilerRepository":
-            return repository
-
-        monkeypatch.setattr(TranspilerRepository, "user_home", classmethod(_user_home))
-        return repository
-
-    def test_switch_install_uses_configured_resources(self, ws, switch_repository):
+    def test_switch_install_uses_configured_resources(self, ws):
         prompts = MockPrompts({})
         recon_deployment = create_autospec(ReconDeployment)
         switch_deployment = create_autospec(SwitchDeployment)
@@ -292,11 +269,10 @@ class TestSwitchInstallation:
         ws_installation.install(config)
 
         switch_deployment.install.assert_called_once()
-        args, _kwargs = switch_deployment.install.call_args
-        assert isinstance(args[0], Path)
-        assert args[1] is switch_resources
+        args, _ = switch_deployment.install.call_args
+        assert args[0] is switch_resources
 
-    def test_switch_install_missing_resources_logs_error(self, ws, switch_repository, caplog):
+    def test_switch_install_missing_resources_logs_error(self, ws, caplog):
         prompts = MockPrompts({})
         recon_deployment = create_autospec(ReconDeployment)
         switch_deployment = create_autospec(SwitchDeployment)
