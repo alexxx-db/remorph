@@ -40,7 +40,7 @@ def arguments_loader(desc: str):
     return args.db_path, credential_file
 
 
-def get_synapse_artifacts_client(config: dict) -> ArtifactsClient:
+def create_synapse_artifacts_client(config: dict) -> ArtifactsClient:
     """
     :return:  an Azure SDK client handle for Synapse Artifacts
     """
@@ -49,7 +49,7 @@ def get_synapse_artifacts_client(config: dict) -> ArtifactsClient:
     )
 
 
-def get_azure_metrics_query_client():
+def create_azure_metrics_query_client():
     """
     :return: an Azure SDK Monitoring Metrics Client handle
     """

@@ -2,7 +2,7 @@ import json
 import sys
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_synapse_artifacts_client,
+    create_synapse_artifacts_client,
     set_logger,
 )
 from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import (
@@ -33,7 +33,7 @@ def execute():
     workspace_tz = zoneinfo.ZoneInfo(tz_info)
     exclude_dedicated_sql_pools = synapse_profiler_settings.get("exclude_dedicated_sql_pools", None)
     dedicated_sql_pools_profiling_list = synapse_profiler_settings.get("dedicated_sql_pools_profiling_list", None)
-    artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
 
     try:
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
@@ -61,7 +61,6 @@ def execute():
         # Info: Extract
         for idx, entry in enumerate(live_dedicated_pools_to_profile):
             entry_info = f"{entry['name']} [{entry['status']}]"
-            # print(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
             logger.info(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
 
             mode = "overwrite" if idx == 0 else "append"
@@ -69,39 +68,38 @@ def execute():
             # tables
             table_name = "dedicated_tables"
             table_query = SynapseQueries.list_tables(pool_name)
-            connection = get_sqlpool_reader(config, pool_name, auth_type=auth_type)
-            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute_query(table_query)
-            save_resultset_to_db(result, table_name, db_path, mode=mode)
+            with get_sqlpool_reader(config, pool_name, auth_type=auth_type) as connection:
+                logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+                result = connection.execute_query(table_query)
+                save_resultset_to_db(result, table_name, db_path, mode=mode)
 
-            # columns
-            table_name = "dedicated_columns"
-            column_query = SynapseQueries.list_columns(pool_name)
-            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute_query(column_query)
-            save_resultset_to_db(result, table_name, db_path, mode=mode)
+                # columns
+                table_name = "dedicated_columns"
+                column_query = SynapseQueries.list_columns(pool_name)
+                logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+                result = connection.execute_query(column_query)
+                save_resultset_to_db(result, table_name, db_path, mode=mode)
 
-            # views
-            table_name = "dedicated_views"
-            view_query = SynapseQueries.list_views(pool_name)
-            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute_query(view_query)
-            save_resultset_to_db(result, table_name, db_path, mode=mode)
+                # views
+                table_name = "dedicated_views"
+                view_query = SynapseQueries.list_views(pool_name)
+                logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+                result = connection.execute_query(view_query)
+                save_resultset_to_db(result, table_name, db_path, mode=mode)
 
-            # routines
-            table_name = "dedicated_routines"
-            routine_query = SynapseQueries.list_routines(pool_name)
-            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute_query(routine_query)
-            save_resultset_to_db(result, table_name, db_path, mode=mode)
+                # routines
+                table_name = "dedicated_routines"
+                routine_query = SynapseQueries.list_routines(pool_name)
+                logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+                result = connection.execute_query(routine_query)
+                save_resultset_to_db(result, table_name, db_path, mode=mode)
 
-            # storage_info
-            table_name = "dedicated_storage_info"
-            storage_info_query = SynapseQueries.get_db_storage_info(pool_name)
-            logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute_query(storage_info_query)
-            save_resultset_to_db(result, table_name, db_path, mode=mode)
-            connection.close()
+                # storage_info
+                table_name = "dedicated_storage_info"
+                storage_info_query = SynapseQueries.get_db_storage_info(pool_name)
+                logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
+                result = connection.execute_query(storage_info_query)
+                save_resultset_to_db(result, table_name, db_path, mode=mode)
 
         # Activity: Extract
         sqlpool_names_to_profile = ",".join([entry['name'] for entry in live_dedicated_pools_to_profile])
@@ -112,25 +110,24 @@ def execute():
             entry for entry in sqlpool_names_to_profile.strip().split(",") if len(entry.strip())
         ]
         for idx, sqlpool_name in enumerate(sqlpool_names_to_profile_list):
-            # print(f"INFO: sqlpool_name:{sqlpool_name}")
-            connection = get_sqlpool_reader(config, sqlpool_name, auth_type=auth_type)
+            with get_sqlpool_reader(config, sqlpool_name, auth_type=auth_type) as connection:
 
-            table_name = "dedicated_sessions"
-            prev_max_login_time = get_max_column_value_duckdb("login_time", table_name, db_path)
-            session_query = SynapseQueries.list_dedicated_sessions(
-                pool_name=sqlpool_name, last_login_time=prev_max_login_time
-            )
+                table_name = "dedicated_sessions"
+                prev_max_login_time = get_max_column_value_duckdb("login_time", table_name, db_path)
+                session_query = SynapseQueries.list_dedicated_sessions(
+                    pool_name=sqlpool_name, last_login_time=prev_max_login_time
+                )
 
-            session_result = connection.execute_query(session_query)
-            save_resultset_to_db(session_result, table_name, db_path, mode="append")
+                session_result = connection.execute_query(session_query)
+                save_resultset_to_db(session_result, table_name, db_path, mode="append")
 
-            table_name = "dedicated_session_requests"
-            prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
-            session_request_query = SynapseQueries.list_dedicated_requests(prev_max_end_time)
+                table_name = "dedicated_session_requests"
+                prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
+                session_request_query = SynapseQueries.list_dedicated_requests(prev_max_end_time)
 
-            session_request_result = connection.execute_query(session_request_query)
-            save_resultset_to_db(session_request_result, table_name, db_path, mode="append")
-            connection.close()
+                session_request_result = connection.execute_query(session_request_query)
+                save_resultset_to_db(session_request_result, table_name, db_path, mode="append")
+
         print(json.dumps({"status": "success", "message": " All data loaded successfully loaded successfully"}))
 
     except Exception as e:

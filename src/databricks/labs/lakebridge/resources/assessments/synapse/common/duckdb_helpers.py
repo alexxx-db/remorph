@@ -1,13 +1,39 @@
 import pandas as pd
 import duckdb
+from typing import Any
+
+from sqlalchemy.engine import Result
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import set_logger
 
 logger = set_logger(__name__)
 
 
-def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
+def save_resultset_to_db(
+    result: Result[Any],
+    table_name: str,
+    db_path: str,
+    mode: str,
+):
     """
-    Enhanced version of save_resultset_to_db with predetermined schemas.
+    Saves a SQL result set to a DuckDB table using a predetermined schema.
+    predetermined schemas align with queries being extracted in queries.py
+    This method is not expected to evolve frequently, as the schemas are fixed.
+
+    Args:
+        result: A DBAPI cursor or result set object with `.keys()` and `.fetchall()` methods.
+        table_name (str): The name of the DuckDB table to write to. Must exist in the predetermined schemas.
+        db_path (str): Path to the DuckDB database file.
+        mode (str): Write mode
+        - 'overwrite' drops and recreates the table;
+        - 'append' creates the table if it does not exist.
+
+    Behavior:
+        - Connects to the DuckDB database at db_path.
+        - Checks if table exists in the database, creates it if not present
+        - Uses a predetermined schema for the specified table_name.
+        - Converts the result set to a pandas DataFrame.
+        - Writes the DataFrame to the DuckDB table using the specified mode.
+
     """
 
     # Predetermined schemas
@@ -46,7 +72,6 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
         columns = result.keys()
         # Convert result to DataFrame
         df = pd.DataFrame(result.fetchall(), columns=columns)
-        # print(df.columns)
         logger.debug(df.columns)
 
         # Fetch the first batch
@@ -93,89 +118,52 @@ def save_resultset_to_db(result, table_name: str, db_path: str, mode: str):
         logger.error(f"Error in save_resultset_to_db for table {table_name}: {str(e)}")
 
 
-def get_max_column_value_duckdb(column_name, table_name, db_path):
+def get_max_column_value_duckdb(
+    column_name: str,
+    table_name: str,
+    db_path: str,
+):
     """
     Get the maximum value of a column from a DuckDB table.
     """
+    max_column_val = None
     try:
-        conn = duckdb.connect(db_path)
-        # Check if table exists
-        table_exists = table_name in conn.execute("SHOW TABLES").fetchdf()['name'].values
-        if not table_exists:
-            logger.info(f"Table {table_name} does not exist in DuckDB. Returning None.")
-            conn.close()
-            return None
-        max_column_query = f"SELECT MAX({column_name}) AS last_{column_name} FROM {table_name}"
-        logger.info(f"get_max_column_value_duckdb:: query {max_column_query}")
-        rows = conn.execute(max_column_query).fetchall()
-        max_column_val = rows[0][0] if rows else None
-        conn.close()
+        with duckdb.connect(db_path) as conn:
+            # Check if table exists
+            table_exists = table_name in conn.execute("SHOW TABLES").fetchdf()['name'].values
+            if not table_exists:
+                logger.info(f"Table {table_name} does not exist in DuckDB. Returning None.")
+                return None
+            max_column_query = f"SELECT MAX({column_name}) AS last_{column_name} FROM {table_name}"
+            logger.info(f"get_max_column_value_duckdb:: query {max_column_query}")
+            rows = conn.execute(max_column_query).fetchall()
+            max_column_val = rows[0][0] if rows else None
     except Exception as e:
         logger.error(f"ERROR: {e}")
     logger.info(f"max_column_val = {max_column_val}")
     return max_column_val
 
 
-def get_serverless_database_groups(
-    db_path, inclusion_list=None, exclusion_list=None, table_name="serverless_databases"
-):
-    """
-    Reads serverless databases from DuckDB, groups by collation_name,
-    and applies inclusion/exclusion filters.
-
-    Returns:
-        (serverless_database_groups, serverless_database_groups_in_scope)
-    """
-    rows = duckdb.connect(db_path).execute(f"SELECT name, collation_name FROM {table_name}").fetchall()
-
-    serverless_database_groups = {}
-    for name, collation_name in rows:
-        serverless_database_groups.setdefault(collation_name, []).append(name)
-
-    inclusion_list = inclusion_list or []
-    exclusion_list = exclusion_list or []
-
-    serverless_database_groups_in_scope = {}
-    for collation_name, dbs in serverless_database_groups.items():
-        for db in dbs:
-            if (not inclusion_list or db in inclusion_list) and db not in exclusion_list:
-                serverless_database_groups_in_scope.setdefault(collation_name, []).append(db)
-
-    return serverless_database_groups_in_scope
-
-
 def insert_df_to_duckdb(df: pd.DataFrame, db_path: str, table_name: str) -> None:
     """
     Insert a pandas DataFrame into a DuckDB table.
-
-    Args:
-        df (pd.DataFrame): The pandas DataFrame to insert
-        db_path (str): Path to the DuckDB database file
-        table_name (str): Name of the table to insert data into
     """
     try:
-        # Connect to DuckDB
-        conn = duckdb.connect(db_path)
+        with duckdb.connect(db_path) as conn:
+            # Drop existing table if it exists
+            conn.execute(f"DROP TABLE IF EXISTS {table_name}")
 
-        # Drop existing table if it exists
-        conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-
-        if df.empty:
-            # If DataFrame is empty, create an empty table with the correct schema
-            if len(df.columns) > 0:
-                # Create empty table with the same schema
-                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df LIMIT 0")
-                logger.info(f"Created empty table {table_name} with schema: {df.columns.tolist()}")
-            else:
-                logger.warning(f"Skipping table {table_name} creation as DataFrame has no columns")
-            conn.close()
-            return
-        # Create the table with the DataFrame's schema and insert data
-        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
-        logger.info(f"Successfully inserted {len(df)} rows into {table_name} table")
-
-        # Close connection
-        conn.close()
+            if df.empty:
+                # If DataFrame is empty, create an empty table with the correct schema
+                if len(df.columns) > 0:
+                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df LIMIT 0")
+                    logger.info(f"Created empty table {table_name} with schema: {df.columns.tolist()}")
+                else:
+                    logger.warning(f"Skipping table {table_name} creation as DataFrame has no columns")
+                return
+            # Create the table with the DataFrame's schema and insert data
+            conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+            logger.info(f"Successfully inserted {len(df)} rows into {table_name} table")
     except Exception as e:
         logger.error(f"Error inserting data into DuckDB: {str(e)}")
         raise
