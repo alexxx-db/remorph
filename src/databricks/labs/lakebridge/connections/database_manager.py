@@ -30,10 +30,6 @@ class DatabaseConnector(ABC):
     def fetch(self, query: str) -> FetchResult:
         pass
 
-    @abstractmethod
-    def close(self) -> None:
-        pass
-
 
 class _BaseConnector(DatabaseConnector):
     def __init__(self, config: dict[str, Any]):
@@ -50,10 +46,6 @@ class _BaseConnector(DatabaseConnector):
         with Session(self.engine) as session, session.begin():
             result = session.execute(text(query))
             return FetchResult(result.keys(), result.fetchall())
-
-    def close(self):
-        if self.engine:
-            self.engine.dispose()
 
 
 def _create_connector(db_type: str, config: dict[str, Any]) -> DatabaseConnector:
