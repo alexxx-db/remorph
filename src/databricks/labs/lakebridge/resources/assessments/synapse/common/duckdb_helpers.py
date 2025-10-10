@@ -1,15 +1,14 @@
 import pandas as pd
 import duckdb
-from typing import Any
 
-from sqlalchemy.engine import Result
+from databricks.labs.lakebridge.connections.database_manager import FetchResult
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import set_logger
 
 logger = set_logger(__name__)
 
 
 def save_resultset_to_db(
-    result: Result[Any],
+    result: FetchResult,
     table_name: str,
     db_path: str,
     mode: str,
@@ -69,9 +68,10 @@ def save_resultset_to_db(
         "serverless_data_processed": "DATA_PROCESSED_MB BIGINT, TYPE STRING, POOL_NAME STRING, EXTRACT_TS STRING",
     }
     try:
-        columns = result.keys()
+        columns = list(result.columns)
         # Convert result to DataFrame
-        df = pd.DataFrame(result.fetchall(), columns=columns)
+        df = pd.DataFrame(result.rows, columns=columns)
+        print(df.head(5))
         logger.debug(df.columns)
 
         # Fetch the first batch
