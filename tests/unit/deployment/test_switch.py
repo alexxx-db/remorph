@@ -5,12 +5,20 @@ import pytest
 from databricks.labs.blueprint.installation import Installation
 from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.wheels import ProductInfo
-from databricks.labs.lakebridge.config import SwitchResourcesConfig
+from databricks.labs.lakebridge.config import LSPConfigOptionV1, LSPPromptMethod, SwitchResourcesConfig
 from databricks.labs.lakebridge.deployment.job import JobDeployment
 from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound
+from databricks.sdk.service.jobs import JobParameterDefinition
+
+
+class FriendOfSwitchDeployment(SwitchDeployment):
+    """A friend class to access protected members for testing purposes."""
+
+    def get_switch_job_parameters(self) -> list[JobParameterDefinition]:
+        return self._get_switch_job_parameters()
 
 
 @pytest.fixture()
@@ -109,3 +117,48 @@ def test_get_configured_resources_returns_mapping(switch_deployment, install_sta
 def test_get_configured_resources_none_when_absent(switch_deployment, install_state):
     install_state.switch_resources = {}
     assert switch_deployment.get_configured_resources() is None
+
+
+def test_get_switch_job_parameters_excludes_wait_for_completion():
+    config_options = {
+        "all": [
+            LSPConfigOptionV1(
+                flag="wait_for_completion",
+                method=LSPPromptMethod.CONFIRM,
+                prompt="Wait for completion?",
+                default="true",
+            ),
+            LSPConfigOptionV1(
+                flag="some_other_option",
+                method=LSPPromptMethod.QUESTION,
+                prompt="Enter value",
+                default="default_value",
+            ),
+        ]
+    }
+
+    mock_config = Mock()
+    mock_config.options = config_options
+
+    mock_repository = create_autospec(TranspilerRepository)
+    mock_repository.all_transpiler_configs.return_value = {"switch": mock_config}
+
+    ws = create_autospec(WorkspaceClient)
+    installation = create_autospec(Installation)
+    state = create_autospec(InstallState)
+    state.jobs = {}
+    product_info = create_autospec(ProductInfo)
+    job_deployer = create_autospec(JobDeployment)
+
+    deployment = FriendOfSwitchDeployment(ws, installation, state, product_info, job_deployer, mock_repository)
+
+    job_params = deployment.get_switch_job_parameters()
+    param_names = {param.name for param in job_params}
+
+    assert "wait_for_completion" not in param_names
+    assert "some_other_option" in param_names
+    assert "input_dir" in param_names
+    assert "output_dir" in param_names
+    assert "result_catalog" in param_names
+    assert "result_schema" in param_names
+    assert "builtin_prompt" in param_names

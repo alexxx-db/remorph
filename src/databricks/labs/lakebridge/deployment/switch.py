@@ -192,9 +192,17 @@ class SwitchDeployment:
             "builtin_prompt": "",
         }
 
+        # Options to exclude from job parameters (local execution only)
+        excluded_options = {"wait_for_completion"}
+
         # Then add parameters from config.yml
         for option in config.options.get("all", []):
             flag = option.flag
+
+            # Skip local execution-only options
+            if flag in excluded_options:
+                continue
+
             default = option.default or ""
 
             # Convert special values
