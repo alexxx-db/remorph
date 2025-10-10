@@ -71,7 +71,6 @@ def save_resultset_to_db(
         columns = list(result.columns)
         # Convert result to DataFrame
         df = pd.DataFrame(result.rows, columns=columns)
-        print(df.head(5))
         logger.debug(df.columns)
 
         # Fetch the first batch
