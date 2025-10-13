@@ -802,13 +802,14 @@ def execute_database_profiler(w: WorkspaceClient):
     ctx = ApplicationContext(w)
     ctx.add_user_agent_extra("cmd", "analyze")
     prompts = ctx.prompts
-    source_tech = prompts.choice("Select the source technology", Profiler.supported_source_technologies())
+    source_tech = prompts.choice("Select the source technology", PROFILER_SOURCE_SYSTEM)
     ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
     user = ctx.current_user
     logger.debug(f"User: {user}")
-    profiler = Profiler()
+    profiler = Profiler.create(source_tech)
+
     # TODO: Add extractor logic to ApplicationContext instead of creating inside the Profiler class
-    profiler.profile(source_tech, None)
+    profiler.profile()
 
 
 if __name__ == "__main__":

@@ -78,3 +78,6 @@ commands:
 
   - name: configure-reconcile
     description: Configure 'reconcile' dependencies
+
+  - name: execute-database-profiler
+  - description: "[EXPERIMENTAL] Profile the source system database"
