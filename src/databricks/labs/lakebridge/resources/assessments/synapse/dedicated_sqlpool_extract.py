@@ -2,20 +2,20 @@ import json
 import sys
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    get_config,
-    get_synapse_artifacts_client,
-    save_resultset_to_db,
-    get_max_column_value_duckdb,
+    create_synapse_artifacts_client,
     set_logger,
 )
+from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import (
+    save_resultset_to_db,
+    get_max_column_value_duckdb,
+)
+from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import get_sqlpool_reader
+
 import zoneinfo
+from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
+from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import SynapseWorkspace
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
-from databricks.labs.lakebridge.resources.assessments.synapse.common.connector import (
-    create_credential_manager,
-    get_sqlpool_reader,
-)
-from sqlalchemy import text
 
 
 def execute():
@@ -23,20 +23,21 @@ def execute():
 
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Dedicated SQL Pool Extract Script")
 
-    cred_manager = create_credential_manager(creds_file)
-    data = cred_manager.get_credentials("synapse")
-    config = data["workspace"]
-    auth_type = data["jdbc"].get("auth_type", "sql_authentication")
+    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    synapse_workspace_settings = cred_manager.get_credentials("synapse")
+    config = synapse_workspace_settings["workspace"]
+    auth_type = synapse_workspace_settings["jdbc"].get("auth_type", "sql_authentication")
+    synapse_profiler_settings = synapse_workspace_settings["profiler"]
+
+    tz_info = synapse_workspace_settings["workspace"]["tz_info"]
+    workspace_tz = zoneinfo.ZoneInfo(tz_info)
+    exclude_dedicated_sql_pools = synapse_profiler_settings.get("exclude_dedicated_sql_pools", None)
+    dedicated_sql_pools_profiling_list = synapse_profiler_settings.get("dedicated_sql_pools_profiling_list", None)
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
+
+    connection = None
 
     try:
-        synapse_workspace_settings = get_config(creds_file)["synapse"]
-        synapse_profiler_settings = synapse_workspace_settings["profiler"]
-
-        tz_info = synapse_workspace_settings["workspace"]["tz_info"]
-        workspace_tz = zoneinfo.ZoneInfo(tz_info)
-        exclude_dedicated_sql_pools = synapse_profiler_settings.get("exclude_dedicated_sql_pools", None)
-        dedicated_sql_pools_profiling_list = synapse_profiler_settings.get("dedicated_sql_pools_profiling_list", None)
-        artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
 
         if exclude_dedicated_sql_pools:
@@ -62,7 +63,6 @@ def execute():
         # Info: Extract
         for idx, entry in enumerate(live_dedicated_pools_to_profile):
             entry_info = f"{entry['name']} [{entry['status']}]"
-            # print(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
             logger.info(f"{idx:02d})  {entry_info.ljust(60, '.')} : RUNNING extract...")
 
             mode = "overwrite" if idx == 0 else "append"
@@ -72,35 +72,35 @@ def execute():
             table_query = SynapseQueries.list_tables(pool_name)
             connection = get_sqlpool_reader(config, pool_name, auth_type=auth_type)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute(text(table_query))
+            result = connection.fetch(table_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # columns
             table_name = "dedicated_columns"
             column_query = SynapseQueries.list_columns(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute(text(column_query))
+            result = connection.fetch(column_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # views
             table_name = "dedicated_views"
             view_query = SynapseQueries.list_views(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute(text(view_query))
+            result = connection.fetch(view_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # routines
             table_name = "dedicated_routines"
             routine_query = SynapseQueries.list_routines(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute(text(routine_query))
+            result = connection.fetch(routine_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
             # storage_info
             table_name = "dedicated_storage_info"
             storage_info_query = SynapseQueries.get_db_storage_info(pool_name)
             logger.info(f"Loading '{table_name}' for pool: %s", pool_name)
-            result = connection.execute(text(storage_info_query))
+            result = connection.fetch(storage_info_query)
             save_resultset_to_db(result, table_name, db_path, mode=mode)
 
         # Activity: Extract
@@ -121,14 +121,14 @@ def execute():
                 pool_name=sqlpool_name, last_login_time=prev_max_login_time
             )
 
-            session_result = connection.execute(text(session_query))
+            session_result = connection.fetch(session_query)
             save_resultset_to_db(session_result, table_name, db_path, mode="append")
 
             table_name = "dedicated_session_requests"
             prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
             session_request_query = SynapseQueries.list_dedicated_requests(prev_max_end_time)
 
-            session_request_result = connection.execute(text(session_request_query))
+            session_request_result = connection.fetch(session_request_query)
             save_resultset_to_db(session_request_result, table_name, db_path, mode="append")
 
         print(json.dumps({"status": "success", "message": " All data loaded successfully loaded successfully"}))

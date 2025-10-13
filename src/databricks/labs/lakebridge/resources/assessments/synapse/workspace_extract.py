@@ -4,13 +4,15 @@ from datetime import date, timedelta
 import zoneinfo
 import pandas as pd
 
+from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
+from databricks.labs.lakebridge.assessments import PRODUCT_NAME
+
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
-    insert_df_to_duckdb,
-    get_config,
-    get_synapse_artifacts_client,
+    create_synapse_artifacts_client,
     set_logger,
 )
+from databricks.labs.lakebridge.resources.assessments.synapse.common.duckdb_helpers import insert_df_to_duckdb
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import SynapseWorkspace
 
 
@@ -19,16 +21,18 @@ def execute():
 
     db_path, creds_file = arguments_loader(desc="Workspace Extract")
 
+    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    synapse_workspace_settings = cred_manager.get_credentials("synapse")
+    tz_info = synapse_workspace_settings["workspace"]["tz_info"]
+    workspace_tz = zoneinfo.ZoneInfo(tz_info)
+    workspace_name = synapse_workspace_settings["workspace"]["name"]
+
+    logger.info(f"workspace_name: {workspace_name}")
+
+    artifacts_client = create_synapse_artifacts_client(synapse_workspace_settings)
+
     try:
         # Initialize workspace settings and client
-        synapse_workspace_settings = get_config(creds_file)["synapse"]
-
-        tz_info = synapse_workspace_settings["workspace"]["tz_info"]
-        workspace_tz = zoneinfo.ZoneInfo(tz_info)
-        workspace_name = synapse_workspace_settings["workspace"]["name"]
-        logger.info(f"workspace_name: {workspace_name}")
-
-        artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
 
         # Extract workspace info
