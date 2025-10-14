@@ -11,6 +11,7 @@ PLATFORM_TO_SOURCE_TECHNOLOGY_CFG = {
 PROFILER_SOURCE_SYSTEM = ["synapse"]
 
 
+
 # This flag indicates whether a connector is required for the source system when pipeline is trigger
 # For example in the case of synapse no connector is required and the python scripts
 # manage the connection by directly reading the credentials files
