@@ -687,18 +687,19 @@ def configure_secrets(*, w: WorkspaceClient) -> None:
     recon_conf.prompt_and_save_connection_details()
 
 
-@lakebridge.command(is_unauthenticated=True)
-def configure_database_profiler() -> None:
+@lakebridge.command
+def configure_database_profiler(w: WorkspaceClient) -> None:
     """[Experimental] Install the lakebridge Assessment package"""
-    prompts = Prompts()
-
-    # Prompt for source system
-    source_system = str(
-        prompts.choice("Please select the source system you want to configure", PROFILER_SOURCE_SYSTEM)
-    ).lower()
+    ctx = ApplicationContext(w)
+    ctx.add_user_agent_extra("cmd", "configure-profiler")
+    prompts = ctx.prompts
+    source_tech = prompts.choice("Select the source technology", PROFILER_SOURCE_SYSTEM).lower()
+    ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
+    user = ctx.current_user
+    logger.debug(f"User: {user}")
 
     # Create appropriate assessment configurator
-    assessment = create_assessment_configurator(source_system=source_system, product_name="lakebridge", prompts=prompts)
+    assessment = create_assessment_configurator(source_system=source_tech, product_name="lakebridge", prompts=prompts)
     assessment.run()
 
 
@@ -800,7 +801,7 @@ def analyze(
 def execute_database_profiler(w: WorkspaceClient):
     """Run the Profiler"""
     ctx = ApplicationContext(w)
-    ctx.add_user_agent_extra("cmd", "analyze")
+    ctx.add_user_agent_extra("cmd", "execute-profiler")
     prompts = ctx.prompts
     source_tech = prompts.choice("Select the source technology", PROFILER_SOURCE_SYSTEM)
     ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
