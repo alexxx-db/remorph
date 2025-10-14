@@ -64,7 +64,7 @@ commands:
         description: (Optional) Whether installing in interactive mode (`true|false|auto`); configuration settings are prompted for when interactive
         default: auto
       - name: include-llm-transpiler
-        description: (Optional) Whether to include LLM-based transpiler in installation ('true'|'false')
+        description: (Optional) Whether to include LLM-based transpiler in installation (`true|false`)
         default: "false"
 
   - name: describe-transpile
