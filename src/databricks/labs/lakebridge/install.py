@@ -103,7 +103,7 @@ class WorkspaceInstaller:
             for transpiler_installer in self._transpiler_installers:
                 transpiler_installer.install()
         if not config:
-            config = self.configure(module, self._include_llm)
+            config = self.configure(module)
         if self._is_testing():
             return config
         self._ws_installation.install(config)
@@ -140,18 +140,18 @@ class WorkspaceInstaller:
         else:
             logger.fatal(f"Cannot install unsupported artifact: {artifact}")
 
-    def configure(self, module: str, include_llm: bool = False) -> LakebridgeConfiguration:
+    def configure(self, module: str) -> LakebridgeConfiguration:
         match module:
             case "transpile":
                 logger.info("Configuring lakebridge `transpile`.")
-                return LakebridgeConfiguration(self._configure_transpile(include_llm), None)
+                return LakebridgeConfiguration(self._configure_transpile(), None)
             case "reconcile":
                 logger.info("Configuring lakebridge `reconcile`.")
                 return LakebridgeConfiguration(None, self._configure_reconcile())
             case "all":
                 logger.info("Configuring lakebridge `transpile` and `reconcile`.")
                 return LakebridgeConfiguration(
-                    self._configure_transpile(include_llm),
+                    self._configure_transpile(),
                     self._configure_reconcile(),
                 )
             case _:
@@ -160,7 +160,7 @@ class WorkspaceInstaller:
     def _is_testing(self):
         return self._product_info.product_name() != "lakebridge"
 
-    def _configure_transpile(self, include_llm: bool = False) -> TranspileConfig | None:
+    def _configure_transpile(self) -> TranspileConfig | None:
         try:
             config = self._installation.load(TranspileConfig)
             logger.info("Lakebridge `transpile` is already installed on this workspace.")
@@ -181,12 +181,12 @@ class WorkspaceInstaller:
             logger.warning("Installation is not interactive, skipping configuration of transpilers.")
             return None
 
-        config = self._configure_new_transpile_installation(include_llm)
+        config = self._configure_new_transpile_installation()
         logger.info("Finished configuring lakebridge `transpile`.")
         return config
 
-    def _configure_new_transpile_installation(self, include_llm: bool = False) -> TranspileConfig:
-        default_config = self._prompt_for_new_transpile_installation(include_llm)
+    def _configure_new_transpile_installation(self) -> TranspileConfig:
+        default_config = self._prompt_for_new_transpile_installation()
         runtime_config = None
         catalog_name = "remorph"
         schema_name = "transpiler"
@@ -215,7 +215,7 @@ class WorkspaceInstaller:
     def _transpiler_config_path(self, transpiler: str) -> Path:
         return self._transpiler_repository.transpiler_config_path(transpiler)
 
-    def _prompt_for_new_transpile_installation(self, include_llm: bool = False) -> TranspileConfig:
+    def _prompt_for_new_transpile_installation(self) -> TranspileConfig:
         install_later = "Set it later"
         # TODO tidy this up, logger might not display the below in console...
         logger.info("Please answer a few questions to configure lakebridge `transpile`")
@@ -247,7 +247,7 @@ class WorkspaceInstaller:
         )
 
         switch_resources = None
-        if include_llm:
+        if include_llm := self._include_llm:
             switch_resources = self._prompt_for_switch_resources()
 
         return TranspileConfig(
