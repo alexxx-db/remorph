@@ -2,11 +2,95 @@
 sidebar_position: 1
 title: Profiler Guide
 ---
-
-# Profiler
-
 import Admonition from '@theme/Admonition';
 
-<Admonition type="info" title="Coming Soon">
-  Profiler is coming soon! Stay tuned for updates.
+# Profiler Guide
+
+## Overview
+
+<p>
+The **Lakebridge Profiler** is designed to extract and analyze metadata from database systems, providing insights into your source environment.
+The profiler helps you understand system configurations, resource utilization, query patterns, and performance metrics to aid in migration planning.
+</p>
+
+Key capabilities:
+- **Database Metadata Extraction**: Captures schema information, table structures, and object definitions
+- **Performance Analytics**: Collects query execution metrics and resource utilization data
+- **Workload Analysis**: Profiles active queries and identifies optimization opportunities
+
+<Admonition type="info" title="Prerequisites">
+    For detailed source system specific prerequisites, refer to <a href="./Prerequisites" style={{ fontWeight: 'bold', color: '#1976d2', textDecoration: 'underline' }}>Pre-Req</a> section.
 </Admonition>
+
+## Configure Profiler
+
+Before running the profiler, you need to configure the connection details for your source system.
+
+Execute the following command to configure the profiler:
+
+```bash
+databricks labs lakebridge configure-database-profiler
+```
+
+This will prompt you to select the source system and provide connection details:
+
+```console
+Please select the source system you want to configure
+[0] mssql
+[1] synapse
+Enter a number between 0 and 1: 1
+(local | env)
+local means values are read as plain text
+env means values are read from environment variables fall back to plain text if not variable is not found
+
+Enter secret vault type (local | env)
+[0] env
+[1] local
+Enter a number between 0 and 1: 1
+Please provide Synapse Workspace settings:
+Enter Synapse workspace name: synapse
+Enter SQL user: user
+Enter SQL password:
+Enter timezone (e.g. America/New_York) (default: UTC):
+Enter the ODBC driver installed locally (default: ODBC Driver 18 for SQL Server):
+Please provide Azure access settings:
+Enter development endpoint: synapse.endpoint
+Please select JDBC authentication type:
+Select authentication type
+[0] ad_passwd_authentication
+[1] spn_authentication
+[2] sql_authentication
+Enter a number between 0 and 2: 2
+Enter fetch size (default: 1000):
+Enter login timeout (seconds) (default: 30):
+Exclude serverless SQL pool from profiling? (default: no):
+Exclude dedicated SQL pools from profiling? (default: no):
+Exclude Spark pools from profiling? (default: no):
+Exclude monitoring metrics from profiling? (default: no):
+Redact SQL pools SQL text? (default: no):
+```
+
+## Execute Profiler
+
+Once configured, run the profiler to extract metadata and performance metrics from your source system:
+
+```bash
+databricks labs lakebridge execute-database-profiler
+```
+
+The profiler will:
+1. Connect to your source system using the configured credentials
+2. Execute the profiling pipeline to extract metadata and metrics
+3. Store the results in the configured output location
+4. Generate a summary report of the profiling execution
+
+:::tip
+The profiler can be run multiple times to capture different time periods or updated configurations.
+Each execution will create a timestamped snapshot of your source environment.
+:::
+
+## Supported Source Systems
+
+| Source Platform | Configuration Status |
+|:---------------:|:-------------------:|
+| Azure Synapse | &#x2705; |
