@@ -690,7 +690,7 @@ def configure_secrets(*, w: WorkspaceClient) -> None:
 
 @lakebridge.command
 def configure_database_profiler(w: WorkspaceClient) -> None:
-    """[Experimental] Configure database profiler settings for Lakebridge assessment"""
+    """[Experimental] Installs and runs the Lakebridge Assessment package for database profiling"""
     ctx = ApplicationContext(w)
     ctx.add_user_agent_extra("cmd", "configure-profiler")
     prompts = ctx.prompts
@@ -809,7 +809,7 @@ def execute_database_profiler(w: WorkspaceClient, source_tech: str | None = None
     source_tech = source_tech.lower()
 
     if source_tech not in PROFILER_SOURCE_SYSTEM:
-        logger.error(f"Only following source system is supported {PROFILER_SOURCE_SYSTEM}")
+        logger.error(f"Only the following source systems are supported: {PROFILER_SOURCE_SYSTEM}")
         raise_validation_exception(f"Invalid source technology {source_tech}")
 
     ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
