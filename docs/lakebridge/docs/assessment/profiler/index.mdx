@@ -75,7 +75,26 @@ Redact SQL pools SQL text? (default: no):
 Once configured, run the profiler to extract metadata and performance metrics from your source system:
 
 ```bash
-databricks labs lakebridge execute-database-profiler
+databricks labs lakebridge execute-database-profiler --help
+```
+
+output:
+
+```console
+Profile the source system database
+
+Usage:
+  databricks labs lakebridge execute-database-profiler [flags]
+
+Flags:
+  -h, --help                 help for execute-database-profiler
+      --source-tech string   (Optional) The technology/platform of the sources to Profile
+
+Global Flags:
+      --debug            enable debug logging
+  -o, --output type      output type: text or json (default text)
+  -p, --profile string   ~/.databrickscfg profile
+  -t, --target string    bundle target to use (if applicable)
 ```
 
 The profiler will:
