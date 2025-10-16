@@ -20,7 +20,6 @@ from databricks.labs.lakebridge.deployment.installation import WorkspaceInstalla
 from databricks.labs.lakebridge.deployment.recon import TableDeployment, JobDeployment, ReconDeployment
 from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
 from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
-from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +128,6 @@ class ApplicationContext:
             self.install_state,
             self.product_info,
             self.job_deployment,
-            TranspilerRepository.user_home(),
         )
 
     @cached_property

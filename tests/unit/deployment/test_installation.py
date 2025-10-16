@@ -1,4 +1,3 @@
-import logging
 from unittest.mock import create_autospec
 
 import pytest
@@ -17,7 +16,6 @@ from databricks.labs.lakebridge.config import (
     ReconcileConfig,
     DatabaseConfig,
     ReconcileMetadataConfig,
-    SwitchResourcesConfig,
 )
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
@@ -93,7 +91,7 @@ def test_no_recon_component_installation(ws):
         catalog_name="remorph7",
         schema_name="transpiler7",
     )
-    config = LakebridgeConfiguration(transpile=transpile_config)
+    config = LakebridgeConfiguration(transpile=transpile_config, reconcile=None)
     installation = WorkspaceInstallation(
         ws, prompts, installation, recon_deployment, switch_deployment, product_info, upgrades
     )
@@ -124,7 +122,7 @@ def test_recon_component_installation(ws):
             volume="reconcile_volume8",
         ),
     )
-    config = LakebridgeConfiguration(reconcile=reconcile_config)
+    config = LakebridgeConfiguration(reconcile=reconcile_config, transpile=None)
     installation = WorkspaceInstallation(
         ws, prompts, installation, recon_deployment, switch_deployment, product_info, upgrades
     )
@@ -147,7 +145,7 @@ def test_negative_uninstall_confirmation(ws):
     ws_installation = WorkspaceInstallation(
         ws, prompts, installation, recon_deployment, switch_deployment, wheels, upgrades
     )
-    config = LakebridgeConfiguration()
+    config = LakebridgeConfiguration(transpile=None, reconcile=None)
     ws_installation.uninstall(config)
     installation.remove.assert_not_called()
 
@@ -169,7 +167,7 @@ def test_missing_installation(ws):
     ws_installation = WorkspaceInstallation(
         ws, prompts, installation, recon_deployment, switch_deployment, wheels, upgrades
     )
-    config = LakebridgeConfiguration()
+    config = LakebridgeConfiguration(transpile=None, reconcile=None)
     ws_installation.uninstall(config)
     installation.remove.assert_not_called()
 
@@ -238,7 +236,7 @@ def test_uninstall_configs_missing(ws):
     ws_installation = WorkspaceInstallation(
         ws, prompts, installation, recon_deployment, switch_deployment, wheels, upgrades
     )
-    config = LakebridgeConfiguration()
+    config = LakebridgeConfiguration(transpile=None, reconcile=None)
     ws_installation.uninstall(config)
     recon_deployment.uninstall.assert_not_called()
     installation.assert_removed()
@@ -255,12 +253,7 @@ class TestSwitchInstallation:
         product_info = create_autospec(ProductInfo)
         upgrades = create_autospec(Upgrades)
 
-        switch_resources = SwitchResourcesConfig(catalog="cat", schema="sch", volume="vol")
-        transpile_config = TranspileConfig(
-            include_llm=True,
-            switch_resources=switch_resources,
-        )
-        config = LakebridgeConfiguration(transpile=transpile_config)
+        config = LakebridgeConfiguration(transpile=TranspileConfig(), reconcile=None, include_switch=True)
 
         ws_installation = WorkspaceInstallation(
             ws, prompts, installation, recon_deployment, switch_deployment, product_info, upgrades
@@ -269,30 +262,3 @@ class TestSwitchInstallation:
         ws_installation.install(config)
 
         switch_deployment.install.assert_called_once()
-        args, _ = switch_deployment.install.call_args
-        assert args[0] is switch_resources
-
-    def test_switch_install_missing_resources_logs_error(self, ws, caplog):
-        prompts = MockPrompts({})
-        recon_deployment = create_autospec(ReconDeployment)
-        switch_deployment = create_autospec(SwitchDeployment)
-        installation = create_autospec(Installation)
-        product_info = create_autospec(ProductInfo)
-        upgrades = create_autospec(Upgrades)
-
-        transpile_config = TranspileConfig(include_llm=True)
-        config = LakebridgeConfiguration(transpile=transpile_config)
-
-        ws_installation = WorkspaceInstallation(
-            ws, prompts, installation, recon_deployment, switch_deployment, product_info, upgrades
-        )
-
-        with caplog.at_level(logging.ERROR):
-            ws_installation.install(config)
-
-        switch_deployment.install.assert_not_called()
-        assert any(
-            "Switch resources are missing" in record.message
-            for record in caplog.records
-            if record.levelno == logging.ERROR
-        )

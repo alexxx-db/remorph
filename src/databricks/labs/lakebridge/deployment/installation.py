@@ -99,16 +99,9 @@ class WorkspaceInstallation:
         if config.reconcile:
             logger.info("Installing Lakebridge reconcile Metadata components.")
             self._recon_deployment.install(config.reconcile, wheel_path)
-        if config.transpile and config.transpile.include_llm:
-            resources = config.transpile.switch_resources
-            if resources is None:
-                logger.error(
-                    "Switch resources are missing. Run `lakebridge install-transpile --include-llm-transpiler true` "
-                    "with interactive prompts to capture the Switch catalog, schema, and volume before retrying."
-                )
-            else:
-                logger.info("Installing Switch transpiler to workspace.")
-                self._switch_deployment.install(resources)
+        if config.include_switch:
+            logger.info("Installing Switch transpiler to workspace.")
+            self._switch_deployment.install()
 
     def uninstall(self, config: LakebridgeConfiguration):
         # This will remove all the Lakebridge modules
@@ -139,12 +132,4 @@ class WorkspaceInstallation:
 
     def _uninstall_switch_job(self) -> None:
         """Remove Switch transpiler job if exists."""
-        resources = self._switch_deployment.get_configured_resources()
         self._switch_deployment.uninstall()
-
-        if resources:
-            logger.info(
-                f"Won't remove Switch resources: catalog=`{resources['catalog']}`, "
-                f"schema=`{resources['schema']}`, volume=`{resources['volume']}`. "
-                "Please remove them manually if needed."
-            )

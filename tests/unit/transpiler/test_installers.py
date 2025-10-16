@@ -6,12 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from databricks.labs.lakebridge.transpiler.installers import (
-    ArtifactInstaller,
-    MorpheusInstaller,
-    SwitchInstaller,
-)
-from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
+from databricks.labs.lakebridge.transpiler.installers import ArtifactInstaller, MorpheusInstaller
 
 
 def test_store_product_state(tmp_path) -> None:
@@ -115,34 +110,3 @@ def test_java_version_parse_missing() -> None:
     version_output = "Nothing in here that looks like a version."
     parsed = FriendOfMorpheusInstaller.parse_java_version(version_output)
     assert parsed is None
-
-
-class TestSwitchInstaller:
-    """Test suite for SwitchInstaller."""
-
-    @pytest.fixture
-    def installer(self, tmp_path: Path) -> SwitchInstaller:
-        """Create a SwitchInstaller instance for testing."""
-        repository = TranspilerRepository(tmp_path)
-        return SwitchInstaller(repository)
-
-    def test_name(self, installer: SwitchInstaller) -> None:
-        """Verify the installer name is correct."""
-        assert installer.name == "Switch"
-
-    @pytest.mark.parametrize(
-        ("filename", "expected"),
-        (
-            # Valid Switch wheel files
-            pytest.param("databricks_switch_plugin-0.1.0-py3-none-any.whl", True, id="valid_version"),
-            pytest.param("databricks_switch_plugin-1.2.3-py3-none-any.whl", True, id="valid_multi_digit"),
-            pytest.param("databricks_switch_plugin-0.1.0rc1-py3-none-any.whl", True, id="valid_rc_version"),
-            # Invalid files
-            pytest.param("databricks_bb_plugin-0.1.0-py3-none-any.whl", False, id="wrong_package"),
-            pytest.param("some_other_package-0.1.0-py3-none-any.whl", False, id="other_package"),
-            pytest.param("databricks_switch_plugin-0.1.0.jar", False, id="wrong_extension"),
-        ),
-    )
-    def test_can_install(self, filename: str, expected: bool, installer: SwitchInstaller) -> None:
-        """Verify can_install works for valid and invalid files."""
-        assert installer.can_install(Path(filename)) == expected
