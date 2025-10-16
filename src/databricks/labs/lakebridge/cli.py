@@ -21,11 +21,12 @@ from databricks.labs.blueprint.tui import Prompts
 
 
 from databricks.labs.lakebridge.assessments.configure_assessment import create_assessment_configurator
-from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM
+from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM, PRODUCT_NAME
 from databricks.labs.lakebridge.assessments.profiler import Profiler
 
 from databricks.labs.lakebridge.config import TranspileConfig, LSPConfigOptionV1
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
+from databricks.labs.lakebridge.connections.credential_manager import cred_file
 from databricks.labs.lakebridge.helpers.recon_config_utils import ReconConfigPrompts
 from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
 from databricks.labs.lakebridge.install import installer
@@ -814,6 +815,13 @@ def execute_database_profiler(w: WorkspaceClient, source_tech: str | None = None
     ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
     user = ctx.current_user
     logger.debug(f"User: {user}")
+    # check if cred_file is present which has the connection details before running the profiler
+    file = cred_file(PRODUCT_NAME)
+    if not file.exists():
+        raise_validation_exception(
+            f"Connection details not found. Please run `databricks labs lakebridge configure-database-profiler` "
+            f"to set up connection details for {source_tech}."
+        )
     profiler = Profiler.create(source_tech)
 
     # TODO: Add extractor logic to ApplicationContext instead of creating inside the Profiler class
