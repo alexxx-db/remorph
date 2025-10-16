@@ -80,7 +80,7 @@ commands:
     description: Configure 'reconcile' dependencies
 
   - name: execute-database-profiler
-  - description: Profile the source system database
+    description: Profile the source system database
     flags:
       - name: source-tech
         description: (Optional) The technology/platform of the sources to Profile
