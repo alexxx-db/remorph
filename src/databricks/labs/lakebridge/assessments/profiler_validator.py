@@ -1,5 +1,7 @@
 import os
 from dataclasses import dataclass
+from collections.abc import Sequence
+
 from duckdb import DuckDBPyConnection
 
 from databricks.labs.lakebridge.assessments.pipeline import PipelineClass
@@ -88,7 +90,7 @@ def get_profiler_extract_path(pipeline_config_path: str) -> str:
 
 
 def build_validation_report(
-    validations: list[ValidationStrategy], connection: DuckDBPyConnection
+    validations: Sequence[ValidationStrategy], connection: DuckDBPyConnection
 ) -> list[ValidationOutcome]:
     """
     Builds a list of ValidationOutcomes from list of validation checks.
