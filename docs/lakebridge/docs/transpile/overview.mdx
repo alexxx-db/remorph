@@ -36,7 +36,7 @@ flowchart TD
 
 When invoked with the following command line:
 
-```bash
+```shell
 databricks labs lakebridge transpile --source-dialect snowflake --input-source /path/to/input --output-folder /path/to/output
 ```
 
@@ -88,7 +88,7 @@ It is important to note that the transpiler isn't always able to know whether it
 
 ## Plugins overview
 
-Out of the box, Lakebridge comes with three transpilation plugins: Morpheus, BladeBridge, and Switch. Each one has its own set of capabilities and levels of guarantee that we describe below.
+Out of the box, Lakebridge comes with two transpilation plugins: Morpheus and BladeBridge. Each one has its own set of capabilities and levels of guarantee that we describe below.
 
 ### Morpheus
 
@@ -139,7 +139,7 @@ Switch is an LLM-powered Lakebridge transpiler that extends beyond SQL to conver
 
 Key characteristics:
 - **LLM-powered extensibility** - Built-in prompts for multiple SQL dialects (T-SQL, Snowflake, Teradata, Oracle, etc.) and generic formats (Python, Scala, Airflow)
-- **Custom prompt support** - Add YAML prompts to handle any source format not covered by built-in options  
+- **Custom prompt support** - Add YAML prompts to handle any source format not covered by built-in options
 - **Flexible outputs** - Python notebooks with Spark SQL (default), SQL notebooks (experimental), or any text-based format
 - **Databricks-native processing** - Executes as scalable Lakeflow Jobs with serverless compute
 - **Model flexibility** - Choose any Model Serving endpoint to match your organization's requirements
@@ -149,12 +149,12 @@ Switch's LLM-based approach enables support for any source format through custom
 
 ### Supported dialects
 
-| Source Platform              | Converter: BladeBridge | Converter: Morpheus | Output: SQL | Output: SparkSql | Output: PySpark | Other features available |
-|:-----------------------------|:-----------:|:--------:|:---:|:--------:|:-------:|:---------------------------:|
-| DataStage                    |  &#x2705;   |          |     | &#x2705; | &#x2705; |                             |
-| Informatica (Cloud, PC)      |  &#x2705;   |          |     | &#x2705; | &#x2705; |                             |
-| Netezza                      |  &#x2705;   |          | &#x2705; |         |         |                             |
-| Oracle (incl. ADS & Exadata) |  &#x2705;   |          | &#x2705; |         |         |                             |
-| Snowflake                    |             | &#x2705; | &#x2705; |         |         | dbt Repointing (Experimental) |
-| MS SQL Server (incl. Synapse)|  &#x2705;   | &#x2705; | &#x2705; |         |         |                             |
-| Teradata                     |  &#x2705;   |          | &#x2705; |         |         |                             |
+| Source Platform              | Converter: BladeBridge | Converter: Morpheus | Output: SQL | Output: SparkSql | Output: PySpark |   Other features available    |
+|:-----------------------------|:----------------------:|:-------------------:|:-----------:|:----------------:|:---------------:|:-----------------------------:|
+| DataStage                    |        &#x2705;        |                     |             |     &#x2705;     |    &#x2705;     |                               |
+| MS SQL Server                |        &#x2705;        |      &#x2705;       |  &#x2705;   |                  |                 |                               |
+| Netezza                      |        &#x2705;        |                     |  &#x2705;   |                  |                 |                               |
+| Oracle (incl. ADS & Exadata) |        &#x2705;        |                     |  &#x2705;   |                  |                 |                               |
+| Snowflake                    |                        |      &#x2705;       |  &#x2705;   |                  |                 | dbt Repointing (Experimental) |
+| Synapse                      |        &#x2705;        |      &#x2705;       |  &#x2705;   |                  |                 |                               |
+| Teradata                     |        &#x2705;        |                     |  &#x2705;   |                  |                 |                               |
