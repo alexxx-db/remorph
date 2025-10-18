@@ -122,33 +122,25 @@ For custom prompt creation, see the [Customizable Prompts](#customizable-prompts
 Switch integrates with the Lakebridge transpiler ecosystem:
 
 ```bash
-databricks labs lakebridge install-transpile
+databricks labs lakebridge install-transpile --include-llm-transpiler true
 ```
 
 The installation automatically:
 
-1. **Installs Switch**: Alongside other transpilers
-2. **Creates Databricks Job**: In your authenticated workspace  
+1. **Installs Switch**: Adds the LLM-powered transpiler by specifying the option during installation
+2. **Creates Databricks Job**: In your authenticated workspace
 3. **Uploads Notebooks**: Switch processing notebooks to workspace
 
-Configuration is saved to:
-- **macOS/Linux**: `~/.databricks/labs/remorph-transpilers/switch/lib/config.yml`
-- **Windows**: `%USERPROFILE%\.databricks\labs\remorph-transpilers\switch\lib\config.yml`
+### Usage
 
-### CLI Usage
-
-Use the following command to run Switch. Specifying the Switch config file with `--transpiler-config-path` tells Lakebridge to use Switch as the transpiler. Add `--output json` for structured output with job monitoring details:
+Use the `llm-transpile` command to run Switch conversions. The command takes local file paths as input and automatically uploads them to Unity Catalog Volumes before processing:
 
 ```bash
 # Switch usage - SQL to notebooks conversion
-databricks labs lakebridge transpile \
-  --transpiler-config-path ~/.databricks/labs/remorph-transpilers/switch/lib/config.yml \
-  --input-source /Workspace/path/to/sql \
-  --output-folder /Workspace/path/to/notebooks \
-  --source-dialect snowflake \
-  --catalog-name your_existing_catalog \
-  --schema-name your_existing_schema \
-  --output json
+databricks labs lakebridge llm-transpile \
+  --input-source /local/path/to/sql \
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect snowflake
 ```
 
 When executing the above command, the response will look like this:
@@ -162,74 +154,78 @@ When executing the above command, the response will look like this:
 }
 ```
 
-For advanced configuration and conversion options (non-SQL sources, file outputs, etc.), see the [Advanced Configuration](#advanced-configuration) section below.
+For all available configuration parameters, see the [Configuration Parameters](#configuration-parameters) section below.
 
 #### Operational Notes
 
 Switch operates differently from other Lakebridge transpilers:
 
-- **Databricks Workspace Paths Required**: Input and output paths must be workspace paths (e.g., `/Workspace/path/to/...`) rather than local file paths
+- **Local Input Paths**: Input files are read from your local filesystem and automatically uploaded to Unity Catalog Volumes
+- **Workspace Output Paths**: Output is written to Databricks Workspace paths (e.g., `/Workspace/path/to/...`)
 - **Jobs API Execution**: Switch runs as a Databricks Job in your workspace, not as a local process
 - **Asynchronous by Default**: The command returns immediately with a job URL, allowing you to monitor progress in the Databricks workspace
 - **Monitoring**: Use the returned job URL to track conversion progress and view logs
+- **Pre-configured Resources**: Catalog and schema are configured during installation and do not need to be specified at runtime
 
 ### CLI Parameters
 
 #### Required Parameters
-- `--transpiler-config-path` - Local path to Switch configuration file (identifies Switch as the transpiler)
-- `--input-source` - Databricks workspace path(s) or Unity Catalog Volume path(s) containing files to convert (see Input Source Patterns below)
-- `--output-folder` - Databricks workspace path for generated outputs
+- `--input-source` - Local file system path containing files to convert (automatically uploaded to Volume)
+- `--output-ws-folder` - Databricks workspace path for generated outputs (must start with `/Workspace/`)
 - `--source-dialect` - Conversion type to use. Choose from:
   - **SQL Dialects**: `mssql`, `mysql`, `netezza`, `oracle`, `postgresql`, `redshift`, `snowflake`, `synapse`, `teradata`
   - **Generic sources**: `python`, `scala`, `airflow`
-- `--catalog-name` - Databricks catalog for state tables. Must already exist.
-- `--schema-name` - Databricks schema for state tables. Must already exist.
-  - Note: The user must have `CREATE TABLE` permissions on the specified catalog and schema for Switch's state management and intermediate result tables.
 
-#### Input Source Patterns
+### Configuration Parameters
 
-The `--input-source` parameter supports flexible path specifications:
-
-| Pattern Type | Example | Description |
-|-------------|---------|-------------|
-| **Single Directory** | `/Workspace/path/to/sql` | Process all files in specified directory recursively |
-| **Multiple Directories** | `/Workspace/project1/sql,/Workspace/project2/sql` | Process files from multiple directories recursively (comma-separated) |
-| **Glob Patterns** | `/Workspace/Users/*/sql/*.sql` | Use wildcards to match paths (`*` = any characters, `**` = recursive) |
-| **Mixed Patterns** | `/Workspace/prod/**/*.sql,/Workspace/dev/sql` | Combine different pattern types |
-
-### Advanced Configuration
-
-Switch provides detailed configuration options that can be set by editing the `config.yml` file:
+Switch provides detailed configuration options that can be specified as command-line arguments:
 
 | Parameter | Description | Default Value | Available Options |
 |-----------|-------------|---------------|-------------------|
-| `endpoint_name` | Model serving endpoint name | `databricks-claude-sonnet-4` | Any valid endpoint name |
-| `token_count_threshold` | Maximum tokens per file for processing | `20000` | Any positive integer |
-| `concurrency` | Number of parallel LLM requests | `4` | Any positive integer |
-| `comment_lang` | Language for generated comments | `English` | `English`, `Japanese`, `Chinese`, `French`, `German`, `Italian`, `Korean`, `Portuguese`, `Spanish` |
-| `max_fix_attempts` | Maximum syntax error fix attempts | `1` | 0 or any positive integer |
-| `log_level` | Logging verbosity level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `source_format` | Source file format type. `sql` performs SQL comment removal and whitespace compression preprocessing. `generic` processes files as-is without preprocessing. | `sql` | `sql`, `generic` |
-| `target_type` | Output format type | `notebook` | `notebook`, `file` |
-| `output_extension` | File extension for file output | `<none>` | Any extension (e.g., `.yml`, `.json`) |
-| `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, this custom prompt is used instead of the built-in prompt for the selected `--source-dialect` | `<none>` | Full workspace path to YAML file |
-| `request_params` | Additional request parameters for model serving endpoint | `<none>` | JSON format string (e.g., `{"max_tokens": 64000}`) |
-| `sql_output_dir` | (Experimental) Directory for SQL notebooks | `<none>` | Full workspace path |
-| `wait_for_completion` | Wait for job completion. `true`=waits until job finishes, `false`=returns immediately with job URL | `false` | `true`, `false` |
+| `--endpoint-name` | Model serving endpoint name | `databricks-claude-sonnet-4` | Any valid endpoint name |
+| `--token-count-threshold` | Maximum tokens per file for processing | `20000` | Any positive integer |
+| `--concurrency` | Number of parallel LLM requests | `4` | Any positive integer |
+| `--comment-lang` | Language for generated comments | `English` | `English`, `Japanese`, `Chinese`, `French`, `German`, `Italian`, `Korean`, `Portuguese`, `Spanish` |
+| `--max-fix-attempts` | Maximum syntax error fix attempts | `1` | 0 or any positive integer |
+| `--log-level` | Logging verbosity level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `--source-format` | Source file format type. `sql` performs SQL comment removal and whitespace compression preprocessing. `generic` processes files as-is without preprocessing. | `sql` | `sql`, `generic` |
+| `--target-type` | Output format type | `notebook` | `notebook`, `file` |
+| `--output-extension` | File extension for file output | `<none>` | Any extension (e.g., `.yml`, `.json`) |
+| `--conversion-prompt-yaml` | Custom conversion prompt YAML file path. When specified, this custom prompt is used instead of the built-in prompt for the selected `--source-dialect` | `<none>` | Full workspace path to YAML file |
+| `--request-params` | Additional request parameters for model serving endpoint | `<none>` | JSON format string (e.g., `{"max_tokens": 64000}`) |
+| `--sql-output-dir` | (Experimental) Directory for SQL notebooks | `<none>` | Full workspace path |
+| `--wait-for-completion` | Wait for job completion. `true`=waits until job finishes, `false`=returns immediately with job URL | `false` | `true`, `false` |
 
-### How to Configure
+#### Configuration Examples
 
-Modify `default:` values in the `config.yml` file and then execute `databricks labs lakebridge transpile`
-
-**Example config.yml modification**:
-```yaml
-- flag: comment_lang
-  default: "Japanese"     # Change from default "English" to "Japanese"
+**Example: Japanese comments**
+```bash
+databricks labs lakebridge llm-transpile \
+  --input-source /local/path/to/sql \
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect snowflake \
+  --comment-lang Japanese
 ```
 
-**Configuration for specific conversions**:
-- **Python script → Databricks Python notebook**: Set `source_format: "generic"`
-- **Airflow → Databricks Jobs YAML**: Set `source_format: "generic"`, `target_type: "file"`, `output_extension: ".yml"`
+**Example: Python script → Databricks Python notebook**
+```bash
+databricks labs lakebridge llm-transpile \
+  --input-source /local/path/to/scripts \
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect python \
+  --source-format generic
+```
+
+**Example: Airflow → Databricks Jobs YAML**
+```bash
+databricks labs lakebridge llm-transpile \
+  --input-source /local/path/to/dags \
+  --output-ws-folder /Workspace/path/to/workflows \
+  --source-dialect airflow \
+  --source-format generic \
+  --target-type file \
+  --output-extension .yml
+```
 
 ---
 
@@ -406,14 +402,13 @@ When Switch executes as a Databricks Job, CLI parameters are mapped to notebook 
 
 | CLI Parameter | Notebook Parameter | Description |
 |---------------|-------------------|-------------|
-| `--input-source` | `input_dir` | Workspace path(s) containing files to convert (supports patterns) |
-| `--output-folder` | `output_dir` | Workspace directory for generated outputs |
-| `--catalog-name` | `result_catalog` | Databricks catalog for state tracking tables |
-| `--schema-name` | `result_schema` | Databricks schema for state tracking tables |
+| `--input-source` | `input_dir` | Local files are uploaded to Volume, then Volume path is passed |
+| `--output-ws-folder` | `output_dir` | Workspace directory for generated outputs |
+| (from installation) | `result_catalog` | Databricks catalog configured during install-transpile |
+| (from installation) | `result_schema` | Databricks schema configured during install-transpile |
 | `--source-dialect` | `builtin_prompt` | Conversion type (mapped to built-in prompt internally) |
-| `--transpiler-config-path` | (config file) | Path to Switch config file (loads additional parameters) |
 
-Additional parameters are configured through the Switch config file (see the [Advanced Configuration](#advanced-configuration) section above).
+Additional configuration parameters (such as `--endpoint-name`, `--concurrency`, etc.) are also passed directly to the notebook as job parameters. See the [Configuration Parameters](#configuration-parameters) section for all available options.
 
 ## State Management
 
