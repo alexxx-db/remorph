@@ -5,7 +5,8 @@ from importlib.abc import Traversable
 from pathlib import PurePosixPath
 from typing import Any
 
-import switch  # TODO: Something is wrong here: switch should not be a top-level package
+from databricks.labs import switch
+from databricks.labs.switch.__about__ import __version__ as switch_version
 from databricks.labs.blueprint.installation import Installation
 from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.paths import WorkspacePath
@@ -163,7 +164,7 @@ class SwitchDeployment:
 
         return {
             "name": job_name,
-            "tags": {"created_by": self._ws.current_user.me().id, "switch_version": f"v{switch.__version__}"},
+            "tags": {"created_by": self._ws.current_user.me().id, "switch_version": f"v{switch_version}"},
             "tasks": [task],
             "parameters": self._get_switch_job_parameters(),
             "max_concurrent_runs": 100,  # Allow simultaneous transpilations
