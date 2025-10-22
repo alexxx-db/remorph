@@ -128,8 +128,9 @@ class ResourceConfigurator:
 
         if foundational_model_names is None:
             raise DatabricksError("No Foundation Model serving endpoints found. Aborting the installation.")
-        choices = [default_choice, *foundational_model_names]
-        choices = list(sorted(set(choices)))
+        # This logic is implemented to make the default choice always to appear first in the list
+        other_models = sorted(set(foundational_model_names) - {default_choice})
+        choices = [f"[DEFAULT] {default_choice}", *other_models]
         selected = self._prompts.choice("Select a Foundation Model serving endpoint:", choices, sort=False)
         return selected
 
