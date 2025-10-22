@@ -817,5 +817,7 @@ def analyze(
 
 if __name__ == "__main__":
     lakebridge()
+    # Temporary logging configuration Till figure out why the base CLI logging is broken
+    logger.setLevel(logging.INFO)
     if is_in_debug():
         logger.setLevel(logging.DEBUG)
