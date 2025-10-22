@@ -54,8 +54,6 @@ class Lakebridge(App):
 
 lakebridge = Lakebridge(__file__)
 logger = get_logger(__file__)
-# Temporary logging configuration Till we figure out why the base CLI logging is broken
-logger.setLevel(logging.INFO)
 
 
 def raise_validation_exception(msg: str) -> NoReturn:
