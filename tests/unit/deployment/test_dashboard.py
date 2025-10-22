@@ -10,7 +10,7 @@ from databricks.sdk.errors import InvalidParameterValue, NotFound
 from databricks.sdk.service.dashboards import Dashboard
 from databricks.sdk.service.dashboards import LifecycleState
 
-from databricks.labs.lakebridge.config import ReconcileMetadataConfig, ReconcileConfig, DatabaseConfig
+from databricks.labs.lakebridge.config import ReconcileMetadataConfig
 from databricks.labs.lakebridge.deployment.dashboard import DashboardDeployment
 
 
