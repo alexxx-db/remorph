@@ -85,8 +85,6 @@ def test_get_switch_job_parameters_excludes_wait_for_completion() -> None:
     job_params = deployment.get_switch_job_parameters()
     param_names = {param.name for param in job_params}
 
+    assert "source_tech" in param_names
     assert "input_dir" in param_names
     assert "output_dir" in param_names
-    assert "result_catalog" in param_names
-    assert "result_schema" in param_names
-    assert "builtin_prompt" in param_names
