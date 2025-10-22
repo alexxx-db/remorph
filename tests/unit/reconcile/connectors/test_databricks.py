@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.connectors.databricks import DatabricksDataSource
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException
@@ -37,17 +38,20 @@ def test_get_schema():
                     col_name""",
         )
     )
-    spark.sql().where.assert_called_with("col_name not like '#%'")
+    spark.sql().selectExpr.assert_called_with("col_name as column_name", "data_type")
+    spark.sql().selectExpr().where.assert_called_with("column_name not like '#%'")
 
     # hive_metastore as catalog
     ddds.get_schema("hive_metastore", "schema", "supplier")
     spark.sql.assert_called_with(re.sub(r'\s+', ' ', """describe table hive_metastore.schema.supplier"""))
-    spark.sql().where.assert_called_with("col_name not like '#%'")
+    spark.sql().selectExpr.assert_called_with("col_name as column_name", "data_type")
+    spark.sql().selectExpr().where.assert_called_with("column_name not like '#%'")
 
     # global_temp as schema with hive_metastore
     ddds.get_schema("hive_metastore", "global_temp", "supplier")
     spark.sql.assert_called_with(re.sub(r'\s+', ' ', """describe table global_temp.supplier"""))
-    spark.sql().where.assert_called_with("col_name not like '#%'")
+    spark.sql().selectExpr.assert_called_with("col_name as column_name", "data_type")
+    spark.sql().selectExpr().where.assert_called_with("column_name not like '#%'")
 
 
 def test_read_data_from_uc():
@@ -114,3 +118,15 @@ def test_get_schema_exception_handling():
         "where lower(table_catalog)='org' and lower(table_schema)='data' and lower("
         "table_name) ='employee' order by col_name : Test Exception"
     )
+
+
+def test_normalize_identifier():
+    engine, spark, ws, scope = initial_setup()
+    data_source = DatabricksDataSource(engine, spark, ws, scope)
+
+    assert data_source.normalize_identifier("a") == NormalizedIdentifier("`a`", '`a`')
+    assert data_source.normalize_identifier('`b`') == NormalizedIdentifier("`b`", '`b`')
+    assert data_source.normalize_identifier('e`f') == NormalizedIdentifier("`e``f`", '`e``f`')
+    assert data_source.normalize_identifier('`e``f`') == NormalizedIdentifier("`e``f`", '`e``f`')
+    assert data_source.normalize_identifier('` g h `') == NormalizedIdentifier("` g h `", '` g h `')
+    assert data_source.normalize_identifier('`j"k`') == NormalizedIdentifier('`j"k`', '`j"k`')

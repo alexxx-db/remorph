@@ -11,7 +11,7 @@ from databricks.sdk.errors import NotFound
 from databricks.sdk.mixins.compute import SemVer
 from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNotExist
 
-from databricks.labs.lakebridge.config import RemorphConfigs
+from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
 
 logger = logging.getLogger("databricks.labs.lakebridge.install")
@@ -54,14 +54,14 @@ class WorkspaceInstallation:
         return Version(
             version=local_installed_version,
             date=local_installed_date,
-            wheel=f"databricks_labs_remorph-{local_installed_version}-py3-none-any.whl",
+            wheel=f"databricks_labs_lakebridge-{local_installed_version}-py3-none-any.whl",
         )
 
     def _get_ws_version(self):
         try:
             return self._installation.load(Version)
-        except ResourceDoesNotExist as err:
-            logger.warning(f"Unable to get Workspace Version due to: {err}")
+        except ResourceDoesNotExist:
+            logger.debug("No existing version found in workspace; assuming fresh installation.")
             return None
 
     def _apply_upgrades(self):
@@ -84,28 +84,27 @@ class WorkspaceInstallation:
             except (InvalidParameterValue, NotFound) as err:
                 logger.warning(f"Unable to apply Upgrades due to: {err}")
 
-    def _upload_wheel(self):
+    def _upload_wheel(self) -> str:
         wheels = self._product_info.wheels(self._ws)
         with wheels:
-            wheel_paths = [wheels.upload_to_wsfs()]
-            wheel_paths = [f"/Workspace{wheel}" for wheel in wheel_paths]
-            return wheel_paths
+            wheel_path = wheels.upload_to_wsfs()
+            return f"/Workspace{wheel_path}"
 
-    def install(self, config: RemorphConfigs):
+    def install(self, config: LakebridgeConfiguration):
         self._apply_upgrades()
-        wheel_paths: list[str] = self._upload_wheel()
+        wheel_path = self._upload_wheel()
         if config.reconcile:
-            logger.info("Installing Remorph reconcile Metadata components.")
-            self._recon_deployment.install(config.reconcile, wheel_paths)
+            logger.info("Installing Lakebridge reconcile Metadata components.")
+            self._recon_deployment.install(config.reconcile, wheel_path)
 
-    def uninstall(self, config: RemorphConfigs):
-        # This will remove all the Remorph modules
+    def uninstall(self, config: LakebridgeConfiguration):
+        # This will remove all the Lakebridge modules
         if not self._prompts.confirm(
-            "Do you want to uninstall Remorph from the workspace too, this would "
-            "remove Remorph project folder, jobs, metadata and dashboards"
+            "Do you want to uninstall Lakebridge from the workspace too, this would "
+            "remove Lakebridge project folder, jobs, metadata and dashboards"
         ):
             return
-        logger.info(f"Uninstalling Remorph from {self._ws.config.host}.")
+        logger.info(f"Uninstalling Lakebridge from {self._ws.config.host}.")
         try:
             self._installation.files()
         except NotFound:

@@ -8,7 +8,12 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import InvalidParameterValue
 from databricks.sdk.service import iam
 
-from databricks.labs.lakebridge.config import RemorphConfigs, ReconcileConfig, DatabaseConfig, ReconcileMetadataConfig
+from databricks.labs.lakebridge.config import (
+    LakebridgeConfiguration,
+    ReconcileConfig,
+    DatabaseConfig,
+    ReconcileMetadataConfig,
+)
 from databricks.labs.lakebridge.deployment.dashboard import DashboardDeployment
 from databricks.labs.lakebridge.deployment.job import JobDeployment
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
@@ -30,7 +35,7 @@ def test_install_missing_config(ws):
     dashboard_deployer = create_autospec(DashboardDeployment)
     installation = MockInstallation(is_global=False)
     install_state = InstallState.from_installation(installation)
-    product_info = ProductInfo.for_testing(RemorphConfigs)
+    product_info = ProductInfo.for_testing(LakebridgeConfiguration)
     recon_deployer = ReconDeployment(
         ws,
         installation,
@@ -41,7 +46,7 @@ def test_install_missing_config(ws):
         dashboard_deployer,
     )
     remorph_config = None
-    recon_deployer.install(remorph_config, ["remorph-x.y.z-py3-none-any.whl"])
+    recon_deployer.install(remorph_config, ["lakebridge-x.y.z-py3-none-any.whl"])
     table_deployer.deploy_table_from_ddl_file.assert_not_called()
     job_deployer.deploy_recon_job.assert_not_called()
     dashboard_deployer.deploy.assert_not_called()
@@ -87,7 +92,7 @@ def test_install(ws):
     job_deployer = create_autospec(JobDeployment)
     dashboard_deployer = create_autospec(DashboardDeployment)
     install_state = InstallState.from_installation(installation)
-    product_info = ProductInfo.for_testing(RemorphConfigs)
+    product_info = ProductInfo.for_testing(LakebridgeConfiguration)
     recon_deployer = ReconDeployment(
         ws,
         installation,
@@ -124,7 +129,7 @@ def test_uninstall_missing_config(ws):
     dashboard_deployer = create_autospec(DashboardDeployment)
     installation = MockInstallation(is_global=False)
     install_state = InstallState.from_installation(installation)
-    product_info = ProductInfo.for_testing(RemorphConfigs)
+    product_info = ProductInfo.for_testing(LakebridgeConfiguration)
     recon_deployer = ReconDeployment(
         ws,
         installation,
@@ -180,7 +185,7 @@ def test_uninstall(ws):
     job_deployer = create_autospec(JobDeployment)
     dashboard_deployer = create_autospec(DashboardDeployment)
     install_state = InstallState.from_installation(installation)
-    product_info = ProductInfo.for_testing(RemorphConfigs)
+    product_info = ProductInfo.for_testing(LakebridgeConfiguration)
     recon_deployer = ReconDeployment(
         ws,
         installation,
