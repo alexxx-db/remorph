@@ -818,7 +818,7 @@ def analyze(
 if __name__ == "__main__":
     lakebridge()
     # Temporary logging configuration Till we figure out why the base CLI logging is broken
-    databricks_logger = logging.getLogger("databricks")
-    databricks_logger.setLevel(logging.INFO)
+    logging.getLogger("lakebridge").setLevel(logging.INFO)
+    logging.getLogger("databricks").setLevel(logging.INFO)
     if is_in_debug():
         logger.setLevel(logging.DEBUG)
