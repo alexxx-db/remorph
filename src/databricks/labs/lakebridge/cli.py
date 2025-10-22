@@ -54,7 +54,8 @@ class Lakebridge(App):
 
 lakebridge = Lakebridge(__file__)
 logger = get_logger(__file__)
-
+# Temporary logging configuration Till we figure out why the base CLI logging is broken
+logger.setLevel(logging.INFO)
 
 def raise_validation_exception(msg: str) -> NoReturn:
     raise ValueError(msg)
@@ -817,7 +818,5 @@ def analyze(
 
 if __name__ == "__main__":
     lakebridge()
-    # Temporary logging configuration Till we figure out why the base CLI logging is broken
-    logger.setLevel(logging.INFO)
     if is_in_debug():
         logger.setLevel(logging.DEBUG)
