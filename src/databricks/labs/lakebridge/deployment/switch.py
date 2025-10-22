@@ -74,6 +74,7 @@ class SwitchDeployment:
             resource_root.rmdir(recursive=True)
         resource_root.mkdir(parents=True)
         already_created = {resource_root}
+        logger.info(f"Copying resources to {resource_root} in workspace.......")
         for resource_path, resource in self._enumerate_package_files(switch):
             # Resource path has a leading 'switch' that we want to strip off.
             nested_path = resource_path.relative_to(PurePosixPath("switch"))
@@ -84,6 +85,7 @@ class SwitchDeployment:
                 already_created.add(parent)
             logger.debug(f"Uploading: {resource_path} -> {upload_path}")
             upload_path.write_bytes(resource.read_bytes())
+        logger.info(f"Completed Copying resources to {resource_root} in workspace...")
 
     @staticmethod
     def _enumerate_package_files(package) -> Generator[tuple[PurePosixPath, Traversable]]:
@@ -173,10 +175,8 @@ class SwitchDeployment:
     def _get_switch_job_parameters(self) -> Sequence[JobParameterDefinition]:
         # Add required runtime parameters, static for now.
         parameters = {
+            "source_tech": "",
             "input_dir": "",
             "output_dir": "",
-            "result_catalog": "",
-            "result_schema": "",
-            "builtin_prompt": "",
         }
         return [JobParameterDefinition(name=key, default=value) for key, value in parameters.items()]

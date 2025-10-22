@@ -1,14 +1,18 @@
 import logging
 import time
 
+from collections.abc import Iterator
+
 from databricks.labs.blueprint.tui import Prompts
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import DatabricksError
 from databricks.sdk.service.catalog import Privilege, SecurableType
 from databricks.sdk.service.sql import (
     CreateWarehouseRequestWarehouseType,
     EndpointInfoWarehouseType,
     SpotInstancePolicy,
 )
+from databricks.sdk.service.serving import ServingEndpoint
 
 from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
 
@@ -29,8 +33,9 @@ class ResourceConfigurator:
 
     def prompt_for_catalog_setup(
         self,
+        default_catalog_name: str = "remorph",
     ) -> str:
-        catalog_name = self._prompts.question("Enter catalog name", default="remorph")
+        catalog_name = self._prompts.question("Enter catalog name", default=default_catalog_name)
         catalog = self._catalog_ops.get_catalog(catalog_name)
         if catalog:
             logger.info(f"Found existing catalog `{catalog_name}`")
@@ -102,6 +107,31 @@ class ResourceConfigurator:
         if warehouse_id is None:
             raise SystemExit("Cannot continue installation, without a valid warehouse. Aborting the installation.")
         return warehouse_id
+
+    def prompt_for_foundation_model_choice(self, default_choice: str = "databricks-claude-sonnet-4-5") -> str:
+        """
+        List Serving Endpoints that expose a foundation model and prompt the user to pick one.
+        Returns the selected endpoint name
+        """
+        endpoints: Iterator[ServingEndpoint] = self._ws.serving_endpoints.list()
+
+        model_endpoints = [
+            ep
+            for ep in endpoints
+            if ep.name
+            and ep.config
+            and ep.config.served_entities
+            and any(getattr(se, "foundation_model", None) is not None for se in ep.config.served_entities)
+        ]
+
+        foundational_model_names = [ep.name for ep in model_endpoints if ep.name]
+
+        if foundational_model_names is None:
+            raise DatabricksError("No Foundation Model serving endpoints found. Aborting the installation.")
+        choices = [default_choice, *foundational_model_names]
+        choices = list(set(choices))
+        selected = self._prompts.choice("Select a Foundation Model serving endpoint:", choices, sort=False)
+        return selected
 
     def has_necessary_catalog_access(
         self, catalog_name: str, user_name: str, privilege_sets: tuple[set[Privilege], ...]
