@@ -203,7 +203,9 @@ class WorkspaceInstaller:
         return config
 
     def _all_installed_dialects(self) -> list[str]:
-        return sorted(self._transpiler_repository.all_dialects())
+        if self._include_llm:
+            self._switch_dialects = get_switch_dialects()
+        return sorted(self._transpiler_repository.all_dialects() | set(self._switch_dialects))
 
     def _transpilers_with_dialect(self, dialect: str) -> list[str]:
         return sorted(self._transpiler_repository.transpilers_with_dialect(dialect))
@@ -217,16 +219,14 @@ class WorkspaceInstaller:
     # Sentinel value for special "set it later" option in prompts.
     _install_later = "Set it later"
     _llm_transpiler = "Switch"
+    _switch_dialects: list = []
 
     def _prompt_for_new_transpile_installation(self) -> TranspileConfig:
         # TODO tidy this up, logger might not display the below in console...
         logger.info("Please answer a few questions to configure lakebridge `transpile`")
-        switch_dialects = []
         transpiler_name: str | None = None
-        if self._include_llm:
-            switch_dialects = get_switch_dialects()
 
-        all_dialects = [self._install_later, *self._all_installed_dialects()] + switch_dialects
+        all_dialects = [self._install_later, *self._all_installed_dialects()]
 
         source_dialect: str | None = self._prompts.choice("Select the source dialect:", all_dialects, sort=False)
         if source_dialect == self._install_later:
@@ -235,7 +235,7 @@ class WorkspaceInstaller:
         transpiler_options: dict[str, JsonValue] | None = None
         if source_dialect:
             transpilers = self._transpilers_with_dialect(source_dialect)
-            if self._include_llm and source_dialect in switch_dialects:
+            if self._include_llm and source_dialect in self._switch_dialects:
                 transpilers.append(self._llm_transpiler)
             if (found_config := self._get_transpiler_config(transpilers)) is not None:
                 transpiler_name, transpiler_config_path = found_config
