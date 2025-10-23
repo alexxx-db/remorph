@@ -10,6 +10,7 @@ from databricks.sdk.errors.platform import ResourceAlreadyExists, DatabricksErro
 from databricks.sdk.service.dashboards import Dashboard
 from databricks.sdk.service.iam import User
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import PermissionDenied, NotFound, InternalError
 
 from databricks.labs.blueprint.wheels import find_project_root
 
@@ -131,9 +132,17 @@ class DashboardManager:
     def upload_duckdb_to_uc_volume(self, local_file_path, volume_path):
         """
         Upload a DuckDB file to Unity Catalog Volume
+<<<<<<< HEAD
         Args:
             local_file_path (str): Local path to the DuckDB file
             volume_path (str): Target path in UC Volume (e.g., '/Volumes/catalog/schema/volume/myfile.duckdb')
+=======
+
+        Args:
+            local_file_path (str): Local path to the DuckDB file
+            volume_path (str): Target path in UC Volume (e.g., '/Volumes/catalog/schema/volume/myfile.duckdb')
+
+>>>>>>> 03ff5bfa (Add more specific exception handling.)
         Returns:
             bool: True if successful, False otherwise
         """
