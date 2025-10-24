@@ -58,4 +58,3 @@ def test_upload_duckdb_to_uc_volume_failure(mock_open, mock_exists, dashboard_ma
                                                           "/Volumes/catalog/schema/volume/myfile.duckdb")
     assert result is False
     dashboard_manager._ws.files.upload.assert_called_once()
-
