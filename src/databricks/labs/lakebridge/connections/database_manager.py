@@ -53,6 +53,7 @@ def _create_connector(db_type: str, config: dict[str, Any]) -> DatabaseConnector
         "snowflake": SnowflakeConnector,
         "mssql": MSSQLConnector,
         "tsql": MSSQLConnector,
+        "oracle": OracleConnector,
     }
 
     connector_class = connectors.get(db_type.lower())
@@ -66,6 +67,24 @@ def _create_connector(db_type: str, config: dict[str, Any]) -> DatabaseConnector
 class SnowflakeConnector(_BaseConnector):
     def _connect(self) -> Engine:
         raise NotImplementedError("Snowflake connector not implemented")
+
+class OracleConnector(_BaseConnector):
+
+    def _connect(self) -> Engine:
+        def _connect(self) -> Engine:
+            raise NotImplementedError("Oracle connector not implemented")
+
+        # db_name = self.config.get('tnsService')
+        #
+        # connection_string = URL.create(
+        #     drivername="oracle+oracledb",
+        #     username=self.config['user'],
+        #     password=self.config['password'],
+        #     host=self.config['host'],
+        #     port=self.config.get('tnsPort', 1521),
+        #     database=db_name
+        # )
+        # return create_engine(connection_string)
 
 
 class MSSQLConnector(_BaseConnector):

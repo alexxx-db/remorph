@@ -72,6 +72,37 @@ class AssessmentConfigurator(ABC):
                     self._test_connection(source, cred_manager)
         logger.info(f"{source.capitalize()} Assessment Configuration Completed")
 
+class ConfigureOracleAssessment(AssessmentConfigurator):
+    """Oracle specific assessment configuration."""
+
+    def _configure_credentials(self) -> str:
+        cred_file = self._credential_file
+        source = self._source_name
+
+        logger.info(
+            "\n(local | env) \nlocal means values are read as plain text \nenv means values are read "
+            "from environment variables fall back to plain text if not variable is not found\n",
+        )
+        secret_vault_type = str(self.prompts.choice("Enter secret vault type (local | env)", ["local", "env"])).lower()
+        secret_vault_name = None
+
+        logger.info("Please refer to the documentation to understand the difference between local and env.")
+
+        credential = {
+            "secret_vault_type": secret_vault_type,
+            "secret_vault_name": secret_vault_name,
+            source: {
+                "host": self.prompts.question("Enter the host details (Server name, IP address, SCAN Name)"),
+                "tnsPort": int(self.prompts.question("Enter the TNS Listener port number", default=1521, valid_number=True)),
+                "tnsService": self.prompts.question("Enter the TNS service name as registered in the Oracle listener", default="orcl"),
+                "user": self.prompts.question("Enter user name with system privileges", default="SYSTEM"),
+                "password": self.prompts.password("Enter user password"),
+            },
+        }
+
+        _save_to_disk(credential, cred_file)
+        logger.info(f"Credential template created for {source}.")
+        return source
 
 class ConfigureSqlServerAssessment(AssessmentConfigurator):
     """SQL Server specific assessment configuration."""
@@ -186,6 +217,7 @@ def create_assessment_configurator(
     configurators = {
         "mssql": ConfigureSqlServerAssessment,
         "synapse": ConfigureSynapseAssessment,
+        "oracle": ConfigureOracleAssessment,
     }
 
     if source_system not in configurators:
