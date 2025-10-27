@@ -203,7 +203,7 @@ Additional conversion parameters are managed in the Switch configuration file. Y
 | `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, overrides the built-in prompt for the selected `--source-tech`, enabling support for additional source formats or specialized conversion requirements. See [Customizable Prompts](#customizable-prompts) for YAML structure and creation guide. | `null` | Full workspace path to YAML file |
 | `output_extension` | File extension for output files when `target_type=file`. Required for non-notebook output formats like YAML workflows or JSON configurations. See [File Conversion Flow](#file-conversion-flow) for usage examples. | `null` | Any extension (e.g., `.yml`, `.json`) |
 | `sql_output_dir` | (Experimental) When specified, triggers additional conversion of Python notebooks to SQL notebook format. This optional post-processing step may lose some Python-specific logic. See [convert_notebook_to_sql](#convert_notebook_to_sql-optional) for details on the SQL conversion process. | `null` | Full workspace path |
-| `request_params` | Additional request parameters passed to the model serving endpoint. Use for advanced configurations like extended thinking mode or custom token limits. See [Model Requirements](#model-requirements) for configuration examples including Claude's extended thinking mode. | `null` | JSON format string (e.g., `{"max_tokens": 64000}`) |
+| `request_params` | Additional request parameters passed to the model serving endpoint. Use for advanced configurations like extended thinking mode or custom token limits. See [LLM Configuration](#llm-configuration) for configuration examples including Claude's extended thinking mode. | `null` | JSON format string (e.g., `{"max_tokens": 64000}`) |
 
 ---
 
@@ -543,7 +543,7 @@ When `sql_output_dir` is specified, this optional step uses the model serving en
 
 ---
 
-## Model Requirements
+## LLM Configuration
 
 ### Supported LLM Endpoints
 
@@ -552,7 +552,7 @@ Switch offers flexible model selection - choose any Model Serving endpoint throu
 **Default Setup**  
 Pre-configured with an latest Claude model via Foundation Model API for immediate use (no configuration required). This ensures strong code comprehension and large context handling out of the box.
 
-**Model Options**
+**Model Options**  
 Switch works with Foundation Model APIs that have large context windows and strong code comprehension capabilities:
 
 - **Pay-per-token pricing**: For light to moderate usage
