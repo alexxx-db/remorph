@@ -129,7 +129,6 @@ class ApplicationContext:
             self.install_state,
             self.product_info,
             self.job_deployment,
-            TranspilerRepository.user_home(),
         )
 
     @cached_property

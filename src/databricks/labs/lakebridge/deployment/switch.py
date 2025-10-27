@@ -1,17 +1,21 @@
+import importlib.resources
 import logging
-import os
-import sys
-from pathlib import Path
+from collections.abc import Generator, Sequence
+from importlib.abc import Traversable
+from pathlib import PurePosixPath
+from typing import Any
 
+from databricks.labs import switch
+from databricks.labs.switch.__about__ import __version__ as switch_version
 from databricks.labs.blueprint.installation import Installation
 from databricks.labs.blueprint.installer import InstallState
+from databricks.labs.blueprint.paths import WorkspacePath
 from databricks.labs.blueprint.wheels import ProductInfo
-from databricks.labs.lakebridge.deployment.job import JobDeployment
-from databricks.labs.lakebridge.config import SwitchResourcesConfig
-from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import InvalidParameterValue, NotFound
 from databricks.sdk.service.jobs import JobParameterDefinition, JobSettings, NotebookTask, Source, Task
+
+from databricks.labs.lakebridge.deployment.job import JobDeployment
 
 logger = logging.getLogger(__name__)
 
@@ -27,31 +31,28 @@ class SwitchDeployment:
         install_state: InstallState,
         product_info: ProductInfo,
         job_deployer: JobDeployment,
-        transpiler_repository: TranspilerRepository,
     ):
         self._ws = ws
         self._installation = installation
         self._install_state = install_state
         self._product_info = product_info
         self._job_deployer = job_deployer
-        self._transpiler_repository = transpiler_repository
 
-    def install(self, resources: SwitchResourcesConfig) -> None:
+    def install(self) -> None:
         """Deploy Switch to workspace and configure resources."""
-        logger.info("Deploying Switch to workspace...")
-        self._deploy_workspace(self._get_switch_package_path())
+        logger.debug("Deploying Switch resources to workspace...")
+        self._deploy_resources_to_workspace()
         self._setup_job()
-        self._record_resources(resources)
-        logger.info("Switch deployment completed")
+        logger.debug("Switch deployment completed")
 
     def uninstall(self) -> None:
         """Remove Switch job from workspace."""
         if self._INSTALL_STATE_KEY not in self._install_state.jobs:
-            logger.info("No Switch job found in InstallState")
+            logger.debug("No Switch job found in InstallState")
             return
 
+        job_id = int(self._install_state.jobs[self._INSTALL_STATE_KEY])
         try:
-            job_id = int(self._install_state.jobs[self._INSTALL_STATE_KEY])
             logger.info(f"Removing Switch job with job_id={job_id}")
             del self._install_state.jobs[self._INSTALL_STATE_KEY]
             self._ws.jobs.delete(job_id)
@@ -60,45 +61,53 @@ class SwitchDeployment:
             logger.warning(f"Switch job {job_id} doesn't exist anymore")
             self._install_state.save()
 
-    def get_configured_resources(self) -> dict[str, str] | None:
-        """Get configured Switch resources (catalog, schema, volume)."""
-        if self._install_state.switch_resources:
-            return {
-                "catalog": self._install_state.switch_resources.get("catalog"),
-                "schema": self._install_state.switch_resources.get("schema"),
-                "volume": self._install_state.switch_resources.get("volume"),
-            }
-        return None
+    def _get_switch_workspace_path(self) -> WorkspacePath:
+        installation_root = self._installation.install_folder()
+        return WorkspacePath(self._ws, installation_root) / "switch"
 
-    def _deploy_workspace(self, switch_package_dir: Path) -> None:
-        """Deploy Switch package to workspace from site-packages."""
-        try:
-            logger.info("Deploying Switch package to workspace...")
-            remote_path = f"{self._TRANSPILER_ID}/databricks"
-            self._upload_directory(switch_package_dir, remote_path)
-            logger.info("Switch workspace deployment completed")
-        except (OSError, ValueError, AttributeError) as e:
-            logger.error(f"Failed to deploy to workspace: {e}")
+    def _deploy_resources_to_workspace(self) -> None:
+        """Replicate the Switch package sources to the workspace."""
+        # TODO: This is temporary, instead the jobs should directly run the code from the deployed wheel/package.
+        resource_root = self._get_switch_workspace_path()
+        # Replace existing resources, to avoid stale files and potential confusion.
+        if resource_root.exists():
+            resource_root.rmdir(recursive=True)
+        resource_root.mkdir(parents=True)
+        already_created = {resource_root}
+        logger.info(f"Copying resources to {resource_root} in workspace.......")
+        for resource_path, resource in self._enumerate_package_files(switch):
+            # Resource path has a leading 'switch' that we want to strip off.
+            nested_path = resource_path.relative_to(PurePosixPath("switch"))
+            upload_path = resource_root / nested_path
+            if (parent := upload_path.parent) not in already_created:
+                logger.debug(f"Creating workspace directory: {parent}")
+                parent.mkdir()
+                already_created.add(parent)
+            logger.debug(f"Uploading: {resource_path} -> {upload_path}")
+            upload_path.write_bytes(resource.read_bytes())
+        logger.info(f"Completed Copying resources to {resource_root} in workspace...")
 
-    def _upload_directory(self, local_path: Path, remote_prefix: str) -> None:
-        """Recursively upload directory to workspace, excluding cache files."""
-        for root, dirs, files in os.walk(local_path):
-            # Skip cache directories and hidden directories
-            dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
+    @staticmethod
+    def _enumerate_package_files(package) -> Generator[tuple[PurePosixPath, Traversable]]:
+        # Locate the root of the package, and then enumerate all its files recursively.
+        root = importlib.resources.files(package)
 
-            for file in files:
-                # Skip compiled Python files and hidden files
-                if file.endswith((".pyc", ".pyo")) or file.startswith("."):
-                    continue
+        def _enumerate_resources(
+            resource: Traversable, parent: PurePosixPath = PurePosixPath(".")
+        ) -> Generator[tuple[PurePosixPath, Traversable]]:
+            if resource.name.startswith("."):
+                # Skip hidden files and directories
+                return
+            if resource.is_dir():
+                next_parent = parent / resource.name
+                for child in resource.iterdir():
+                    yield from _enumerate_resources(child, next_parent)
+            elif resource.is_file():
+                # Skip hidden files and compiled Python files
+                if not (name := resource.name).endswith((".pyc", ".pyo")):
+                    yield parent / name, resource
 
-                local_file = Path(root) / file
-                rel_path = local_file.relative_to(local_path)
-                remote_path = f"{remote_prefix}/{rel_path}"
-
-                with open(local_file, "rb") as f:
-                    content = f.read()
-
-                self._installation.upload(remote_path, content)
+        yield from _enumerate_resources(root)
 
     def _setup_job(self) -> None:
         """Create or update Switch job."""
@@ -144,94 +153,30 @@ class SwitchDeployment:
         assert new_job_id is not None
         return new_job_id
 
-    def _get_switch_job_settings(self) -> dict:
+    def _get_switch_job_settings(self) -> dict[str, Any]:
         """Build job settings for Switch transpiler."""
-        product = self._installation.product()
-        job_name = f"{product.upper()}_Switch"
-        version = ProductInfo.from_class(self.__class__).version()
-        user_name = self._installation.username()
-        notebook_path = (
-            f"/Workspace/Users/{user_name}/.{product}/{self._TRANSPILER_ID}/"
-            f"databricks/labs/switch/notebooks/00_main"
-        )
+        job_name = "Lakebridge_Switch"
+        notebook_path = self._get_switch_workspace_path() / "notebooks" / "00_main"
 
         task = Task(
             task_key="run_transpilation",
-            notebook_task=NotebookTask(
-                notebook_path=notebook_path,
-                source=Source.WORKSPACE,
-            ),
+            notebook_task=NotebookTask(notebook_path=str(notebook_path), source=Source.WORKSPACE),
             disable_auto_optimization=True,  # To disable retries on failure
         )
 
         return {
             "name": job_name,
-            "tags": {"created_by": user_name, "switch_version": f"v{version}"},
+            "tags": {"created_by": self._ws.current_user.me().user_name, "switch_version": f"v{switch_version}"},
             "tasks": [task],
             "parameters": self._get_switch_job_parameters(),
             "max_concurrent_runs": 100,  # Allow simultaneous transpilations
         }
 
-    def _get_switch_job_parameters(self) -> list[JobParameterDefinition]:
-        """Build job-level parameter definitions from installed config.yml."""
-        configs = self._transpiler_repository.all_transpiler_configs()
-        config = configs.get(self._INSTALL_STATE_KEY) or configs.get(self._TRANSPILER_ID)
-
-        if not config:
-            raise ValueError(
-                "Switch config.yml not found. This indicates an incomplete installation. "
-                "Please reinstall Switch transpiler."
-            )
-
-        # Add required runtime parameters not in config at the beginning
+    def _get_switch_job_parameters(self) -> Sequence[JobParameterDefinition]:
+        # Add required runtime parameters, static for now.
         parameters = {
+            "source_tech": "",
             "input_dir": "",
             "output_dir": "",
-            "result_catalog": "",
-            "result_schema": "",
-            "builtin_prompt": "",
         }
-
-        # Options to exclude from job parameters (local execution only)
-        excluded_options = {"wait_for_completion"}
-
-        # Then add parameters from config.yml
-        for option in config.options.get("all", []):
-            flag = option.flag
-
-            # Skip local execution-only options
-            if flag in excluded_options:
-                continue
-
-            default = option.default or ""
-
-            # Convert special values
-            if default == "<none>":
-                default = ""
-            elif isinstance(default, (int, float)):
-                default = str(default)
-
-            parameters[flag] = default
-
         return [JobParameterDefinition(name=key, default=value) for key, value in parameters.items()]
-
-    def _record_resources(self, resources: SwitchResourcesConfig) -> None:
-        """Persist configured Switch resources for later reuse."""
-        self._install_state.switch_resources["catalog"] = resources.catalog
-        self._install_state.switch_resources["schema"] = resources.schema
-        self._install_state.switch_resources["volume"] = resources.volume
-        self._install_state.save()
-        logger.info(
-            f"Switch resources stored: catalog=`{resources.catalog}`, "
-            f"schema=`{resources.schema}`, volume=`{resources.volume}`"
-        )
-
-    def _get_switch_package_path(self) -> Path:
-        """Get Switch package path (databricks directory) from site-packages."""
-        product_path = self._transpiler_repository.transpilers_path() / self._TRANSPILER_ID
-        venv_path = product_path / "lib" / ".venv"
-
-        if sys.platform != "win32":
-            major, minor = sys.version_info[:2]
-            return venv_path / "lib" / f"python{major}.{minor}" / "site-packages" / "databricks"
-        return venv_path / "Lib" / "site-packages" / "databricks"
