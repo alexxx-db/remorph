@@ -7,44 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from databricks.labs.blueprint.installation import Installation, RootJsonValue
-from databricks.labs.blueprint.installer import InstallState
 from databricks.sdk import WorkspaceClient
 
 logger = logging.getLogger(__name__)
-
-
-class SwitchConfig:
-    """Helper to load Switch configuration from InstallState."""
-
-    def __init__(self, install_state: InstallState):
-        self._install_state = install_state
-
-    def get_resources(self) -> dict[str, str]:
-        """Get catalog, schema, volume from switch_resources."""
-        resources = self._install_state.switch_resources
-
-        if not resources or not all(k in resources for k in ("catalog", "schema", "volume")):
-            raise SystemExit(
-                "Switch resources not configured. "
-                "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
-            )
-
-        return {
-            "catalog": resources["catalog"],
-            "schema": resources["schema"],
-            "volume": resources["volume"],
-        }
-
-    def get_job_id(self) -> int:
-        """Get Switch job ID from InstallState."""
-        if "Switch" in self._install_state.jobs:
-            logger.debug("Switch job ID found in InstallState")
-            return int(self._install_state.jobs["Switch"])
-
-        raise SystemExit(
-            "Switch Job ID not found. "
-            "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
-        )
 
 
 class SwitchRunner:
@@ -60,32 +25,24 @@ class SwitchRunner:
 
     def run(
         self,
-        input_source: str,
+        volume_input_path: str,
         output_ws_folder: str,
-        source_dialect: str,
-        catalog: str,
-        schema: str,
-        volume: str,
+        source_tech: str,
         job_id: int,
-        switch_options: dict[str, str],
         wait_for_completion: bool = False,
     ) -> RootJsonValue:
         """Upload local files to Volume and trigger Switch job."""
-        volume_input_path = self._upload_to_volume(Path(input_source), catalog, schema, volume)
 
         job_params = self._build_job_parameters(
-            volume_input_path=volume_input_path,
-            output_ws_folder=output_ws_folder,
-            catalog=catalog,
-            schema=schema,
-            source_dialect=source_dialect,
-            switch_options=switch_options,
+            input_dir=volume_input_path,
+            output_dir=output_ws_folder,
+            source_tech=source_tech,
         )
         logger.info(f"Triggering Switch job with job_id: {job_id}")
 
         return self._run_job(job_id, job_params, wait_for_completion)
 
-    def _upload_to_volume(
+    def upload_to_volume(
         self,
         local_path: Path,
         catalog: str,
@@ -129,20 +86,18 @@ class SwitchRunner:
 
     def _build_job_parameters(
         self,
-        volume_input_path: str,
-        output_ws_folder: str,
-        catalog: str,
-        schema: str,
-        source_dialect: str,
-        switch_options: dict[str, str],
+        input_dir: str,
+        output_dir: str,
+        source_tech: str,
+        switch_options: dict | None = None,
     ) -> dict[str, str]:
         """Build Switch job parameters."""
+        if switch_options is None:
+            switch_options = {}
         return {
-            "input_dir": volume_input_path,
-            "output_dir": output_ws_folder,
-            "result_catalog": catalog,
-            "result_schema": schema,
-            "builtin_prompt": source_dialect,
+            "input_dir": input_dir,
+            "output_dir": output_dir,
+            "source_tech": source_tech,
             **switch_options,
         }
 
