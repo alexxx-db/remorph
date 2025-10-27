@@ -56,8 +56,8 @@ Switch requires a Databricks catalog, schema, and volume:
 - **Volume**: Store uploaded input source files
 
 **Required permissions:**
-- **Existing resources**: `USE CATALOG`, `USE SCHEMA`, `CREATE TABLE`, `READ VOLUME`, `WRITE VOLUME`
-- **New resources**: Catalog/schema/volume creation permissions (resources will be created automatically during installation if they don't exist)
+- **If using existing resources**: `USE CATALOG`, `USE SCHEMA`, `CREATE TABLE`, `READ VOLUME`, `WRITE VOLUME`
+- **If creating new resources**: Catalog/schema/volume creation permissions (Switch will create them automatically during installation)
 
 ---
 
@@ -158,7 +158,7 @@ Switch operates differently from other Lakebridge transpilers:
 
 ---
 
-## Configuration Management
+## Configuration
 
 Switch provides flexible configuration through three tiers: command-line parameters for each execution, Lakebridge configuration for installation settings, and Switch configuration file for customizing conversion behavior.
 
@@ -178,31 +178,32 @@ These settings are configured during `install-transpile` and stored in Lakebridg
 
 **File location:** `/Workspace/Users/{user}/.lakebridge/config.yml` (under `transpiler_options` section)
 
-| Parameter | Description |
-|-----------|-------------|
-| `catalog` | Databricks Unity Catalog for Switch state tables |
-| `schema` | Schema within the catalog for storing conversion results |
-| `foundation_model` | Model serving endpoint for LLM-powered conversions |
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `catalog` | Databricks Unity Catalog for Switch Delta tables and Volume | `main` |
+| `schema` | Schema within the catalog for Switch Delta tables and Volume | `switch` |
+| `volume` | Unity Catalog Volume for uploaded input source files | `switch_volume` |
+| `foundation_model` | Model serving endpoint name for conversions | `databricks-claude-sonnet-4-5` |
 
 ### Switch Configuration File
 
 Additional conversion parameters are managed in the Switch configuration file. You can edit this file directly in your workspace to customize Switch's conversion behavior.
 
-**File location:** `/Workspace/Users/{user}/.databricks/labs/lakebridge/switch/resources/switch_config.yml`
+**File location:** `/Workspace/Users/{user}/.lakebridge/switch/resources/switch_config.yml`
 
 | Parameter | Description | Default Value | Available Options |
 |-----------|-------------|---------------|-------------------|
-| `target_type` | Output format type | `notebook` | `notebook`, `file` |
-| `source_format` | Source file format type. `sql` performs SQL comment removal and whitespace compression preprocessing. `generic` processes files as-is without preprocessing. | `sql` | `sql`, `generic` |
-| `comment_lang` | Language for generated comments | `English` | `English`, `Japanese`, `Chinese`, `French`, `German`, `Italian`, `Korean`, `Portuguese`, `Spanish` |
-| `log_level` | Logging verbosity level | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `token_count_threshold` | Maximum tokens per file for processing | `20000` | Any positive integer |
-| `concurrency` | Number of parallel LLM requests | `4` | Any positive integer |
-| `max_fix_attempts` | Maximum syntax error fix attempts | `1` | 0 or any positive integer |
-| `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, this custom prompt is used instead of the built-in prompt for the selected `--source-tech` | `null` | Full workspace path to YAML file |
-| `output_extension` | File extension for file output | `null` | Any extension (e.g., `.yml`, `.json`) |
-| `sql_output_dir` | (Experimental) Directory for SQL notebooks | `null` | Full workspace path |
-| `request_params` | Additional request parameters for model serving endpoint | `null` | JSON format string (e.g., `{"max_tokens": 64000}`) |
+| `target_type` | Output format type. `notebook` for Python notebooks with validation and error fixing, `file` for generic file formats. See [Conversion Flow Overview](#conversion-flow-overview) for processing differences. | `notebook` | `notebook`, `file` |
+| `source_format` | Source file format type. `sql` performs SQL comment removal and whitespace compression preprocessing before conversion. `generic` processes files as-is without preprocessing. Preprocessing affects token counting and conversion quality. See [analyze_input_files](#analyze_input_files) for preprocessing details. | `sql` | `sql`, `generic` |
+| `comment_lang` | Language for generated comments. | `English` | `English`, `Japanese`, `Chinese`, `French`, `German`, `Italian`, `Korean`, `Portuguese`, `Spanish` |
+| `log_level` | Logging verbosity level. | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `token_count_threshold` | Maximum tokens per file for processing. Files exceeding this limit are automatically excluded from conversion. Adjust based on your model's context window and conversion complexity. See [Token Management](#token-management) for detailed configuration guidelines and file splitting strategies. | `20000` | Any positive integer |
+| `concurrency` | Number of parallel LLM requests for processing multiple files simultaneously. Higher values improve throughput but may hit rate limits. Default is optimized for Claude models. See [Performance Optimization](#performance-optimization) for scaling guidance and model-specific considerations. | `4` | Any positive integer |
+| `max_fix_attempts` | Maximum number of automatic syntax error correction attempts per file. Each attempt sends error context back to the LLM for fixing. Set to 0 to skip automatic fixes. See [fix_syntax_with_llm](#fix_syntax_with_llm) for details on the error correction process. | `1` | 0 or any positive integer |
+| `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, overrides the built-in prompt for the selected `--source-tech`, enabling support for additional source formats or specialized conversion requirements. See [Customizable Prompts](#customizable-prompts) for YAML structure and creation guide. | `null` | Full workspace path to YAML file |
+| `output_extension` | File extension for output files when `target_type=file`. Required for non-notebook output formats like YAML workflows or JSON configurations. See [File Conversion Flow](#file-conversion-flow) for usage examples. | `null` | Any extension (e.g., `.yml`, `.json`) |
+| `sql_output_dir` | (Experimental) When specified, triggers additional conversion of Python notebooks to SQL notebook format. This optional post-processing step may lose some Python-specific logic. See [convert_notebook_to_sql](#convert_notebook_to_sql-optional) for details on the SQL conversion process. | `null` | Full workspace path |
+| `request_params` | Additional request parameters passed to the model serving endpoint. Use for advanced configurations like extended thinking mode or custom token limits. See [Model Requirements](#model-requirements) for configuration examples including Claude's extended thinking mode. | `null` | JSON format string (e.g., `{"max_tokens": 64000}`) |
 
 ---
 
@@ -343,7 +344,7 @@ few_shots:
 
 Switch includes built-in YAML configuration files for supported conversion types, including SQL dialects and other source formats. When creating custom prompts, these built-in configurations serve as excellent starting points - even for supported conversion types, customizing the default prompts based on your specific input patterns can significantly improve conversion accuracy.
 
-**Location**: You can find built-in YAML files in the `databricks/labs/switch/resources/builtin_prompts/` directory within the Switch installation. These files demonstrate the proper structure and provide conversion-specific examples that you can adapt for your custom requirements.
+**Location**: You can find built-in YAML files in the `/Workspace/Users/{user}/.lakebridge/switch/resources/builtin_prompts/` directory within the Switch installation. These files demonstrate the proper structure and provide conversion-specific examples that you can adapt for your custom requirements.
 
 ---
 
@@ -513,6 +514,8 @@ flowchart TD
 - **Direct export** from converted content to specified file format with custom extension
 - **Optimized** for non-notebook outputs like YAML workflows, JSON configurations, etc.
 
+---
+
 ## Processing Steps
 
 The following sections describe each processing step used in the workflows above:
@@ -538,47 +541,7 @@ Creates Databricks-compatible `.py` notebooks in the specified output directory.
 ### convert_notebook_to_sql (Optional)
 When `sql_output_dir` is specified, this optional step uses the model serving endpoint to convert Python notebooks into SQL notebook format with Databricks SQL syntax. Useful for teams preferring SQL-only workflows, though some Python logic may be lost in the conversion process.
 
-## State Management
-
-Switch uses a Delta table to track conversion progress and results. Each conversion job creates a timestamped table: `{catalog}.{schema}.lakebridge_switch_{timestamp}_{random}` (e.g., `main.default.lakebridge_switch_20250115143022_7ka9`)
-
-The table stores input file information (path, content, token counts), conversion results (generated notebooks, token usage, processing time), error details when conversions fail, and syntax check results from validation stages. This allows you to monitor which files were processed successfully and investigate any issues that occurred during conversion.
-
-### Conversion Result Table Schema
-
-Switch creates Delta tables with the following complete schema:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `input_file_number` | int | Unique integer identifier for each input file (starts from 1) |
-| `input_file_path` | string | Full path to the input file |
-| `input_file_encoding` | string | Detected encoding of the input file (e.g., UTF-8) |
-| `tokenizer_type` | string | Type of tokenizer used (claude or openai) |
-| `tokenizer_model` | string | Specific tokenizer model/encoding used |
-| `input_file_token_count` | int | Total number of tokens in the input file |
-| `input_file_token_count_preprocessed` | int | Token count of preprocessed content (SQL comments removed for SQL files, original count for generic files) |
-| `input_file_content` | string | Entire content of the input file |
-| `input_file_content_preprocessed` | string | Preprocessed content (SQL comments removed for SQL files, original content for generic files) |
-| `is_conversion_target` | boolean | Whether file should be processed (updated during conversion) |
-| `model_serving_endpoint_for_conversion` | string | Model endpoint used for conversion |
-| `model_serving_endpoint_for_fix` | string | Model endpoint used for syntax error fixing |
-| `request_params_for_conversion` | string | Conversion request parameters in JSON format |
-| `request_params_for_fix` | string | Fix request parameters in JSON format |
-| `result_content` | string | Generated notebook content (initially null) |
-| `result_prompt_tokens` | int | Number of prompt tokens used (initially null) |
-| `result_completion_tokens` | int | Number of completion tokens generated (initially null) |
-| `result_total_tokens` | int | Total tokens used (prompt + completion, initially null) |
-| `result_processing_time_seconds` | float | Processing time in seconds (initially null) |
-| `result_timestamp` | timestamp | UTC timestamp when processing completed (initially null) |
-| `result_error` | string | Any conversion errors encountered (initially null) |
-| `result_python_parse_error` | string | Python syntax errors found using ast.parse (initially null) |
-| `result_extracted_sqls` | array&lt;string&gt; | SQL statements extracted from Python code (initially null) |
-| `result_sql_parse_errors` | array&lt;string&gt; | SQL syntax errors found using EXPLAIN (initially null) |
-| `export_output_path` | string | Path to the exported file (initially null) |
-| `export_status` | string | Export processing status (initially null) |
-| `export_error` | string | Export error information (initially null) |
-| `export_timestamp` | timestamp | UTC timestamp when export completed (initially null) |
-| `export_content_size_bytes` | long | Size of exported content in bytes (initially null) |
+---
 
 ## Model Requirements
 
@@ -643,6 +606,50 @@ If your input files exceed the threshold, consider logical splitting points:
 **Monitoring:**
 - Watch for rate limiting or throttling responses from model endpoints
 - Consider enabling [Inference Tables](https://docs.databricks.com/aws/en/machine-learning/model-serving/inference-tables) to automatically capture requests and responses for detailed monitoring and debugging
+
+---
+
+## State Management
+
+Switch uses a Delta table to track conversion progress and results. Each conversion job creates a timestamped table: `{catalog}.{schema}.lakebridge_switch_{timestamp}_{random}` (e.g., `main.default.lakebridge_switch_20250115143022_7ka9`)
+
+The table stores input file information (path, content, token counts), conversion results (generated notebooks, token usage, processing time), error details when conversions fail, and syntax check results from validation stages. This allows you to monitor which files were processed successfully and investigate any issues that occurred during conversion.
+
+### Conversion Result Table Schema
+
+Switch creates Delta tables with the following complete schema:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `input_file_number` | int | Unique integer identifier for each input file (starts from 1) |
+| `input_file_path` | string | Full path to the input file |
+| `input_file_encoding` | string | Detected encoding of the input file (e.g., UTF-8) |
+| `tokenizer_type` | string | Type of tokenizer used (claude or openai) |
+| `tokenizer_model` | string | Specific tokenizer model/encoding used |
+| `input_file_token_count` | int | Total number of tokens in the input file |
+| `input_file_token_count_preprocessed` | int | Token count of preprocessed content (SQL comments removed for SQL files, original count for generic files) |
+| `input_file_content` | string | Entire content of the input file |
+| `input_file_content_preprocessed` | string | Preprocessed content (SQL comments removed for SQL files, original content for generic files) |
+| `is_conversion_target` | boolean | Whether file should be processed (updated during conversion) |
+| `model_serving_endpoint_for_conversion` | string | Model endpoint used for conversion |
+| `model_serving_endpoint_for_fix` | string | Model endpoint used for syntax error fixing |
+| `request_params_for_conversion` | string | Conversion request parameters in JSON format |
+| `request_params_for_fix` | string | Fix request parameters in JSON format |
+| `result_content` | string | Generated notebook content (initially null) |
+| `result_prompt_tokens` | int | Number of prompt tokens used (initially null) |
+| `result_completion_tokens` | int | Number of completion tokens generated (initially null) |
+| `result_total_tokens` | int | Total tokens used (prompt + completion, initially null) |
+| `result_processing_time_seconds` | float | Processing time in seconds (initially null) |
+| `result_timestamp` | timestamp | UTC timestamp when processing completed (initially null) |
+| `result_error` | string | Any conversion errors encountered (initially null) |
+| `result_python_parse_error` | string | Python syntax errors found using ast.parse (initially null) |
+| `result_extracted_sqls` | array&lt;string&gt; | SQL statements extracted from Python code (initially null) |
+| `result_sql_parse_errors` | array&lt;string&gt; | SQL syntax errors found using EXPLAIN (initially null) |
+| `export_output_path` | string | Path to the exported file (initially null) |
+| `export_status` | string | Export processing status (initially null) |
+| `export_error` | string | Export error information (initially null) |
+| `export_timestamp` | timestamp | UTC timestamp when export completed (initially null) |
+| `export_content_size_bytes` | long | Size of exported content in bytes (initially null) |
 
 ---
 
