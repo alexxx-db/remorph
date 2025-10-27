@@ -37,42 +37,27 @@ Switch runs entirely within the Databricks workspace:
 
 ## Requirements
 
-Before installing and using Switch, ensure your Databricks environment meets these requirements:
+Before installing Switch, ensure your Databricks environment meets the following requirements:
 
-### Databricks Workspace Setup
+### User Entitlements
 
-**Job Execution Environment**
-- **Job Creation Permission**: Ability to create and manage Databricks Jobs
-  - A Switch job is automatically created during `install-transpile` execution
-- **Compute Access**: Switch creates jobs using serverless job compute by default
-  - If serverless is unavailable, you can modify job configuration in the Databricks workspace to use classic job compute
+Users installing and running Switch require **Workspace Access** entitlement.
 
-**Data Storage Requirements**
+### Workspace Resources
 
-Switch requires access to a Databricks catalog, schema, and volume for:
-- Creating a Delta table for state management and conversion results
-- Uploading input source files to the volume
+- **Serverless job compute** (used by default for Switch job execution)
+  - If unavailable: Manually configure the Switch job to use classic job compute with DBR 14.3 LTS or higher
+- **Foundation Model API** enabled workspace
 
-**When using existing catalog, schema, and volume:**
-- **Catalog and Schema**: Requires `USE CATALOG`, `USE SCHEMA`, and `CREATE TABLE` permissions
-- **Volume**: Requires `READ VOLUME` and `WRITE VOLUME` permissions
+### Unity Catalog Resources
 
-**When creating new catalog, schema, or volume:**
-- Appropriate creation permissions are required (Switch will attempt to create non-existing catalog, schema, or volume during installation)
+Switch requires a Databricks catalog, schema, and volume:
+- **Catalog and Schema**: Store Delta tables for state management and conversion results
+- **Volume**: Store uploaded input source files
 
-### Model Serving Access
-
-Switch supports any LLM available through Databricks Model Serving endpoints:
-
-- **Default Setup**: Uses Foundation Model API endpoints - no additional configuration required
-- **Permissions Required**: Query access to the model serving endpoint being used
-- **Provisioned Throughput**: Optionally configure Provisioned Throughput for higher capacity workloads
-
-### Databricks Runtime
-- **Default**: Serverless job compute (no runtime configuration required)
-- **Classic Job Compute**: If using classic clusters instead of serverless:
-  - **Verified Versions**: DBR 14.3 LTS or 15.3 LTS (higher versions likely compatible)
-  - **Compute Type**: Single-node clusters recommended (Photon not required)
+**Required permissions:**
+- **Existing resources**: `USE CATALOG`, `USE SCHEMA`, `CREATE TABLE`, `READ VOLUME`, `WRITE VOLUME`
+- **New resources**: Catalog/schema/volume creation permissions (resources will be created automatically during installation if they don't exist)
 
 ---
 
@@ -175,7 +160,7 @@ Switch operates differently from other Lakebridge transpilers:
 
 ## Configuration Management
 
-Switch uses a three-tier configuration system:
+Switch provides flexible configuration through three tiers: command-line parameters for each execution, Lakebridge configuration for installation settings, and Switch configuration file for customizing conversion behavior.
 
 ### Command-Line Parameters
 
@@ -253,7 +238,14 @@ databricks labs lakebridge llm-transpile \
 
 ### Example 3: Python script to Databricks notebook
 
-Edit `switch_config.yml` to set `source_format: "generic"` (leave other parameters unchanged), then run:
+Convert Python scripts to Databricks Python notebooks:
+
+First, edit `switch_config.yml` to set `source_format: "generic"` (leave other parameters unchanged):
+```yaml
+source_format: "generic"
+```
+
+Then run:
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/scripts \
@@ -263,7 +255,9 @@ databricks labs lakebridge llm-transpile \
 
 ### Example 4: Airflow DAG to Databricks Jobs YAML
 
-Edit `switch_config.yml` (leave other parameters unchanged):
+Convert Airflow DAGs to Databricks Jobs YAML definitions:
+
+First, edit `switch_config.yml` (leave other parameters unchanged):
 ```yaml
 source_format: "generic"
 target_type: "file"
@@ -351,28 +345,6 @@ Switch includes built-in YAML configuration files for supported conversion types
 
 **Location**: You can find built-in YAML files in the `databricks/labs/switch/resources/builtin_prompts/` directory within the Switch installation. These files demonstrate the proper structure and provide conversion-specific examples that you can adapt for your custom requirements.
 
-### FAQ: Can Switch Support My Source System?
-
-A common question is whether Switch can handle sources beyond the built-in conversion types. The answer is: **try it!**
-
-Switch already supports various source formats including SQL dialects (MySQL, Snowflake, Oracle, etc.), programming languages (Python scripts, Scala code), and workflows (Airflow DAGs).
-
-**For SQL-based sources**: Creating a custom prompt YAML file should work well for most SQL dialects. Since LLMs understand SQL syntax patterns, you can typically achieve good results by:
-- Starting with a similar built-in dialect's YAML as a template
-- Adding specific syntax examples from your source system
-- Testing and iterating based on results
-
-**Tips for efficient prompt creation:**
-- **Quick baseline creation**: Feed built-in prompts and your source dialect's representative features to an advanced LLM to quickly generate a baseline YAML configuration
-- **Dialect-specific patterns**: Reference open source projects like [SQLGlot dialects](https://github.com/tobymao/sqlglot/tree/main/sqlglot/dialects) for insights into dialect-specific transformation patterns
-
-**For other source formats**: Switch's LLM-based architecture means it can potentially handle various conversions beyond the built-in types. Modern LLMs have strong comprehension capabilities across many languages and formats. You can experiment by:
-- Creating custom prompts that define your source format
-- Providing clear conversion examples in the few-shots section
-- Testing with representative source samples
-
-Rather than waiting for additional built-in examples, we encourage experimentation with custom prompts. The flexibility of LLM-based conversion means many use cases are possible with the right prompt engineering.
-
 ---
 
 ## Transpiler Selection Guide
@@ -410,6 +382,30 @@ When using Switch, follow these guidelines for optimal results:
 2. **Iteratively refine prompts based on results** - Adjust YAML prompts to improve accuracy for your specific patterns
 3. **Review generated code before production use** - LLM outputs may require manual adjustments
 4. **Document successful patterns for future reference** - Keep track of effective prompts and configurations for reuse
+
+---
+
+## FAQ: Can Switch Support My Source System?
+
+A common question is whether Switch can handle sources beyond the built-in conversion types. The answer is: **try it!**
+
+Switch already supports various source formats including SQL dialects (MySQL, Snowflake, Oracle, etc.), programming languages (Python scripts, Scala code), and workflows (Airflow DAGs).
+
+**For SQL-based sources**: Creating a custom prompt YAML file should work well for most SQL dialects. Since LLMs understand SQL syntax patterns, you can typically achieve good results by:
+- Starting with a similar built-in dialect's YAML as a template
+- Adding specific syntax examples from your source system
+- Testing and iterating based on results
+
+**Tips for efficient prompt creation:**
+- **Quick baseline creation**: Feed built-in prompts and your source dialect's representative features to an advanced LLM to quickly generate a baseline YAML configuration
+- **Dialect-specific patterns**: Reference open source projects like [SQLGlot dialects](https://github.com/tobymao/sqlglot/tree/main/sqlglot/dialects) for insights into dialect-specific transformation patterns
+
+**For other source formats**: Switch's LLM-based architecture means it can potentially handle various conversions beyond the built-in types. Modern LLMs have strong comprehension capabilities across many languages and formats. You can experiment by:
+- Creating custom prompts that define your source format
+- Providing clear conversion examples in the few-shots section
+- Testing with representative source samples
+
+Rather than waiting for additional built-in examples, we encourage experimentation with custom prompts. The flexibility of LLM-based conversion means many use cases are possible with the right prompt engineering.
 
 ---
 
