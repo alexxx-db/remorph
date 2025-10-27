@@ -569,27 +569,22 @@ For complex code transformations and intricate business logic, Claude’s extend
 
 LLMs have limits on how much text they can process at once. Switch uses a configurable threshold approach to ensure stable processing.
 
-**Token Limits and Calculation:**
-- **Default threshold**: 20,000 tokens per file
-- **Token estimation**: 
-  - Claude models: ~3.4 characters per token (20,000 tokens ≈ 68,000 characters)
-  - Other models: Uses tiktoken library with o200k_base encoding
-- **Preprocessing**: SQL comments removed and whitespace compressed before counting
+#### Token Counting and Thresholds
 
-**Threshold Configuration:**
-- **Base configuration**: 20,000 tokens (tested with Claude 3.7 Sonnet, 128k context)
-- **Adjustment guidelines**:
-  - Complex transformations with extended thinking: Lower threshold (e.g., 8,000 tokens)
-  - Larger context models (e.g., Claude Sonnet 4, 200k context): Higher threshold possible
+Switch sets a default threshold of **20,000 tokens per file**. Token estimation varies by model: Claude models use approximately 3.4 characters per token (meaning 20,000 tokens ≈ 68,000 characters), while other models use the tiktoken library with o200k_base encoding. For SQL sources, Switch removes comments and compresses whitespace before counting tokens to provide more accurate estimates.
 
-**Handling Oversized Files:**
-When files exceed the threshold:
-- Automatically excluded during analyze phase
-- Marked with status "Not converted"
-- Require manual splitting before processing
+#### Adjusting the Threshold
 
-**File Splitting Strategies:**
-If your input files exceed the threshold, consider logical splitting points:
+This base configuration of 20,000 tokens has been tested with Claude 3.7 Sonnet's 128k context window. However, you should adjust this threshold based on your specific needs:
+
+- **Lower the threshold (e.g., 8,000 tokens)** for complex transformations using extended thinking mode
+- **Raise the threshold** when using larger context models like Claude Sonnet 4 (200k context)
+
+#### Handling Oversized Files
+
+When files exceed the token threshold, Switch automatically excludes them during the analyze phase and marks them with status "Not converted". These files require manual splitting before processing.
+
+Consider these logical splitting strategies:
 - Separate stored procedures into individual files
 - Split by functional modules or business domains
 - Maintain referential integrity across split files
