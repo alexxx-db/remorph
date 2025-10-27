@@ -666,7 +666,7 @@ def llm_transpile(
         )
 
     transpile_options = transpile_config.transpiler_options
-    if not isinstance(transpile_options, JsonValue):
+    if not isinstance(transpile_options, Mapping):
         raise RuntimeError(
             "Invalid transpile configuration: transpiler_options must be a mapping. "
             "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
