@@ -666,6 +666,7 @@ def llm_transpile(
         )
 
     transpile_options = transpile_config.transpiler_options
+    logger.debug(f"Transpiler options: {transpile_options}")
     if not isinstance(transpile_options, Mapping):
         raise RuntimeError(
             "Invalid transpile configuration: transpiler_options must be a mapping. "
@@ -675,9 +676,9 @@ def llm_transpile(
     schema = transpile_options.get("schema", None)
     volume = transpile_options.get("volume", None)
 
-    if catalog or schema or volume is None:
+    if catalog is None or schema is None or volume is None:
         raise RuntimeError(
-            "Invalid transpile configuration: transpiler_options must be a mapping. "
+            "Invalid transpile configuration: catalog, schema or volume is missing. "
             "Please run 'databricks labs lakebridge install-transpile --include-llm-transpiler true' first."
         )
     assert isinstance(catalog, str)
