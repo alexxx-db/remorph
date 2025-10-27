@@ -21,7 +21,6 @@ from databricks.labs.lakebridge.config import (
     LakebridgeConfiguration,
     ReconcileMetadataConfig,
     TranspileConfig,
-    SwitchResourcesConfig,
 )
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
@@ -30,7 +29,6 @@ from databricks.labs.lakebridge.reconcile.constants import ReconReportType, Reco
 from databricks.labs.lakebridge.transpiler.installers import (
     BladebridgeInstaller,
     MorpheusInstaller,
-    SwitchInstaller,
     TranspilerInstaller,
 )
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
@@ -42,7 +40,7 @@ TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
 
 class WorkspaceInstaller:
     # TODO: Temporary suppression, is_interactive is pending removal.
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         ws: WorkspaceClient,
         prompts: Prompts,
@@ -59,7 +57,6 @@ class WorkspaceInstaller:
         transpiler_installers: Sequence[Callable[[TranspilerRepository], TranspilerInstaller]] = (
             BladebridgeInstaller,
             MorpheusInstaller,
-            SwitchInstaller,
         ),
     ):
         self._ws = ws
@@ -84,12 +81,7 @@ class WorkspaceInstaller:
 
     @property
     def _transpiler_installers(self) -> Set[TranspilerInstaller]:
-        factories = self._transpiler_installer_factories
-        if not self._include_llm:
-            if SwitchInstaller in factories:
-                logger.info("Skipping Switch installation (LLM transpiler not requested)")
-            factories = tuple(f for f in factories if f != SwitchInstaller)
-        return frozenset(factory(self._transpiler_repository) for factory in factories)
+        return frozenset(factory(self._transpiler_repository) for factory in self._transpiler_installer_factories)
 
     def run(
         self,
@@ -104,7 +96,7 @@ class WorkspaceInstaller:
             for transpiler_installer in self._transpiler_installers:
                 transpiler_installer.install()
         if not config:
-            config = self.configure(module, self._include_llm)
+            config = self.configure(module)
         if self._is_testing():
             return config
         self._ws_installation.install(config)
@@ -141,7 +133,7 @@ class WorkspaceInstaller:
         else:
             logger.fatal(f"Cannot install unsupported artifact: {artifact}")
 
-    def configure(self, module: str, include_llm: bool = False) -> LakebridgeConfiguration:
+    def configure(self, module: str) -> LakebridgeConfiguration:
         match module:
             case "transpile":
                 logger.info("Configuring lakebridge `transpile`.")
@@ -154,7 +146,7 @@ class WorkspaceInstaller:
             case "all":
                 logger.info("Configuring lakebridge `transpile` and `reconcile`.")
                 return LakebridgeConfiguration(
-                    self._configure_transpile(include_llm),
+                    self._configure_transpile(),
                     self._configure_reconcile(),
                     include_switch=self._include_llm,
                 )
@@ -164,7 +156,7 @@ class WorkspaceInstaller:
     def _is_testing(self):
         return self._product_info.product_name() != "lakebridge"
 
-    def _configure_transpile(self, include_llm: bool = False) -> TranspileConfig | None:
+    def _configure_transpile(self) -> TranspileConfig | None:
         try:
             config = self._installation.load(TranspileConfig)
             logger.info("Lakebridge `transpile` is already installed on this workspace.")
@@ -185,12 +177,12 @@ class WorkspaceInstaller:
             logger.warning("Installation is not interactive, skipping configuration of transpilers.")
             return None
 
-        config = self._configure_new_transpile_installation(include_llm)
+        config = self._configure_new_transpile_installation()
         logger.info("Finished configuring lakebridge `transpile`.")
         return config
 
-    def _configure_new_transpile_installation(self, include_llm: bool = False) -> TranspileConfig:
-        default_config = self._prompt_for_new_transpile_installation(include_llm)
+    def _configure_new_transpile_installation(self) -> TranspileConfig:
+        default_config = self._prompt_for_new_transpile_installation()
         runtime_config = None
         catalog_name = "remorph"
         schema_name = "transpiler"
@@ -293,20 +285,14 @@ class WorkspaceInstaller:
                 "Would you like to validate the syntax and semantics of the transpiled queries?"
             )
 
-        switch_resources = None
-        if include_llm:
-            switch_resources = self._prompt_for_switch_resources()
-
         return TranspileConfig(
             transpiler_config_path=str(transpiler_config_path) if transpiler_config_path is not None else None,
             transpiler_options=transpiler_options,
             source_dialect=source_dialect,
             skip_validation=(not run_validation),
-            include_llm=include_llm,
             input_source=input_source,
             output_folder=output_folder,
             error_file_path=error_file_path,
-            switch_resources=switch_resources,
         )
 
     def _get_transpiler_config(self, transpiler_names: list[str]) -> tuple[str, Path] | None:
@@ -332,14 +318,6 @@ class WorkspaceInstaller:
         #    attributes, where None means the user chose to provide a value later.)
         #  - There is no way to express 'provide a value later'.
         return {option.flag: option.prompt_for_value(self._prompts) for option in config_options}
-
-    def _prompt_for_switch_resources(self) -> SwitchResourcesConfig:
-        logger.info("Configuring Switch resources (catalog, schema, volume)...")
-        catalog = self._resource_configurator.prompt_for_catalog_setup()
-        schema = self._resource_configurator.prompt_for_schema_setup(catalog, "switch")
-        volume = self._resource_configurator.prompt_for_volume_setup(catalog, schema, "switch_volume")
-        self._has_necessary_access(catalog, schema, volume)
-        return SwitchResourcesConfig(catalog=catalog, schema=schema, volume=volume)
 
     def _configure_catalog(self) -> str:
         return self._resource_configurator.prompt_for_catalog_setup()

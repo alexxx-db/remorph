@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable, Generator, Sequence, Set
+from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from unittest.mock import create_autospec, patch
 
@@ -24,9 +24,6 @@ from databricks.labs.lakebridge.deployment.installation import WorkspaceInstalla
 from databricks.labs.lakebridge.install import WorkspaceInstaller
 from databricks.labs.lakebridge.reconcile.constants import ReconSourceType, ReconReportType
 from databricks.labs.lakebridge.transpiler.installers import (
-    BladebridgeInstaller,
-    MorpheusInstaller,
-    SwitchInstaller,
     TranspilerInstaller,
 )
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository

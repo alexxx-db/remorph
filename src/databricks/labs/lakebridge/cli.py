@@ -86,7 +86,7 @@ def _remove_warehouse(ws: WorkspaceClient, warehouse_id: str):
 
 
 @lakebridge.command
-def transpile(  # pylint: disable=too-many-arguments
+def transpile(
     *,
     w: WorkspaceClient,
     transpiler_config_path: str | None = None,

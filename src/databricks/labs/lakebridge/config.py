@@ -155,13 +155,6 @@ class LSPConfigOptionV1:
 
 
 @dataclass
-class SwitchResourcesConfig:
-    catalog: str
-    schema: str
-    volume: str
-
-
-@dataclass
 class TranspileConfig:
     __file__ = "config.yml"
     __version__ = 3
@@ -177,7 +170,6 @@ class TranspileConfig:
     catalog_name: str = "remorph"
     schema_name: str = "transpiler"
     transpiler_options: JsonValue = None
-    switch_resources: SwitchResourcesConfig | None = None
 
     @property
     def transpiler_config_path_parsed(self) -> Path | None:

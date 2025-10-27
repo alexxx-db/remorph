@@ -20,7 +20,6 @@ from databricks.labs.lakebridge.deployment.installation import WorkspaceInstalla
 from databricks.labs.lakebridge.deployment.recon import TableDeployment, JobDeployment, ReconDeployment
 from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
 from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
-from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 logger = logging.getLogger(__name__)
 

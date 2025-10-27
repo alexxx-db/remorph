@@ -1,4 +1,3 @@
-import logging
 from unittest.mock import create_autospec
 
 import pytest
@@ -17,7 +16,6 @@ from databricks.labs.lakebridge.config import (
     ReconcileConfig,
     DatabaseConfig,
     ReconcileMetadataConfig,
-    SwitchResourcesConfig,
 )
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment

@@ -564,18 +564,3 @@ class MorpheusInstaller(TranspilerInstaller):
         update = int(match["update"] or 0)
         patch = int(match["patch"] or 0)
         return feature, interim, update, patch
-
-
-class SwitchInstaller(TranspilerInstaller):
-    @property
-    def name(self) -> str:
-        return "Switch"
-
-    def can_install(self, artifact: Path) -> bool:
-        return "databricks_switch_plugin" in artifact.name and artifact.suffix == ".whl"
-
-    def install(self, artifact: Path | None = None) -> bool:
-        local_name = "switch"
-        pypi_name = "databricks-switch-plugin"
-        wheel_installer = WheelInstaller(self._transpiler_repository, local_name, pypi_name, artifact)
-        return wheel_installer.install() is not None
