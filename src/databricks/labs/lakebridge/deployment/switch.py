@@ -166,7 +166,7 @@ class SwitchDeployment:
 
         return {
             "name": job_name,
-            "tags": {"created_by": self._ws.current_user.me(), "switch_version": f"v{switch_version}"},
+            "tags": {"created_by": self._ws.current_user.me().user_name, "switch_version": f"v{switch_version}"},
             "tasks": [task],
             "parameters": self._get_switch_job_parameters(),
             "max_concurrent_runs": 100,  # Allow simultaneous transpilations
