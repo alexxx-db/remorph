@@ -1,5 +1,134 @@
 # Version changelog
 
+## 0.10.13
+
+## Analyzer
+
+- **Added defensive code to prevent analyzer crashes on DataStage files with empty array references** - Fixes an issue where the DataStage analyzer would crash when encountering empty array references
+    
+## Converters
+    
+## Morpheus
+
+### General
+- **Enhanced name representation consistency** - Major refactoring that replaces String representations with Expression types for table names, column names, and constraints across IR nodes, improving SQL/PySpark code generation accuracy
+    
+- **Fixed DBT parsing issues** - Resolved template parsing problems by changing template markers to `!#Jinja0001#!` format and improving whitespace handling for proper tokenization
+### TSQL (Synapse/SQL Server)
+
+- **Support for dual OUTPUT clauses in TSQL INSERT/DELETE/UPDATE statements** - Enhanced T-SQL parser to handle complex statements with multiple OUTPUT clauses (OUTPUT ... INTO ... OUTPUT ...) with comprehensive test coverage
+    
+- **Fixed TSQL DECLARE statement handling** - Refactored DECLARE statement processing by moving logic to dedicated visitor methods and properly marking unsupported statements for future implementation
+    
+- **Improved BLOCK structure parsing for BEGIN and BEGIN TRY statements** - Updated parser grammar to support flexible scripting blocks and transaction handling, allowing zero or more statements in control flow constructs
+    
+- **Added comprehensive USE statement support** - Introduced new IR representations (UseCatalog, UseSchema) with dialect-specific AST building logic and proper SQL generation
+
+### Snowflake
+
+- **Fixed Snowflake connection tests** - Internal improvements for database connection test reliability
+    
+- **Added comprehensive USE statement support** - Introduced new IR representations (UseCatalog, UseSchema) with dialect-specific AST building logic and proper SQL generation
+
+## BladeBridge
+
+### General
+- **Automatically creates and cleans up temporary folders for embedded SQL conversion in wrapper scripts** - Improves workflow management by implicitly creating temp folders and cleaning them up once conversion is complete
+
+### MSSQL (SQL Server)
+
+- **Enhanced table variable and temporary table conversion** - Added support for table variable conversion to temporary tables and improved string handling with logic to convert double single quotes to double quotes
+    
+- **Fixed semicolon placement in nested select statements** - Resolved issue where semicolons appeared before comments in nested select statements
+    
+- **Improved MS SQL procedure handling** - Added LIMIT 1 for Set in select statements, enhanced function mappings, fixed string concatenation, and removed unsupported constraints
+    
+## Reconcile
+
+No updates in this release.
+
+## Documentation
+
+No updates in this release.
+
+## 0.10.12
+
+## Analyzer
+
+* **New installation verification command** - Introduced a new command to verify successful installation of the Lakebridge Analyzer, displaying usage and available flags for report file paths, source directories, and source technologies
+
+## Converters
+
+### General
+
+* **Enhanced transpile command** - Updated `transpile` command to support `--overrides-path` and `--target-technology` arguments for greater flexibility and customization
+
+* **Improved error handling** - Enhanced handling of parsing errors during code transpilation to output transpiled code instead of original input, providing clearer outcomes when issues arise
+
+* **Refactored naming conventions** - Renamed transpiler `product_name` to `transpiler_id` throughout the codebase for improved consistency and clarity
+
+### Morpheus
+
+#### TSQL
+
+* **Enhanced TSQL support** - Added support for DENY statements, EXEC statement syntax improvements, COLLATION in CREATE TABLE column definitions, and WINDOW clause functionality
+
+* **Improved ALTER DATABASE support** - Enhanced support for all options on ALTER DATABASE SET statements and multiple LOG file specifications in ALTER DATABASE ADD LOG
+
+* **Better JOIN functionality** - Added support for all join hints (MERGE, HASH, LOOP, REDUCE, REPLICATE, REDISTRIBUTE) in JOIN constructs
+
+* **Enhanced COPY INTO support** - Fixed syntax for COPY INTO commands and added extended column definitions support in TSQL mode
+
+* **Improved DELETE operations** - Added transformation rule to translate `IN` to `EXISTS` when needed in DELETE statement WHERE clauses
+
+#### Snowflake
+
+* **COPY INTO improvements** - Refactored and standardized grammar rules for COPY INTO commands, consolidating stage location handling
+
+* **UPDATE FROM enhancements** - Added tests for UPDATE FROM statements to verify correct transpilation to MERGE INTO statements
+
+#### General
+
+* **Enhanced permission handling** - Added support for column-specific privileges and improved handling of column-specific permissions
+
+* **Improved parser functionality** - Allowed SCHEMAS keyword to be used as identifier and clarified warning messages for unrecognized functions
+
+### BladeBridge
+
+#### MSSQL
+
+* **Fixed update_to_merge functionality** - Improved WITH clause handling and script variable ordering for MSSQL dialects
+
+* **Table variable support** - Implemented table variable conversion support for MSSQL dialects
+
+* **DDL operation fixes** - Fixed and removed unsupported DDL operations including alter index, switch partitions, and drop constraints
+
+#### Informatica
+
+* **Power Center improvements** - Fixed hanging issue on Linux for Informatica PC conversion by improving block_subst patterns and output flushing
+
+* **Dataframe implementation fixes** - Fixed dataframe implementation for pulling data from flat file unconnected lookups in Informatica Power Center
+
+#### DataStage
+
+* **TRUNCATE TABLE support** - Added spark.sql_template to resolve TRUNCATE TABLE statement generation when TRUNCATE flag is enabled in DataStage
+
+## Reconcile
+
+* **Enhanced Databricks schema queries** - Fixed Databricks schema query to improve accuracy and reliability of schema reconciliation, with better column name consistency and filtering
+
+## Documentation
+
+* **Updated CLI documentation** - Refreshed documentation to reflect latest changes in Command Line Interface menus, including new commands and flags such as `transpile`, `reconcile`, and `install-transpile` subcommands
+
+* **Enhanced command documentation** - Added detailed documentation for transpile command usage and flags, including optional flags for catalog name, error file path, and source dialect
+
+* **Updated installation guides** - Modified installation documentation to include verification examples and updated help flags for new command options
+Dependency updates:
+
+ * Updated cryptography requirement from <45.1.0,>=44.0.2 to >=44.0.2,<46.1.0 ([#2028](https://github.com/databrickslabs/lakebridge/pull/2028)).
+ * Bump databrickslabs/sandbox/acceptance@acceptance/v0.4.2 from 0.4.2 to 0.4.4 ([#1833](https://github.com/databrickslabs/lakebridge/pull/1833)).
+
 ## # Lakebridge v0.10.11 Release Notes
 
 ## Analyzer
