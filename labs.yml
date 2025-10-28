@@ -84,15 +84,3 @@ commands:
     flags:
       - name: source-tech
         description: (Optional) The technology/platform of the sources to Profile
-
-  - name: create-profiler-dashboard
-    description: [EXPERIMENTAL] Upload the Profiler Results as a Databricks Dashboard.
-    flags:
-      - name: extract-file
-        description: Path Location of the Profiler Extract File
-      - name: source-tech
-        description: Name of the Source System Technology that was Profiled
-      - name: catalog-name
-        description: (Optional) Name of the Catalog that extract data will be uploaded to
-      - name: schema-name
-        description: (Optional) Name of the Schema that the extract tables will be uploaded to

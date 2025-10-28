@@ -851,21 +851,6 @@ def execute_database_profiler(w: WorkspaceClient, source_tech: str | None = None
     profiler.profile()
 
 
-@lakebridge.command()
-def create_profiler_dashboard(
-    *,
-    w: WorkspaceClient,
-    extract_file: str,
-    source_tech: str,
-    catalog_name: str,
-    schema_name: str,
-) -> None:
-    """Deploys a profiler summary as a Databricks dashboard."""
-    ctx = ApplicationContext(w)
-    ctx.add_user_agent_extra("cmd", "create-profiler-dashboard")
-    ctx.dashboard_manager.create_profiler_summary_dashboard(extract_file, source_tech, catalog_name, schema_name)
-
-
 if __name__ == "__main__":
     app = lakebridge
     logger = app.get_logger()
