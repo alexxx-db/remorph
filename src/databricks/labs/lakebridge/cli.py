@@ -649,9 +649,12 @@ def llm_transpile(
     input_source: str,
     output_ws_folder: str,
     source_dialect: str,
+    ctx: ApplicationContext | None = None,
 ) -> None:
     """Transpile source code to Databricks using LLM Transpiler (Switch)"""
-    ctx = ApplicationContext(w)
+    if ctx is None:
+        ctx = ApplicationContext(w)
+    del w
     ctx.add_user_agent_extra("cmd", "transpile-switch")
     user = ctx.current_user
     logger.debug(f"User: {user}")
@@ -705,7 +708,7 @@ def llm_transpile(
             source_tech=source_dialect,
             job_id=job_id,
         )
-        print(json.dumps(response))
+        json.dump(response, sys.stdout, indent=2)
     except Exception as ex:
         raise RuntimeError(ex) from ex
 
