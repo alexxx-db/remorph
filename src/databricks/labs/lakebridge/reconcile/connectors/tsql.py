@@ -7,6 +7,7 @@ from pyspark.sql import DataFrame, DataFrameReader, SparkSession
 from pyspark.sql.functions import col
 from sqlglot import Dialect
 
+from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
@@ -64,6 +65,7 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         self._spark = spark
         self._ws = ws
         self._secret_scope = secret_scope
+        self._secrets = DatabricksSecretProvider(self._ws)
 
     @property
     def get_jdbc_url(self) -> str:

@@ -1,8 +1,14 @@
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 import logging
 from typing import Protocol
+import base64
 
 import yaml
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import NotFound
 
 from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 
@@ -32,18 +38,48 @@ class EnvSecretProvider(SecretProvider):
             return key
 
 
-class DatabricksSecretProvider:
+class DatabricksSecretProvider(SecretProvider):
+    def __init__(self, ws: WorkspaceClient):
+        self._ws = ws
+
     def get_secret(self, key: str) -> str:
-        raise NotImplementedError("Databricks secret vault not implemented")
+        """Get the secret value given a secret scope & secret key.
+
+        :param key: key in the format 'scope/secret_key'
+        :return: The decoded UTF-8 secret value.
+
+        Raises:
+          NotFound: The secret could not be found.
+          UnicodeDecodeError: The secret value was not Base64-encoded UTF-8.
+        """
+        scope, key_only = key.split(sep="/")
+        assert scope and key_only, "Secret key must be in the format 'scope/secret_key'"
+
+        try:
+            secret = self._ws.secrets.get_secret(scope, key_only)
+            assert secret.value is not None
+            return base64.b64decode(secret.value).decode("utf-8")
+        except NotFound as e:
+            raise NotFound(f'Secret does not exist with scope: {scope} and key: {key_only} : {e}') from e
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(
+                "utf-8",
+                key_only.encode(),
+                0,
+                1,
+                f"Secret {key} has Base64 bytes that cannot be decoded to utf-8 string: {e}.",
+            ) from e
 
 
 class CredentialManager:
-    def __init__(self, credentials: dict, secret_providers: dict[str, SecretProvider]):
+    SecretProviderFactory = Callable[[], SecretProvider]
+    def __init__(self, credentials: dict, secret_providers: dict[str, SecretProviderFactory]):
         self._credentials = credentials
         self._default_vault = self._credentials.get('secret_vault_type', 'local').lower()
-        self._provider = secret_providers.get(self._default_vault)
-        if not self._provider:
+        provider_factory = secret_providers.get(self._default_vault)
+        if not provider_factory:
             raise ValueError(f"Unsupported secret vault type: {self._default_vault}")
+        self._provider = provider_factory()
 
     def get_credentials(self, source: str) -> dict:
         if source not in self._credentials:
@@ -76,14 +112,22 @@ def _load_credentials(path: Path) -> dict:
         raise FileNotFoundError(f"Credentials file not found at {path}") from e
 
 
-def create_credential_manager(product_name: str, env_getter: EnvGetter) -> CredentialManager:
-    creds_path = cred_file(product_name)
+def create_databricks_secret_provider() -> DatabricksSecretProvider:
+    ws = WorkspaceClient()
+    return DatabricksSecretProvider(ws)
+
+
+
+def create_credential_manager(creds_path: Path | str) -> CredentialManager:
+    if isinstance(creds_path, str):
+        creds_path = Path(creds_path)
     creds = _load_credentials(creds_path)
 
-    secret_providers = {
-        'local': LocalSecretProvider(),
-        'env': EnvSecretProvider(env_getter),
-        'databricks': DatabricksSecretProvider(),
+    # Lazily initialize secret providers
+    secret_providers: dict[str, CredentialManager.SecretProviderFactory] = {
+        'local': LocalSecretProvider,
+        'env': partial(EnvSecretProvider, EnvGetter()),
+        'databricks': create_databricks_secret_provider,
     }
 
     return CredentialManager(creds, secret_providers)

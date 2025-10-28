@@ -5,7 +5,6 @@ import zoneinfo
 import pandas as pd
 
 from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
-from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 
 from databricks.labs.lakebridge.resources.assessments.synapse.common.functions import (
     arguments_loader,
@@ -21,7 +20,7 @@ def execute():
 
     db_path, creds_file = arguments_loader(desc="Workspace Extract")
 
-    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    cred_manager = create_credential_manager(creds_file)
     synapse_workspace_settings = cred_manager.get_credentials("synapse")
     tz_info = synapse_workspace_settings["workspace"]["tz_info"]
     workspace_tz = zoneinfo.ZoneInfo(tz_info)

@@ -8,11 +8,9 @@ from databricks.labs.blueprint.tui import Prompts
 
 from databricks.labs.lakebridge.connections.credential_manager import (
     cred_file as creds,
-    CredentialManager,
     create_credential_manager,
 )
 from databricks.labs.lakebridge.connections.database_manager import DatabaseManager
-from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 from databricks.labs.lakebridge.assessments import CONNECTOR_REQUIRED
 
 logger = logging.getLogger(__name__)
@@ -44,8 +42,8 @@ class AssessmentConfigurator(ABC):
     def _configure_credentials(self) -> str:
         pass
 
-    @staticmethod
-    def _test_connection(source: str, cred_manager: CredentialManager):
+    def _test_connection(self, source: str):
+        cred_manager = create_credential_manager(self._credential_file)
         config = cred_manager.get_credentials(source)
 
         try:
@@ -67,9 +65,7 @@ class AssessmentConfigurator(ABC):
         logger.info(f"{source.capitalize()} details and credentials received.")
         if CONNECTOR_REQUIRED.get(self._source_name, True):
             if self.prompts.confirm(f"Do you want to test the connection to {source}?"):
-                cred_manager = create_credential_manager("lakebridge", EnvGetter())
-                if cred_manager:
-                    self._test_connection(source, cred_manager)
+                self._test_connection(source)
         logger.info(f"{source.capitalize()} Assessment Configuration Completed")
 
 

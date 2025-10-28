@@ -5,7 +5,6 @@ import zoneinfo
 import pandas as pd
 
 from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
-from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import (
     SynapseWorkspace,
     SynapseMetrics,
@@ -23,7 +22,7 @@ def execute():
     logger = set_logger(__name__)
 
     db_path, creds_file = arguments_loader(desc="Monitoring Metrics Extract Script")
-    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    cred_manager = create_credential_manager(creds_file)
     synapse_workspace_settings = cred_manager.get_credentials("synapse")
     synapse_profiler_settings = synapse_workspace_settings["profiler"]
 

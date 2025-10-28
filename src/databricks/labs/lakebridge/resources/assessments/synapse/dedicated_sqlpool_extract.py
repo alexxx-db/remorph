@@ -13,7 +13,6 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.connector i
 
 import zoneinfo
 from databricks.labs.lakebridge.connections.credential_manager import create_credential_manager
-from databricks.labs.lakebridge.assessments import PRODUCT_NAME
 from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_classes import SynapseWorkspace
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 
@@ -23,7 +22,7 @@ def execute():
 
     db_path, creds_file = arguments_loader(desc="Synapse Synapse Dedicated SQL Pool Extract Script")
 
-    cred_manager = create_credential_manager(PRODUCT_NAME, creds_file)
+    cred_manager = create_credential_manager(creds_file)
     synapse_workspace_settings = cred_manager.get_credentials("synapse")
     config = synapse_workspace_settings["workspace"]
     auth_type = synapse_workspace_settings["jdbc"].get("auth_type", "sql_authentication")

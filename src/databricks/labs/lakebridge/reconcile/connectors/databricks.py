@@ -7,6 +7,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col
 from sqlglot import Dialect
 
+from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
@@ -50,6 +51,7 @@ class DatabricksDataSource(DataSource, SecretsMixin):
         self._spark = spark
         self._ws = ws
         self._secret_scope = secret_scope
+        self._secrets = DatabricksSecretProvider(self._ws)
 
     def read_data(
         self,
