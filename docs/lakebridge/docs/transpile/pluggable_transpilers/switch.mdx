@@ -131,8 +131,8 @@ Use the `llm-transpile` command to run Switch conversions. The command takes loc
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/sql \
-  --output-folder /Workspace/path/to/notebooks \
-  --source-tech snowflake
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect snowflake
 ```
 
 When executing the above command, the response will look like this:
@@ -169,8 +169,8 @@ The `llm-transpile` command requires only three parameters:
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `--input-source` | Local file system path containing files to convert (automatically uploaded to Volume) | `/local/path/to/sql` |
-| `--output-folder` | Databricks workspace path for generated outputs (must start with `/Workspace/`) | `/Workspace/path/to/notebooks` |
-| `--source-tech` | Source technology/dialect to convert from (see [Source Format Support](#source-format-support) for available options) | `snowflake`, `oracle`, `python`, `airflow`, etc. |
+| `--output-ws-folder` | Databricks workspace path for generated outputs (must start with `/Workspace/`) | `/Workspace/path/to/notebooks` |
+| `--source-dialect` | Source technology/dialect to convert from (see [Source Format Support](#source-format-support) for available options) | `snowflake`, `oracle`, `python`, `airflow`, etc. |
 
 ### Lakebridge Configuration File
 
@@ -200,7 +200,7 @@ Additional conversion parameters are managed in the Switch configuration file. Y
 | `token_count_threshold` | Maximum tokens per file for processing. Files exceeding this limit are automatically excluded from conversion. Adjust based on your model's context window and conversion complexity. See [Token Management](#token-management) for detailed configuration guidelines and file splitting strategies. | `20000` | Any positive integer |
 | `concurrency` | Number of parallel LLM requests for processing multiple files simultaneously. Higher values improve throughput but may hit rate limits. Default is optimized for Claude models. See [Performance Optimization](#performance-optimization) for scaling guidance and model-specific considerations. | `4` | Any positive integer |
 | `max_fix_attempts` | Maximum number of automatic syntax error correction attempts per file. Each attempt sends error context back to the LLM for fixing. Set to 0 to skip automatic fixes. See [fix_syntax_with_llm](#fix_syntax_with_llm) for details on the error correction process. | `1` | 0 or any positive integer |
-| `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, overrides the built-in prompt for the selected `--source-tech`, enabling support for additional source formats or specialized conversion requirements. See [Customizable Prompts](#customizable-prompts) for YAML structure and creation guide. | `null` | Full workspace path to YAML file |
+| `conversion_prompt_yaml` | Custom conversion prompt YAML file path. When specified, overrides the built-in prompt for the selected `--source-dialect`, enabling support for additional source formats or specialized conversion requirements. See [Customizable Prompts](#customizable-prompts) for YAML structure and creation guide. | `null` | Full workspace path to YAML file |
 | `output_extension` | File extension for output files when `target_type=file`. Required for non-notebook output formats like YAML workflows or JSON configurations. See [File Conversion Flow](#file-conversion-flow) for usage examples. | `null` | Any extension (e.g., `.yml`, `.json`) |
 | `sql_output_dir` | (Experimental) When specified, triggers additional conversion of Python notebooks to SQL notebook format. This optional post-processing step may lose some Python-specific logic. See [convert_notebook_to_sql](#convert_notebook_to_sql-optional) for details on the SQL conversion process. | `null` | Full workspace path |
 | `request_params` | Additional request parameters passed to the model serving endpoint. Use for advanced configurations like extended thinking mode or custom token limits. See [LLM Configuration](#llm-configuration) for configuration examples including Claude's extended thinking mode. | `null` | JSON format string (e.g., `{"max_tokens": 64000}`) |
@@ -216,8 +216,8 @@ Convert Snowflake SQL to Databricks Python notebooks using the built-in Snowflak
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/sql \
-  --output-folder /Workspace/path/to/notebooks \
-  --source-tech snowflake
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect snowflake
 ```
 
 ### Example 2: SQL conversion using custom prompt
@@ -229,12 +229,12 @@ First, edit `switch_config.yml` to specify your custom prompt (leave other param
 conversion_prompt_yaml: "/Workspace/path/to/my_custom_prompt.yml"
 ```
 
-Then run (note: when using a custom prompt, `--source-tech` can be any value since the custom prompt takes precedence):
+Then run (note: when using a custom prompt, `--source-dialect` can be any value since the custom prompt takes precedence):
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/sql \
-  --output-folder /Workspace/path/to/notebooks \
-  --source-tech oracle
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect oracle
 ```
 
 ### Example 3: Python script to Databricks notebook
@@ -250,8 +250,8 @@ Then run:
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/scripts \
-  --output-folder /Workspace/path/to/notebooks \
-  --source-tech python
+  --output-ws-folder /Workspace/path/to/notebooks \
+  --source-dialect python
 ```
 
 ### Example 4: Airflow DAG to Databricks Jobs YAML
@@ -269,8 +269,8 @@ Then run:
 ```bash
 databricks labs lakebridge llm-transpile \
   --input-source /local/path/to/dags \
-  --output-folder /Workspace/path/to/workflows \
-  --source-tech airflow
+  --output-ws-folder /Workspace/path/to/workflows \
+  --source-dialect airflow
 ```
 
 ---
