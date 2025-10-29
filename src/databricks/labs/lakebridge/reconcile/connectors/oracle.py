@@ -50,8 +50,7 @@ class OracleDataSource(DataSource, JDBCReaderMixin):
     @property
     def get_jdbc_url(self) -> str:
         return (
-            f"jdbc:{OracleDataSource._DRIVER}:thin:{self._secrets.get_databricks_secret(self._secret_scope, 'user')}"
-            f"/{self._secrets.get_databricks_secret(self._secret_scope, 'password')}@//{self._secrets.get_databricks_secret(self._secret_scope, 'host')}"
+            f"jdbc:{OracleDataSource._DRIVER}:thin:@//{self._secrets.get_databricks_secret(self._secret_scope, 'host')}"
             f":{self._secrets.get_databricks_secret(self._secret_scope, 'port')}/{self._secrets.get_databricks_secret(self._secret_scope, 'database')}"
         )
 
@@ -87,7 +86,7 @@ class OracleDataSource(DataSource, JDBCReaderMixin):
         schema_query = re.sub(
             r'\s+',
             ' ',
-            OracleDataSource._SCHEMA_QUERY.format(table=table, owner=schema),
+            OracleDataSource._SCHEMA_QUERY.format(table=table.lower(), owner=schema.lower()),
         )
         try:
             logger.debug(f"Fetching schema using query: \n`{schema_query}`")
@@ -103,14 +102,19 @@ class OracleDataSource(DataSource, JDBCReaderMixin):
     @staticmethod
     def _get_timestamp_options() -> dict[str, str]:
         return {
-            "oracle.jdbc.mapDateToTimestamp": "False",
+            "oracle.jdbc.mapDateToTimestamp": "false",
             "sessionInitStatement": "BEGIN dbms_session.set_nls('nls_date_format', "
             "'''YYYY-MM-DD''');dbms_session.set_nls('nls_timestamp_format', '''YYYY-MM-DD "
             "HH24:MI:SS''');END;",
         }
 
     def reader(self, query: str) -> DataFrameReader:
-        return self._get_jdbc_reader(query, self.get_jdbc_url, OracleDataSource._DRIVER)
+        user = self._get_secret('user')
+        password = self._get_secret('password')
+        logger.debug(f"Using user: {user} to connect to Oracle")
+        return self._get_jdbc_reader(
+            query, self.get_jdbc_url, OracleDataSource._DRIVER, {"user": user, "password": password}
+        )
 
     def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
         normalized = DialectUtils.normalize_identifier(
