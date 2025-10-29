@@ -1476,7 +1476,7 @@ def test_installer_upgrade_configure_if_changed(
         prompts=MockPrompts(
             {
                 r"Do you want to override the existing installation?": "yes",
-                r"Select the source dialect": "2",
+                r"Select the source dialect": str(ALL_INSTALLED_DIALECTS.index("tsql")),
                 r"Select the transpiler": "1",
                 r"Enter .*": "/tmp/updated",
                 r"Would you like to validate.*": "no",
