@@ -1,90 +1,324 @@
-from collections.abc import Sequence
-from unittest.mock import Mock, create_autospec
-
+from unittest.mock import create_autospec
+from typing import Any, cast
 import pytest
 
-from databricks.labs.blueprint.installation import Installation
+from databricks.labs.blueprint.installation import MockInstallation
 from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.wheels import ProductInfo
+from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.job import JobDeployment
 from databricks.labs.lakebridge.deployment.switch import SwitchDeployment
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.errors import NotFound
-from databricks.sdk.service.jobs import JobParameterDefinition
-
-
-class FriendOfSwitchDeployment(SwitchDeployment):
-    """A friend class to access protected members for testing purposes."""
-
-    def get_switch_job_parameters(self) -> Sequence[JobParameterDefinition]:
-        return self._get_switch_job_parameters()
+from databricks.sdk import WorkspaceClient, JobsExt
+from databricks.sdk.errors import NotFound, InvalidParameterValue
+from databricks.sdk.service.jobs import CreateResponse
+from databricks.sdk.service.iam import User
 
 
 @pytest.fixture()
-def workspace_client() -> WorkspaceClient:
-    ws = create_autospec(WorkspaceClient)
-    ws.jobs = Mock()
-    ws.jobs.delete = Mock()
-    ws.jobs.get = Mock()
-    ws.jobs.reset = Mock()
-    ws.jobs.create = Mock()
+def mock_workspace_client() -> WorkspaceClient:
+    ws: Any = create_autospec(WorkspaceClient, instance=True)
+    ws.current_user.me.return_value = User(user_name="test_user")
+    ws.config.host = "https://test.databricks.com"
+    ws.jobs = cast(Any, create_autospec(JobsExt, instance=True))
     return ws
 
 
 @pytest.fixture()
-def install_state() -> InstallState:
-    state = create_autospec(InstallState)
-    state.jobs = {}
-    state.switch_resources = {}
-    return state
+def installation() -> MockInstallation:
+    return MockInstallation(is_global=False)
 
 
 @pytest.fixture()
-def switch_deployment(workspace_client: WorkspaceClient, install_state: InstallState) -> SwitchDeployment:
-    installation = create_autospec(Installation)
-    product_info = create_autospec(ProductInfo)
-    job_deployer = create_autospec(JobDeployment)
-
-    return SwitchDeployment(workspace_client, installation, install_state, product_info, job_deployer)
+def install_state(installation: MockInstallation) -> InstallState:
+    return InstallState.from_installation(installation)
 
 
-def test_uninstall_removes_job_and_saves_state(
-    switch_deployment: SwitchDeployment, install_state, workspace_client
+@pytest.fixture()
+def product_info() -> ProductInfo:
+    return ProductInfo.for_testing(LakebridgeConfiguration)
+
+
+@pytest.fixture()
+def job_deployer() -> JobDeployment:
+    return create_autospec(JobDeployment, instance=True)
+
+
+@pytest.fixture()
+def switch_deployment(
+    mock_workspace_client: Any,
+    installation: MockInstallation,
+    install_state: InstallState,
+    product_info: ProductInfo,
+    job_deployer: JobDeployment,
+) -> SwitchDeployment:
+    return SwitchDeployment(mock_workspace_client, installation, install_state, product_info, job_deployer)
+
+
+def test_install_creates_job_successfully(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
 ) -> None:
-    install_state.jobs = {"Switch": "123"}
-    install_state.save.reset_mock()
+    """Test successful installation creates job and saves state."""
+    mock_workspace_client.jobs.create.return_value = CreateResponse(job_id=123)
 
-    workspace_client.jobs.delete.reset_mock()
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "123"
+    mock_workspace_client.jobs.create.assert_called_once()
+
+
+def test_install_updates_existing_job(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    """Test installation updates existing job if found."""
+    install_state.jobs["Switch"] = "456"
+    mock_workspace_client.jobs.get.return_value = create_autospec(CreateResponse, instance=True)
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "456"
+    mock_workspace_client.jobs.reset.assert_called_once()
+    mock_workspace_client.jobs.create.assert_not_called()
+
+
+def test_install_creates_new_job_when_existing_not_found(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    """Test installation creates new job when existing job is not found."""
+    install_state.jobs["Switch"] = "789"
+    mock_workspace_client.jobs.get.side_effect = NotFound("Job not found")
+    mock_workspace_client.jobs.create.return_value = CreateResponse(job_id=999)
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "999"
+    mock_workspace_client.jobs.create.assert_called_once()
+
+
+def test_install_handles_job_creation_error(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    """Test installation handles job creation errors gracefully."""
+    mock_workspace_client.jobs.create.side_effect = RuntimeError("Job creation failed")
+
+    switch_deployment.install()
+
+    # State should not be updated on error
+    assert "Switch" not in install_state.jobs
+
+
+def test_install_handles_invalid_parameter_error(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    """Test installation handles invalid parameter errors gracefully."""
+    mock_workspace_client.jobs.create.side_effect = InvalidParameterValue("Invalid parameter")
+
+    switch_deployment.install()
+
+    assert "Switch" not in install_state.jobs
+
+
+def test_install_fallback_on_update_failure(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "555"
+    mock_workspace_client.jobs.get.return_value = create_autospec(CreateResponse, instance=True)
+    mock_workspace_client.jobs.reset.side_effect = InvalidParameterValue("Update failed")
+    new_job = CreateResponse(job_id=666)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "666"
+    mock_workspace_client.jobs.reset.assert_called_once()
+    mock_workspace_client.jobs.create.assert_called_once()
+
+
+def test_install_with_invalid_existing_job_id(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "not_a_number"
+    mock_workspace_client.jobs.get.side_effect = ValueError("Invalid job ID")
+    new_job = CreateResponse(job_id=777)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "777"
+    mock_workspace_client.jobs.create.assert_called_once()
+
+
+def test_install_preserves_other_jobs_in_state(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["OtherJob"] = "999"
+    new_job = CreateResponse(job_id=123)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == "123"
+    assert install_state.jobs["OtherJob"] == "999"
+
+
+def test_install_configures_job_with_correct_parameters(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any
+) -> None:
+    """Test installation configures job with correct parameters."""
+    new_job = CreateResponse(job_id=123)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    # Verify job creation was called with settings
+    mock_workspace_client.jobs.create.assert_called_once()
+    call_kwargs = mock_workspace_client.jobs.create.call_args.kwargs
+
+    # Verify job name
+    assert call_kwargs["name"] == "Lakebridge_Switch"
+
+    # Verify tags
+    assert "created_by" in call_kwargs["tags"]
+    assert call_kwargs["tags"]["created_by"] == "test_user"
+    assert "switch_version" in call_kwargs["tags"]
+
+    # Verify tasks
+    assert len(call_kwargs["tasks"]) == 1
+    assert call_kwargs["tasks"][0].task_key == "run_transpilation"
+    assert call_kwargs["tasks"][0].disable_auto_optimization is True
+
+    # Verify parameters
+    param_names = {param.name for param in call_kwargs["parameters"]}
+    assert param_names == {"source_tech", "input_dir", "output_dir"}
+
+    # Verify max concurrent runs
+    assert call_kwargs["max_concurrent_runs"] == 100
+
+
+def test_install_configures_job_with_correct_notebook_path(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, installation: MockInstallation
+) -> None:
+    """Test installation configures job with correct notebook path."""
+    new_job = CreateResponse(job_id=123)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    call_kwargs = mock_workspace_client.jobs.create.call_args.kwargs
+    notebook_path = call_kwargs["tasks"][0].notebook_task.notebook_path
+
+    # Verify notebook path includes switch directory and notebook name
+    assert "switch" in notebook_path
+    assert "notebooks" in notebook_path
+    assert "00_main" in notebook_path
+
+
+def test_uninstall_removes_job_successfully(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "123"
 
     switch_deployment.uninstall()
 
     assert "Switch" not in install_state.jobs
-    workspace_client.jobs.delete.assert_called_once_with(123)
-    install_state.save.assert_called_once()
+    mock_workspace_client.jobs.delete.assert_called_once_with(123)
 
 
-def test_uninstall_handles_missing_job(switch_deployment: SwitchDeployment, install_state, workspace_client) -> None:
-    install_state.jobs = {"Switch": "123"}
-    workspace_client.jobs.delete.side_effect = NotFound("missing")
+def test_uninstall_handles_job_not_found(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "456"
+    mock_workspace_client.jobs.delete.side_effect = NotFound("Job not found")
 
     switch_deployment.uninstall()
 
-    install_state.save.assert_called_once()
+    assert "Switch" not in install_state.jobs
 
 
-def test_get_switch_job_parameters_excludes_wait_for_completion() -> None:
-    ws = create_autospec(WorkspaceClient)
-    installation = create_autospec(Installation)
-    state = create_autospec(InstallState)
-    state.jobs = {}
-    product_info = create_autospec(ProductInfo)
-    job_deployer = create_autospec(JobDeployment)
+def test_uninstall_handles_invalid_parameter(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "789"
+    mock_workspace_client.jobs.delete.side_effect = InvalidParameterValue("Invalid job ID")
 
-    deployment = FriendOfSwitchDeployment(ws, installation, state, product_info, job_deployer)
+    switch_deployment.uninstall()
 
-    job_params = deployment.get_switch_job_parameters()
-    param_names = {param.name for param in job_params}
+    assert "Switch" not in install_state.jobs
 
-    assert "source_tech" in param_names
-    assert "input_dir" in param_names
-    assert "output_dir" in param_names
+
+def test_uninstall_no_job_in_state(switch_deployment: SwitchDeployment, mock_workspace_client: Any) -> None:
+    switch_deployment.uninstall()
+
+    mock_workspace_client.jobs.delete.assert_not_called()
+
+
+def test_uninstall_with_invalid_job_id_format(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "not_a_number"
+
+    # Should raise ValueError when trying to convert to int
+    with pytest.raises(ValueError):
+        switch_deployment.uninstall()
+
+
+def test_uninstall_preserves_other_jobs_in_state(
+    switch_deployment: SwitchDeployment, mock_workspace_client: Any, install_state: InstallState
+) -> None:
+    install_state.jobs["Switch"] = "123"
+    install_state.jobs["OtherJob"] = "999"
+
+    switch_deployment.uninstall()
+
+    assert "Switch" not in install_state.jobs
+    assert install_state.jobs["OtherJob"] == "999"
+
+
+# Parameterized tests
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [
+        NotFound("Job not found"),
+        InvalidParameterValue("Invalid parameter"),
+    ],
+)
+def test_uninstall_handles_exceptions(
+    switch_deployment: SwitchDeployment,
+    mock_workspace_client: Any,
+    install_state: InstallState,
+    exception,
+) -> None:
+    install_state.jobs["Switch"] = "123"
+    mock_workspace_client.jobs.delete.side_effect = exception
+
+    switch_deployment.uninstall()
+
+    assert "Switch" not in install_state.jobs
+
+
+@pytest.mark.parametrize(
+    "exception,expected_job_id",
+    [
+        (InvalidParameterValue("Update failed"), 888),
+        (ValueError("Invalid job ID"), 777),
+    ],
+)
+def test_install_creates_new_job_on_update_failure(
+    switch_deployment: SwitchDeployment,
+    mock_workspace_client: Any,
+    install_state: InstallState,
+    exception,
+    expected_job_id,
+) -> None:
+    install_state.jobs["Switch"] = "555"
+    mock_workspace_client.jobs.get.return_value = create_autospec(CreateResponse, instance=True)
+    mock_workspace_client.jobs.reset.side_effect = exception
+    new_job = CreateResponse(job_id=expected_job_id)
+    mock_workspace_client.jobs.create.return_value = new_job
+
+    switch_deployment.install()
+
+    assert install_state.jobs["Switch"] == str(expected_job_id)
+    mock_workspace_client.jobs.reset.assert_called_once()
+    mock_workspace_client.jobs.create.assert_called_once()
