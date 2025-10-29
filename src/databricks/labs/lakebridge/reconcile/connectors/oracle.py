@@ -109,8 +109,8 @@ class OracleDataSource(DataSource, JDBCReaderMixin):
         }
 
     def reader(self, query: str) -> DataFrameReader:
-        user = self._get_secret('user')
-        password = self._get_secret('password')
+        user = self._secrets.get_databricks_secret(self._secret_scope, 'user')
+        password = self._secrets.get_databricks_secret(self._secret_scope, 'password')
         logger.debug(f"Using user: {user} to connect to Oracle")
         return self._get_jdbc_reader(
             query, self.get_jdbc_url, OracleDataSource._DRIVER, {"user": user, "password": password}
