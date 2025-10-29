@@ -10,9 +10,7 @@ from sqlglot import Dialect
 from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
-from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
-from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils, NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -50,7 +48,7 @@ _SCHEMA_QUERY = """SELECT
               """
 
 
-class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
+class TSQLServerDataSource(DataSource, JDBCReaderMixin):
     _DRIVER = "sqlserver"
     _IDENTIFIER_DELIMITER = {"prefix": "[", "suffix": "]"}
 
@@ -60,23 +58,24 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         spark: SparkSession,
         ws: WorkspaceClient,
         secret_scope: str,
+        secrets: DatabricksSecretProvider,  # only Databricks secrets are supported currently
     ):
         self._engine = engine
         self._spark = spark
         self._ws = ws
         self._secret_scope = secret_scope
-        self._secrets = DatabricksSecretProvider(self._ws)
+        self._secrets = secrets
 
     @property
     def get_jdbc_url(self) -> str:
         # Construct the JDBC URL
         return (
-            f"jdbc:{self._DRIVER}://{self._get_secret('host')}:{self._get_secret('port')};"
-            f"databaseName={self._get_secret('database')};"
-            f"user={self._get_secret('user')};"
-            f"password={self._get_secret('password')};"
-            f"encrypt={self._get_secret('encrypt')};"
-            f"trustServerCertificate={self._get_secret('trustServerCertificate')};"
+            f"jdbc:{self._DRIVER}://{self._secrets.get_databricks_secret(self._secret_scope, 'host')}:{self._secrets.get_databricks_secret(self._secret_scope, 'port')};"
+            f"databaseName={self._secrets.get_databricks_secret(self._secret_scope, 'database')};"
+            f"user={self._secrets.get_databricks_secret(self._secret_scope, 'user')};"
+            f"password={self._secrets.get_databricks_secret(self._secret_scope, 'password')};"
+            f"encrypt={self._secrets.get_databricks_secret(self._secret_scope, 'encrypt')};"
+            f"trustServerCertificate={self._secrets.get_databricks_secret(self._secret_scope, 'trustServerCertificate')};"
         )
 
     def read_data(

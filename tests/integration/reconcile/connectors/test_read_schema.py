@@ -36,7 +36,7 @@ def test_tsql_server_read_schema_happy(mock_spark):
 
 def test_databricks_read_schema_happy(mock_spark):
     mock_ws = create_autospec(WorkspaceClient)
-    connector = DatabricksDataSource(get_dialect("databricks"), mock_spark, mock_ws, "my_secret")
+    connector = DatabricksDataSource(get_dialect("databricks"), mock_spark, mock_ws)
 
     mock_spark.sql("CREATE DATABASE IF NOT EXISTS my_test_db")
     mock_spark.sql("CREATE TABLE IF NOT EXISTS my_test_db.my_test_table (id INT, name STRING) USING parquet")

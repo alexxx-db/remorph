@@ -1906,7 +1906,7 @@ def test_initialise_data_source(mock_workspace_client, mock_spark):
     source, target = initialise_data_source(mock_workspace_client, mock_spark, src_engine, secret_scope)
 
     snowflake_data_source = SnowflakeDataSource(src_engine, mock_spark, mock_workspace_client, secret_scope).__class__
-    databricks_data_source = DatabricksDataSource(src_engine, mock_spark, mock_workspace_client, secret_scope).__class__
+    databricks_data_source = DatabricksDataSource(src_engine, mock_spark, mock_workspace_client).__class__
 
     assert isinstance(source, snowflake_data_source)
     assert isinstance(target, databricks_data_source)

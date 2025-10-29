@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import NormalizedIdentifier
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.connectors.databricks import DatabricksDataSource
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException
@@ -26,7 +26,7 @@ def test_get_schema():
     engine, spark, ws, scope = initial_setup()
 
     # catalog as catalog
-    ddds = DatabricksDataSource(engine, spark, ws, scope)
+    ddds = DatabricksDataSource(engine, spark, ws)
     ddds.get_schema("catalog", "schema", "supplier")
     spark.sql.assert_called_with(
         re.sub(

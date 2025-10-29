@@ -10,16 +10,14 @@ from sqlglot import Dialect
 from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
-from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
-from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils, NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
 logger = logging.getLogger(__name__)
 
 
-class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
+class OracleDataSource(DataSource, JDBCReaderMixin):
     _DRIVER = "oracle"
     _IDENTIFIER_DELIMITER = "\""
     _SCHEMA_QUERY = """select column_name, case when (data_precision is not null
@@ -41,19 +39,20 @@ class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         spark: SparkSession,
         ws: WorkspaceClient,
         secret_scope: str,
+        secrets: DatabricksSecretProvider,  # only Databricks secrets are supported currently
     ):
         self._engine = engine
         self._spark = spark
         self._ws = ws
         self._secret_scope = secret_scope
-        self._secrets = DatabricksSecretProvider(self._ws)
+        self._secrets = secrets
 
     @property
     def get_jdbc_url(self) -> str:
         return (
-            f"jdbc:{OracleDataSource._DRIVER}:thin:{self._get_secret('user')}"
-            f"/{self._get_secret('password')}@//{self._get_secret('host')}"
-            f":{self._get_secret('port')}/{self._get_secret('database')}"
+            f"jdbc:{OracleDataSource._DRIVER}:thin:{self._secrets.get_databricks_secret(self._secret_scope, 'user')}"
+            f"/{self._secrets.get_databricks_secret(self._secret_scope, 'password')}@//{self._secrets.get_databricks_secret(self._secret_scope, 'host')}"
+            f":{self._secrets.get_databricks_secret(self._secret_scope, 'port')}/{self._secrets.get_databricks_secret(self._secret_scope, 'database')}"
         )
 
     def read_data(

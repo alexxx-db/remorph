@@ -20,6 +20,12 @@ class SecretProvider(Protocol):
     def get_secret(self, key: str) -> str:
         pass
 
+    def get_secret_or_none(self, key: str) -> str | None:
+        try:
+            return self.get_secret(key)
+        except KeyError:
+            return None
+
 
 class LocalSecretProvider(SecretProvider):
     def get_secret(self, key: str) -> str:
@@ -42,10 +48,13 @@ class DatabricksSecretProvider(SecretProvider):
     def __init__(self, ws: WorkspaceClient):
         self._ws = ws
 
+    def get_databricks_secret(self, scope: str, key: str) -> str:
+        return self.get_secret(f"{scope}/{key}")
+
     def get_secret(self, key: str) -> str:
         """Get the secret value given a secret scope & secret key.
 
-        :param key: key in the format 'scope/secret_key'
+        :param key: key in the format 'scope/secret'
         :return: The decoded UTF-8 secret value.
 
         Raises:
@@ -53,14 +62,14 @@ class DatabricksSecretProvider(SecretProvider):
           UnicodeDecodeError: The secret value was not Base64-encoded UTF-8.
         """
         scope, key_only = key.split(sep="/")
-        assert scope and key_only, "Secret key must be in the format 'scope/secret_key'"
+        assert scope and key_only, "Secret name must be in the format 'scope/secret'"
 
         try:
             secret = self._ws.secrets.get_secret(scope, key_only)
             assert secret.value is not None
             return base64.b64decode(secret.value).decode("utf-8")
         except NotFound as e:
-            raise NotFound(f'Secret does not exist with scope: {scope} and key: {key_only} : {e}') from e
+            raise KeyError(f'Secret does not exist with scope: {scope} and key: {key_only} : {e}') from e
         except UnicodeDecodeError as e:
             raise UnicodeDecodeError(
                 "utf-8",
@@ -73,6 +82,7 @@ class DatabricksSecretProvider(SecretProvider):
 
 class CredentialManager:
     SecretProviderFactory = Callable[[], SecretProvider]
+
     def __init__(self, credentials: dict, secret_providers: dict[str, SecretProviderFactory]):
         self._credentials = credentials
         self._default_vault = self._credentials.get('secret_vault_type', 'local').lower()
@@ -117,11 +127,13 @@ def create_databricks_secret_provider() -> DatabricksSecretProvider:
     return DatabricksSecretProvider(ws)
 
 
-
-def create_credential_manager(creds_path: Path | str) -> CredentialManager:
-    if isinstance(creds_path, str):
-        creds_path = Path(creds_path)
-    creds = _load_credentials(creds_path)
+def create_credential_manager(creds_or_path: dict | Path | str) -> CredentialManager:
+    if isinstance(creds_or_path, str):
+        creds_or_path = Path(creds_or_path)
+    if isinstance(creds_or_path, Path):
+        creds = _load_credentials(creds_or_path)
+    else:
+        creds = creds_or_path
 
     # Lazily initialize secret providers
     secret_providers: dict[str, CredentialManager.SecretProviderFactory] = {

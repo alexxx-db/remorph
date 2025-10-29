@@ -12,9 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
-from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
-from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils, NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.exception import InvalidSnowflakePemPrivateKey
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
@@ -23,7 +21,7 @@ from databricks.sdk.errors import NotFound
 logger = logging.getLogger(__name__)
 
 
-class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
+class SnowflakeDataSource(DataSource, JDBCReaderMixin):
     _DRIVER = "snowflake"
     _IDENTIFIER_DELIMITER = "\""
 
@@ -58,27 +56,32 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         spark: SparkSession,
         ws: WorkspaceClient,
         secret_scope: str,
+        secrets: DatabricksSecretProvider,  # only Databricks secrets are supported currently
     ):
         self._engine = engine
         self._spark = spark
         self._ws = ws
         self._secret_scope = secret_scope
-        self._secrets = DatabricksSecretProvider(self._ws)
+        self._secrets = secrets
 
     @property
     def get_jdbc_url(self) -> str:
-        try:
-            sf_password = self._get_secret('sfPassword')
-        except (NotFound, KeyError) as e:
-            message = "sfPassword is mandatory for jdbc connectivity with Snowflake."
-            logger.error(message)
-            raise NotFound(message) from e
+        creds = self._get_snowflake_options()
+        sf_password = creds.get('sfPassword')
+        if not sf_password:
+            try:
+                sf_password = self._secrets.get_databricks_secret(self._secret_scope, 'sfPassword')
+            except (NotFound, KeyError) as e:
+                message = "sfPassword is mandatory for jdbc connectivity with Snowflake."
+                logger.error(message)
+                raise NotFound(message) from e
+                # TODO Support PEM key auth
 
         return (
-            f"jdbc:{SnowflakeDataSource._DRIVER}://{self._get_secret('sfAccount')}.snowflakecomputing.com"
-            f"/?user={self._get_secret('sfUser')}&password={sf_password}"
-            f"&db={self._get_secret('sfDatabase')}&schema={self._get_secret('sfSchema')}"
-            f"&warehouse={self._get_secret('sfWarehouse')}&role={self._get_secret('sfRole')}"
+            f"jdbc:{SnowflakeDataSource._DRIVER}://{creds['sfUrl']}"
+            f"/?user={creds['sfUser']}&password={sf_password}"
+            f"&db={creds['sfDatabase']}&schema={creds['sfSchema']}"
+            f"&warehouse={creds['sfWarehouse']}&role={creds['sfRole']}"
         )
 
     def read_data(
@@ -141,12 +144,12 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     # Pay attention to https://pylint.pycqa.org/en/latest/user_guide/messages/warning/method-cache-max-size-none.html
     def _get_snowflake_options(self):
         options = {
-            "sfUrl": self._get_secret('sfUrl'),
-            "sfUser": self._get_secret('sfUser'),
-            "sfDatabase": self._get_secret('sfDatabase'),
-            "sfSchema": self._get_secret('sfSchema'),
-            "sfWarehouse": self._get_secret('sfWarehouse'),
-            "sfRole": self._get_secret('sfRole'),
+            "sfUrl": self._secrets.get_databricks_secret(self._secret_scope, 'sfUrl'),
+            "sfUser": self._secrets.get_databricks_secret(self._secret_scope, 'sfUser'),
+            "sfDatabase": self._secrets.get_databricks_secret(self._secret_scope, 'sfDatabase'),
+            "sfSchema": self._secrets.get_databricks_secret(self._secret_scope, 'sfSchema'),
+            "sfWarehouse": self._secrets.get_databricks_secret(self._secret_scope, 'sfWarehouse'),
+            "sfRole": self._secrets.get_databricks_secret(self._secret_scope, 'sfRole'),
         }
         options = options | self._get_snowflake_auth_options()
 
@@ -155,13 +158,14 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     def _get_snowflake_auth_options(self):
         try:
             key = SnowflakeDataSource._get_private_key(
-                self._get_secret('pem_private_key'), self._get_secret_or_none('pem_private_key_password')
+                self._secrets.get_databricks_secret(self._secret_scope, 'pem_private_key'),
+                self._secrets.get_secret_or_none(f"{self._secret_scope}/pem_private_key_password"),
             )
             return {"pem_private_key": key}
         except (NotFound, KeyError):
             logger.warning("pem_private_key not found. Checking for sfPassword")
             try:
-                password = self._get_secret('sfPassword')
+                password = self._secrets.get_databricks_secret(self._secret_scope, 'sfPassword')
                 return {"sfPassword": password}
             except (NotFound, KeyError) as e:
                 message = "sfPassword and pem_private_key not found. Either one is required for snowflake auth."

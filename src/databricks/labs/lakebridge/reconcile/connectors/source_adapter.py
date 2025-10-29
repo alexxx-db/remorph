@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 from sqlglot import Dialect
 from sqlglot.dialects import TSQL
 
+from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.databricks import DatabricksDataSource
 from databricks.labs.lakebridge.reconcile.connectors.oracle import OracleDataSource
@@ -19,12 +20,13 @@ def create_adapter(
     ws: WorkspaceClient,
     secret_scope: str,
 ) -> DataSource:
+    secrets = DatabricksSecretProvider(ws)
     if isinstance(engine, Snowflake):
-        return SnowflakeDataSource(engine, spark, ws, secret_scope)
+        return SnowflakeDataSource(engine, spark, ws, secret_scope, secrets)
     if isinstance(engine, Oracle):
-        return OracleDataSource(engine, spark, ws, secret_scope)
+        return OracleDataSource(engine, spark, ws, secret_scope, secrets)
     if isinstance(engine, Databricks):
-        return DatabricksDataSource(engine, spark, ws, secret_scope)
+        return DatabricksDataSource(engine, spark, ws)
     if isinstance(engine, TSQL):
-        return TSQLServerDataSource(engine, spark, ws, secret_scope)
+        return TSQLServerDataSource(engine, spark, ws, secret_scope, secrets)
     raise ValueError(f"Unsupported source type --> {engine}")

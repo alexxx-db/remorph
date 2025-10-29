@@ -7,11 +7,8 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col
 from sqlglot import Dialect
 
-from databricks.labs.lakebridge.connections.credential_manager import DatabricksSecretProvider
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
-from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
-from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils, NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -37,7 +34,7 @@ def _get_schema_query(catalog: str, schema: str, table: str):
     return re.sub(r'\s+', ' ', query)
 
 
-class DatabricksDataSource(DataSource, SecretsMixin):
+class DatabricksDataSource(DataSource):
     _IDENTIFIER_DELIMITER = "`"
 
     def __init__(
@@ -45,13 +42,10 @@ class DatabricksDataSource(DataSource, SecretsMixin):
         engine: Dialect,
         spark: SparkSession,
         ws: WorkspaceClient,
-        secret_scope: str,
     ):
         self._engine = engine
         self._spark = spark
         self._ws = ws
-        self._secret_scope = secret_scope
-        self._secrets = DatabricksSecretProvider(self._ws)
 
     def read_data(
         self,

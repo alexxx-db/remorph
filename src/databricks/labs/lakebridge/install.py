@@ -316,7 +316,7 @@ class WorkspaceInstaller:
         report_type = self._prompts.choice(
             "Select the report type:", [report_type.value for report_type in ReconReportType]
         )
-        scope_name = self._prompts.question(
+        scope_name = self._prompts.question(  # TODO deprecate
             f"Enter Secret scope name to store `{data_source.capitalize()}` connection details / secrets",
             default=f"remorph_{data_source}",
         )
