@@ -235,15 +235,19 @@ class _TranspileConfigChecker:
     def use_transpiler_config_path(self, transpiler_config_path: str | None) -> None:
         if transpiler_config_path is not None:
             logger.debug(f"Setting transpiler_config_path to: {transpiler_config_path!r}")
-            # Switch is installed inside "/Users/<>/.lakebridge/transpilers/Switch/lsp/config.yml
-            if Path(transpiler_config_path).parent.parent.name == "Switch":
-                msg = "Switch transpiler is not supported through `transpile` run `llm-transpile` instead."
-                raise_validation_exception(msg)
             self._validate_transpiler_config_path(
                 transpiler_config_path,
                 f"Invalid path for '--transpiler-config-path', does not exist: {transpiler_config_path}",
             )
             self._config = dataclasses.replace(self._config, transpiler_config_path=transpiler_config_path)
+
+        # Switch is installed inside "/Users/<>/.lakebridge/transpilers/Switch/lsp/config.yml
+        if (
+            self._config.transpiler_config_path is not None
+            and Path(self._config.transpiler_config_path).parent.parent.name == "Switch"
+        ):
+            msg = "Switch transpiler is not supported through `transpile` run `llm-transpile` instead."
+            raise RuntimeError(msg)
 
     def use_source_dialect(self, source_dialect: str | None) -> None:
         if source_dialect is not None:
