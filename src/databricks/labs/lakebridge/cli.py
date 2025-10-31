@@ -40,6 +40,7 @@ from databricks.labs.lakebridge.transpiler.switch_runner import SwitchRunner
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 from databricks.labs.lakebridge.transpiler.transpile_status import ErrorSeverity
+from databricks.labs.switch.lsp import get_switch_dialects
 
 
 # Subclass to allow controlled access to protected methods.
@@ -646,13 +647,56 @@ def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[s
         ctx.connect_config.cluster_id = cluster_id
 
 
+def _validate_llm_transpile_args(
+    input_source: str | None,
+    output_ws_folder: str | None,
+    source_dialect: str | None,
+    transpile_config: TranspileConfig | None,
+    prompts: Prompts,
+) -> tuple[str, str, str]:
+
+    if input_source is None:
+        input_source = transpile_config.input_source if transpile_config else None
+    if output_ws_folder is None:
+        output_ws_folder = transpile_config.output_folder if transpile_config else None
+    if source_dialect is None:
+        source_dialect = transpile_config.source_dialect if transpile_config else None
+
+    _switch_dialects = get_switch_dialects()
+
+    # Validate presence after attempting to source from config
+    if not input_source:
+        input_source = prompts.question("Enter input SQL path")
+    if not output_ws_folder:
+        output_ws_folder = prompts.question("Enter output workspace folder must start with /Workspace/")
+    if not source_dialect:
+        source_dialect = prompts.choice("Select the source dialect", sorted(_switch_dialects))
+
+    # Validate input_source path exists (local path)
+    if not Path(input_source).exists():
+        raise_validation_exception(f"Invalid path for '--input-source': Path '{input_source}' does not exist.")
+
+    # Validate output_ws_folder is a workspace path
+    if not str(output_ws_folder).startswith("/Workspace/"):
+        raise_validation_exception(
+            f"Invalid value for '--output-ws-folder': workspace output path must start with /Workspace/. Got: {output_ws_folder!r}"
+        )
+
+    if source_dialect not in _switch_dialects:
+        raise_validation_exception(
+            f"Invalid value for '--source-dialect': {source_dialect!r} must be one of: {', '.join(sorted(_switch_dialects))}"
+        )
+
+    return input_source, output_ws_folder, source_dialect
+
+
 @lakebridge.command
 def llm_transpile(
     *,
     w: WorkspaceClient,
-    input_source: str,
-    output_ws_folder: str,
-    source_dialect: str,
+    input_source: str | None = None,
+    output_ws_folder: str | None = None,
+    source_dialect: str | None = None,
     ctx: ApplicationContext | None = None,
 ) -> None:
     """Transpile source code to Databricks using LLM Transpiler (Switch)"""
@@ -662,6 +706,17 @@ def llm_transpile(
     ctx.add_user_agent_extra("cmd", "transpile-switch")
     user = ctx.current_user
     logger.debug(f"User: {user}")
+
+    prompts = ctx.prompts
+    transpile_config = ctx.transpile_config
+    # If CLI args are missing, try to read them from config.yml
+    input_source, output_ws_folder, source_dialect = _validate_llm_transpile_args(
+        input_source,
+        output_ws_folder,
+        source_dialect,
+        transpile_config,
+        prompts,
+    )
 
     job_list = ctx.install_state.jobs
     if "Switch" not in job_list:
