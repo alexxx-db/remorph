@@ -703,7 +703,7 @@ def llm_transpile(
     if ctx is None:
         ctx = ApplicationContext(w)
     del w
-    ctx.add_user_agent_extra("cmd", "transpile-switch")
+    ctx.add_user_agent_extra("cmd", "llm-transpile")
     user = ctx.current_user
     logger.debug(f"User: {user}")
 
@@ -756,6 +756,7 @@ def llm_transpile(
     assert isinstance(volume, str)
 
     try:
+        ctx.add_user_agent_extra("transpiler_source_dialect", source_dialect)
         job_runner = SwitchRunner(ctx.workspace_client, ctx.installation)
         volume_input_path = job_runner.upload_to_volume(
             local_path=Path(input_source), catalog=catalog, schema=schema, volume=volume
