@@ -12,8 +12,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
-logger.setLevel("INFO")
-
+logger.setLevel(logging.INFO)
 
 @dataclasses.dataclass
 class FetchResult:
@@ -29,7 +28,6 @@ class DatabaseConnector(ABC):
     @abstractmethod
     def fetch(self, query: str) -> FetchResult:
         pass
-
 
 class _BaseConnector(DatabaseConnector):
     def __init__(self, config: dict[str, Any]):
@@ -67,26 +65,6 @@ def _create_connector(db_type: str, config: dict[str, Any]) -> DatabaseConnector
 class SnowflakeConnector(_BaseConnector):
     def _connect(self) -> Engine:
         raise NotImplementedError("Snowflake connector not implemented")
-
-class OracleConnector(_BaseConnector):
-
-    def _connect(self) -> Engine:
-        def _connect(self) -> Engine:
-            raise NotImplementedError("Oracle connector not implemented")
-
-        # db_name = self.config.get('tnsService')
-        #
-        # connection_string = URL.create(
-        #     drivername="oracle+oracledb",
-        #     username=self.config['user'],
-        #     password=self.config['password'],
-        #     host=self.config['host'],
-        #     port=self.config.get('tnsPort', 1521),
-        #     database=db_name
-        # )
-        # return create_engine(connection_string)
-
-
 class MSSQLConnector(_BaseConnector):
     def _connect(self) -> Engine:
         auth_type = self.config.get('auth_type', 'sql_authentication')
@@ -117,9 +95,25 @@ class MSSQLConnector(_BaseConnector):
         return create_engine(connection_string)
 
 
+class OracleConnector(_BaseConnector):
+    def _connect(self) -> Engine:
+
+        db_name = self.config.get('tnsService')
+        connection_string = URL.create(
+        drivername="oracle+oracledb",
+        username=self.config['user'],
+        password=self.config['password'],
+        host=self.config['host'],
+        port=self.config.get('tnsPort', 1521),
+        database=db_name
+        )
+
+        return create_engine(connection_string)
+
 class DatabaseManager:
     def __init__(self, db_type: str, config: dict[str, Any]):
         self.connector = _create_connector(db_type, config)
+        self.db_type = db_type
 
     def fetch(self, query: str) -> FetchResult:
         try:
@@ -129,7 +123,8 @@ class DatabaseManager:
             raise ConnectionError("Error connecting to the database check credentials") from None
 
     def check_connection(self) -> bool:
-        query = "SELECT 101 AS test_column"
+        query = "SELECT 101 AS test_column from dual" if self.db_type == "oracle" else "SELECT 101 AS test_column"
+
         result = self.fetch(query)
         if result is None:
             return False

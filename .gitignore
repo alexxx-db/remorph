@@ -1,11 +1,13 @@
+.venv/
 .venv
 .python-version
 .sdkmanrc
-.DS_Store
+.DS_Store/
 *.pyc
 __pycache__
 dist
 .idea
+.idea/
 /htmlcov/
 *.iml
 target/
