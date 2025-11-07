@@ -21,10 +21,12 @@ from databricks.labs.blueprint.tui import Prompts
 
 
 from databricks.labs.lakebridge.assessments.configure_assessment import create_assessment_configurator
-from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM
+from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM, PRODUCT_NAME
+from databricks.labs.lakebridge.assessments.profiler import Profiler
 
 from databricks.labs.lakebridge.config import TranspileConfig, LSPConfigOptionV1
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
+from databricks.labs.lakebridge.connections.credential_manager import cred_file
 from databricks.labs.lakebridge.helpers.recon_config_utils import ReconConfigPrompts
 from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
 from databricks.labs.lakebridge.install import installer
@@ -711,18 +713,19 @@ def configure_secrets(*, w: WorkspaceClient) -> None:
     recon_conf.prompt_and_save_connection_details()
 
 
-@lakebridge.command(is_unauthenticated=True)
-def configure_database_profiler() -> None:
-    """[Experimental] Install the lakebridge Assessment package"""
-    prompts = Prompts()
-
-    # Prompt for source system
-    source_system = str(
-        prompts.choice("Please select the source system you want to configure", PROFILER_SOURCE_SYSTEM)
-    ).lower()
+@lakebridge.command
+def configure_database_profiler(w: WorkspaceClient) -> None:
+    """[Experimental] Installs and runs the Lakebridge Assessment package for database profiling"""
+    ctx = ApplicationContext(w)
+    ctx.add_user_agent_extra("cmd", "configure-profiler")
+    prompts = ctx.prompts
+    source_tech = prompts.choice("Select the source technology", PROFILER_SOURCE_SYSTEM).lower()
+    ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
+    user = ctx.current_user
+    logger.debug(f"User: {user}")
 
     # Create appropriate assessment configurator
-    assessment = create_assessment_configurator(source_system=source_system, product_name="lakebridge", prompts=prompts)
+    assessment = create_assessment_configurator(source_system=source_tech, product_name="lakebridge", prompts=prompts)
     assessment.run()
 
 
@@ -958,6 +961,36 @@ def llm_transpile(
         foundation_model=foundation_model,
         job_id=job_id,
     )
+
+
+@lakebridge.command()
+def execute_database_profiler(w: WorkspaceClient, source_tech: str | None = None) -> None:
+    """Execute the Profiler Extraction for the given source technology"""
+    ctx = ApplicationContext(w)
+    ctx.add_user_agent_extra("cmd", "execute-profiler")
+    prompts = ctx.prompts
+    if source_tech is None:
+        source_tech = prompts.choice("Select the source technology", PROFILER_SOURCE_SYSTEM)
+    source_tech = source_tech.lower()
+
+    if source_tech not in PROFILER_SOURCE_SYSTEM:
+        logger.error(f"Only the following source systems are supported: {PROFILER_SOURCE_SYSTEM}")
+        raise_validation_exception(f"Invalid source technology {source_tech}")
+
+    ctx.add_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
+    user = ctx.current_user
+    logger.debug(f"User: {user}")
+    # check if cred_file is present which has the connection details before running the profiler
+    file = cred_file(PRODUCT_NAME)
+    if not file.exists():
+        raise_validation_exception(
+            f"Connection details not found. Please run `databricks labs lakebridge configure-database-profiler` "
+            f"to set up connection details for {source_tech}."
+        )
+    profiler = Profiler.create(source_tech)
+
+    # TODO: Add extractor logic to ApplicationContext instead of creating inside the Profiler class
+    profiler.profile()
 
 
 @lakebridge.command()
