@@ -84,6 +84,8 @@ class HashQueryBuilder(QueryBuilder):
         # We now use exp.Dpipe to force the use of CONCAT() function across all dialects to be dialect specific || or + in TSQL
         concat_expr = concat(col_exprs)
 
-        hash_expr = concat_expr.transform(_hash_transform, self.engine, self.layer).transform(lower, is_expr=True)
+        hash_expr = concat_expr.transform(_hash_transform, self._source_engine, self.layer).transform(
+            lower, is_expr=True
+        )
 
         return build_column(hash_expr, alias=column_alias)
