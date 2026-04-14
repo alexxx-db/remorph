@@ -1,8 +1,12 @@
+import base64
 from pathlib import Path
 import logging
 from typing import Any, Protocol
 
 import yaml
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import NotFound
 
 from databricks.labs.lakebridge.connections.env_getter import EnvGetter
 
@@ -31,9 +35,28 @@ class EnvSecretProvider(SecretProvider):
             return key
 
 
-class DatabricksSecretProvider:
+class DatabricksSecretProvider(SecretProvider):
+    def __init__(self, ws: WorkspaceClient, scope: str):
+        self._ws = ws
+        self._scope = scope
+
     def get_secret(self, key: str) -> str:
-        raise NotImplementedError("Databricks secret vault not implemented")
+        try:
+            secret = self._ws.secrets.get_secret(self._scope, key)
+        except NotFound as e:
+            raise NotFound(f"Secret not found in scope '{self._scope}' with key '{key}'") from e
+        if secret.value is None:
+            raise ValueError(f"Secret '{self._scope}/{key}' has no value")
+        try:
+            return base64.b64decode(secret.value).decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise UnicodeDecodeError(
+                "utf-8",
+                key.encode(),
+                0,
+                1,
+                f"Secret '{self._scope}/{key}' has Base64 bytes that cannot be decoded to utf-8: {e}",
+            ) from e
 
 
 class CredentialManager:
@@ -101,15 +124,21 @@ def create_credential_manager(
     product_name: str,
     env_getter: EnvGetter,
     creds_path: Path | None = None,
+    ws: WorkspaceClient | None = None,
 ) -> CredentialManager:
     if creds_path is None:
         creds_path = cred_file(product_name)
     creds = _load_credentials(creds_path)
 
-    secret_providers = {
+    secret_providers: dict[str, SecretProvider] = {
         'local': LocalSecretProvider(),
         'env': EnvSecretProvider(env_getter),
-        'databricks': DatabricksSecretProvider(),
     }
+
+    if (creds.get('secret_vault_type') or '').lower() == 'databricks':
+        scope = creds.get('secret_vault_name')
+        if not scope:
+            raise ValueError("secret_vault_name is required when secret_vault_type is 'databricks'")
+        secret_providers['databricks'] = DatabricksSecretProvider(ws or WorkspaceClient(), scope)
 
     return CredentialManager(creds, secret_providers)

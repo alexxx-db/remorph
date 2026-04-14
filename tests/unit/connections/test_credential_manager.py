@@ -1,6 +1,10 @@
+import base64
 import os
+from unittest.mock import MagicMock
 
 import pytest
+from databricks.sdk.errors import NotFound
+from databricks.sdk.service.workspace import GetSecretResponse
 
 from databricks.labs.lakebridge.connections.credential_manager import (
     CredentialManager,
@@ -39,8 +43,21 @@ def _create_secret_providers() -> dict:
     return {
         'local': LocalSecretProvider(),
         'env': EnvSecretProvider(EnvGetter()),
-        'databricks': DatabricksSecretProvider(),
     }
+
+
+def _make_ws(values: dict[str, str]) -> MagicMock:
+    ws = MagicMock()
+
+    def _get_secret(scope: str, key: str) -> GetSecretResponse:
+        del scope
+        if key not in values:
+            raise NotFound(f"secret {key} not found")
+        encoded = base64.b64encode(values[key].encode("utf-8")).decode("utf-8")
+        return GetSecretResponse(key=key, value=encoded)
+
+    ws.secrets.get_secret.side_effect = _get_secret
+    return ws
 
 
 def test_local_credentials_flat_structure():
@@ -104,21 +121,41 @@ def test_env_credentials_fallback_to_literal_value():
     assert creds['database'] == 'DB_NAME'
 
 
-def test_databricks_credentials_raises_not_implemented():
-    """Test that databricks secret provider raises NotImplementedError ."""
+def test_databricks_credentials_resolves_from_secret_scope():
+    """Databricks secret provider resolves keys via ws.secrets.get_secret and base64-decodes."""
+    ws = _make_ws({'mssql_user_key': 'databricks_user', 'mssql_pwd_key': 'databricks_password'})
+    providers = _create_secret_providers()
+    providers['databricks'] = DatabricksSecretProvider(ws, 'my_scope')
+
     credentials = {
         'secret_vault_type': 'databricks',
-        'secret_vault_name': 'databricks_vault_name',
+        'secret_vault_name': 'my_scope',
         'mssql': {
             'database': 'DB_NAME',
-            'user': 'databricks_user',
+            'user': 'mssql_user_key',
+            'password': 'mssql_pwd_key',
+            'port': 1433,
         },
     }
 
-    manager = CredentialManager(credentials, _create_secret_providers())
+    manager = CredentialManager(credentials, providers)
+    creds = manager.get_credentials('mssql')
 
-    with pytest.raises(NotImplementedError, match="Databricks secret vault not implemented"):
-        manager.get_credentials('mssql')
+    assert creds['user'] == 'databricks_user'
+    assert creds['password'] == 'databricks_password'
+    assert creds['database'] == 'DB_NAME'
+    assert creds['port'] == 1433
+    ws.secrets.get_secret.assert_any_call('my_scope', 'mssql_user_key')
+    ws.secrets.get_secret.assert_any_call('my_scope', 'mssql_pwd_key')
+
+
+def test_databricks_secret_not_found_raises():
+    """Missing secret surfaces as NotFound with scope+key context."""
+    ws = _make_ws({})
+    provider = DatabricksSecretProvider(ws, 'my_scope')
+
+    with pytest.raises(NotFound, match="scope 'my_scope'"):
+        provider.get_secret('missing_key')
 
 
 def test_nested_dict_credentials_local_vault():
