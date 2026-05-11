@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
 from sqlglot import Dialect
+from sqlglot.dialects.redshift import Redshift
 
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.databricks import (
@@ -7,6 +8,7 @@ from databricks.labs.lakebridge.reconcile.connectors.databricks import (
     DatabricksNonUnityCatalogDataSource,
 )
 from databricks.labs.lakebridge.reconcile.connectors.oracle import OracleDataSource
+from databricks.labs.lakebridge.reconcile.connectors.redshift import RedshiftDataSource
 from databricks.labs.lakebridge.reconcile.connectors.remote_query_reader import RemoteQueryReader
 from databricks.labs.lakebridge.reconcile.connectors.snowflake import SnowflakeDataSource
 from databricks.labs.lakebridge.reconcile.connectors.tsql import TSQLServerDataSource
@@ -36,4 +38,6 @@ def create_adapter(
         return DatabricksNonUnityCatalogDataSource(engine, spark, ws)
     if isinstance(engine, Tsql):
         return TSQLServerDataSource(engine, reader)
+    if isinstance(engine, Redshift):
+        return RedshiftDataSource(engine, reader)
     raise ValueError(f"Unsupported source type --> {engine}")

@@ -9,6 +9,7 @@ from databricks.labs.lakebridge.reconcile.connectors.databricks import (
     DatabricksNonUnityCatalogDataSource,
 )
 from databricks.labs.lakebridge.reconcile.connectors.oracle import OracleDataSource
+from databricks.labs.lakebridge.reconcile.connectors.redshift import RedshiftDataSource
 from databricks.labs.lakebridge.reconcile.connectors.snowflake import SnowflakeDataSource
 from databricks.labs.lakebridge.reconcile.connectors.source_adapter import create_adapter
 from databricks.sdk import WorkspaceClient
@@ -56,6 +57,17 @@ def test_create_adapter_for_databricks_dialect_target():
     assert isinstance(data_source, DatabricksDataSource)
     # Target uses the base class directly, not the non-UC subclass
     assert not isinstance(data_source, DatabricksNonUnityCatalogDataSource)
+
+
+def test_create_adapter_for_redshift_dialect():
+    spark = create_autospec(DatabricksSession)
+    engine = get_dialect("redshift")
+    ws = create_autospec(WorkspaceClient)
+    scope = "scope"
+
+    data_source = create_adapter(engine, spark, ws, scope)
+
+    assert isinstance(data_source, RedshiftDataSource)
 
 
 def test_raise_exception_for_unknown_dialect():

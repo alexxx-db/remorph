@@ -9,6 +9,7 @@ from databricks.labs.lakebridge.reconcile.connectors.databricks import (
     DatabricksDataSource,
     DatabricksNonUnityCatalogDataSource,
 )
+from databricks.labs.lakebridge.reconcile.connectors.redshift import RedshiftDataSource
 from databricks.labs.lakebridge.reconcile.connectors.remote_query_reader import RemoteQueryReader
 from databricks.labs.lakebridge.reconcile.connectors.snowflake import SnowflakeDataSource
 from databricks.labs.lakebridge.reconcile.connectors.tsql import TSQLServerDataSource
@@ -67,6 +68,15 @@ def test_oracle_read_schema_happy(spark: SparkSession) -> None:
     connector = OracleDataSourceUnderTest(spark)
 
     columns = connector.get_schema("ORCL", "SYSTEM", "help")
+    assert columns
+
+
+def test_redshift_read_schema_happy(spark: SparkSession) -> None:
+    connection = "sandbox_labs_tool_redshift"
+    reader = RemoteQueryReader(spark, connection)
+    connector = RedshiftDataSource(get_dialect("redshift"), reader)
+
+    columns = connector.get_schema("labs", "lakebridge", "diamonds")
     assert columns
 
 
