@@ -21,7 +21,6 @@ from databricks.labs.lakebridge.resources.assessments.synapse.common.profiler_cl
 from databricks.labs.lakebridge.resources.assessments.synapse.common.queries import SynapseQueries
 from databricks.labs.lakebridge.resources.assessments.synapse.common.schemas import SYNAPSE_SCHEMAS
 
-
 logger = get_logger(__file__)
 
 
