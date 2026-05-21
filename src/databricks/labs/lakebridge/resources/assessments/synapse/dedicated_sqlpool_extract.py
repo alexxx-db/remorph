@@ -142,7 +142,7 @@ def execute():
 
             table_name = "dedicated_session_requests"
             prev_max_end_time = get_max_column_value_duckdb("end_time", table_name, db_path)
-            session_request_query = SynapseQueries.list_dedicated_requests(prev_max_end_time)
+            session_request_query = SynapseQueries.list_dedicated_requests(sqlpool_name, prev_max_end_time)
 
             session_request_result = connection.fetch(session_request_query)
             save_to_duckdb(
